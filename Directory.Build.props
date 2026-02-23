@@ -1,0 +1,14 @@
+<Project>
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <Company>Original Circuit</Company>
+    <Authors>Original Circuit</Authors>
+    <Copyright>Copyright (c) Original Circuit 2024-2026</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <Version>1.0.0-alpha.1</Version>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,26 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# C# source files
+*.cs text diff=csharp
+*.csproj text
+*.sln text eol=crlf
+*.props text
+*.targets text
+
+# Documentation
+*.md text diff=markdown
+
+# Config
+*.json text
+*.xml text
+*.yml text
+*.yaml text
+
+# Binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.snk binary

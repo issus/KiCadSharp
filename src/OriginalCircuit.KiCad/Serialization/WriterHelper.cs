@@ -1,0 +1,142 @@
+using OriginalCircuit.Eda.Enums;
+using OriginalCircuit.Eda.Primitives;
+using OriginalCircuit.KiCad.SExpression;
+using SExpr = OriginalCircuit.KiCad.SExpression.SExpression;
+
+namespace OriginalCircuit.KiCad.Serialization;
+
+/// <summary>
+/// Shared helper methods for building S-expression trees for KiCad file writing.
+/// </summary>
+internal static class WriterHelper
+{
+    /// <summary>
+    /// Builds an <c>(at X Y [ANGLE])</c> node.
+    /// </summary>
+    public static SExpr BuildPosition(CoordPoint location, double angle = 0)
+    {
+        var b = new SExpressionBuilder("at")
+            .AddValue(location.X.ToMm())
+            .AddValue(location.Y.ToMm());
+        if (angle != 0)
+            b.AddValue(angle);
+        return b.Build();
+    }
+
+    /// <summary>
+    /// Builds an <c>(xy X Y)</c> node.
+    /// </summary>
+    public static SExpr BuildXY(CoordPoint point)
+    {
+        return new SExpressionBuilder("xy")
+            .AddValue(point.X.ToMm())
+            .AddValue(point.Y.ToMm())
+            .Build();
+    }
+
+    /// <summary>
+    /// Builds a <c>(pts (xy ...) (xy ...) ...)</c> node.
+    /// </summary>
+    public static SExpr BuildPoints(IReadOnlyList<CoordPoint> points)
+    {
+        var b = new SExpressionBuilder("pts");
+        foreach (var pt in points)
+            b.AddChild(BuildXY(pt));
+        return b.Build();
+    }
+
+    /// <summary>
+    /// Builds a <c>(stroke (width W) (type T))</c> node.
+    /// </summary>
+    public static SExpr BuildStroke(Coord width, LineStyle style = LineStyle.Solid)
+    {
+        return new SExpressionBuilder("stroke")
+            .AddChild("width", w => w.AddValue(width.ToMm()))
+            .AddChild("type", t => t.AddSymbol(SExpressionHelper.LineStyleToString(style)))
+            .Build();
+    }
+
+    /// <summary>
+    /// Builds a <c>(fill (type T))</c> node.
+    /// </summary>
+    public static SExpr BuildFill(SchFillType fillType)
+    {
+        return new SExpressionBuilder("fill")
+            .AddChild("type", t => t.AddSymbol(SExpressionHelper.SchFillTypeToString(fillType)))
+            .Build();
+    }
+
+    /// <summary>
+    /// Builds a <c>(effects (font (size H W)))</c> node.
+    /// </summary>
+    public static SExpr BuildTextEffects(Coord fontH, Coord fontW, TextJustification justification = TextJustification.MiddleCenter, bool hide = false, bool isMirrored = false)
+    {
+        var b = new SExpressionBuilder("effects")
+            .AddChild("font", f => f.AddChild("size", s =>
+            {
+                s.AddValue(fontH.ToMm());
+                s.AddValue(fontW.ToMm());
+            }));
+
+        if (justification != TextJustification.MiddleCenter || isMirrored)
+        {
+            b.AddChild("justify", j =>
+            {
+                switch (justification)
+                {
+                    case TextJustification.MiddleLeft:
+                    case TextJustification.TopLeft:
+                    case TextJustification.BottomLeft:
+                        j.AddSymbol("left");
+                        break;
+                    case TextJustification.MiddleRight:
+                    case TextJustification.TopRight:
+                    case TextJustification.BottomRight:
+                        j.AddSymbol("right");
+                        break;
+                }
+                switch (justification)
+                {
+                    case TextJustification.TopLeft:
+                    case TextJustification.TopCenter:
+                    case TextJustification.TopRight:
+                        j.AddSymbol("top");
+                        break;
+                    case TextJustification.BottomLeft:
+                    case TextJustification.BottomCenter:
+                    case TextJustification.BottomRight:
+                        j.AddSymbol("bottom");
+                        break;
+                }
+                if (isMirrored)
+                    j.AddSymbol("mirror");
+            });
+        }
+
+        if (hide)
+            b.AddChild("hide", _ => { });
+
+        return b.Build();
+    }
+
+    /// <summary>
+    /// Builds a <c>(uuid ...)</c> node.
+    /// </summary>
+    public static SExpr BuildUuid(string uuid)
+    {
+        return new SExpressionBuilder("uuid").AddValue(uuid).Build();
+    }
+
+    /// <summary>
+    /// Builds a <c>(color R G B A)</c> node.
+    /// </summary>
+    public static SExpr BuildColor(EdaColor color)
+    {
+        return new SExpressionBuilder("color")
+            .AddValue(color.R)
+            .AddValue(color.G)
+            .AddValue(color.B)
+            .AddValue(color.A / 255.0)
+            .Build();
+    }
+}
