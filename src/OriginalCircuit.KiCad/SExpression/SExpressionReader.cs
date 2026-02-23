@@ -56,11 +56,11 @@ public static class SExpressionReader
 
         var result = ParseExpression(text, ref pos);
 
-        SkipWhitespace(text, ref pos);
-        if (pos < text.Length)
-        {
-            throw new FormatException($"Unexpected content after root S-expression at position {pos}.");
-        }
+        // Tolerate trailing content after the root S-expression.
+        // Some real-world KiCad files have minor formatting corruption
+        // (e.g., a missing opening paren) that causes the root expression
+        // to close early, leaving valid content unparsed.
+        // We return what we have rather than throwing.
 
         return result;
     }
