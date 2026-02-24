@@ -7,7 +7,7 @@ namespace OriginalCircuit.KiCad.SExpression;
 /// <summary>
 /// High-performance S-expression parser for KiCad files.
 /// Uses byte-based parsing with string interning, cached value objects,
-/// and ArrayPool-based frame storage for minimal allocations.
+/// pooled parse frames, and ArrayPool-based storage for minimal allocations.
 /// </summary>
 public static class SExpressionReader
 {
@@ -15,70 +15,67 @@ public static class SExpressionReader
     // String intern pool — common KiCad tokens as UTF-8 byte arrays
     // ---------------------------------------------------------------
 
-    private static readonly string[] _internedTokens =
-    [
-        "xy", "at", "layer", "width", "uuid", "tstamp", "net", "segment", "via", "pad",
-        "fp_line", "fp_text", "gr_text", "property", "fill", "pin", "symbol", "stroke",
-        "effects", "font", "size", "pts", "start", "end", "mid", "center", "radius",
-        "angle", "offset", "thickness", "clearance", "type", "color", "name", "number",
-        "value", "footprint", "reference", "hide", "yes", "no", "none", "solid", "rect",
-        "circle", "oval", "smd", "thru_hole", "locked", "version", "generator",
-        "kicad_pcb", "kicad_sch", "kicad_symbol_lib", "in_bom", "on_board", "pin_names",
-        "pin_numbers", "polyline", "rectangle", "arc", "text", "wire", "label",
-        "global_label", "hierarchical_label", "junction", "no_connect", "bus_entry",
-        "lib_symbols", "lib_id", "descr", "title", "paper", "title_block", "date",
-        "rev", "company", "comment", "sheet", "sheet_instances", "symbol_instances",
-        "path", "fp_arc", "fp_circle", "fp_rect", "fp_poly", "gr_line", "gr_arc",
-        "gr_circle", "gr_rect", "gr_poly", "zone", "filled_polygon", "polygon",
-        "roundrect_rratio", "solder_mask_margin", "solder_paste_margin",
-        "solder_paste_ratio", "thermal_bridge_width", "thermal_bridge_angle",
-        "layers", "drill", "tstamps", "teardrop", "chamfer_ratio", "chamfer",
-        "model", "fp_text_private", "module", "general", "page", "setup",
-        "pcbplotparams", "net_class", "dimension", "target", "drawings",
-        "tracks", "zones", "groups", "images"
-    ];
+    private static readonly (byte[] Bytes, string Str)[][] _internBuckets = BuildInternPool();
+    private const int InternBucketCount = 256; // power of 2 for fast modulo
 
-    private static readonly Dictionary<int, (byte[] Bytes, string Str)[]> _internPool = BuildInternPool();
-
-    private static Dictionary<int, (byte[] Bytes, string Str)[]> BuildInternPool()
+    private static (byte[] Bytes, string Str)[][] BuildInternPool()
     {
-        var pool = new Dictionary<int, (byte[] Bytes, string Str)[]>();
-        var groups = new Dictionary<int, List<(byte[] Bytes, string Str)>>();
+        string[] tokens =
+        [
+            "xy", "at", "layer", "width", "uuid", "tstamp", "net", "segment", "via", "pad",
+            "fp_line", "fp_text", "gr_text", "property", "fill", "pin", "symbol", "stroke",
+            "effects", "font", "size", "pts", "start", "end", "mid", "center", "radius",
+            "angle", "offset", "thickness", "clearance", "type", "color", "name", "number",
+            "value", "footprint", "reference", "hide", "yes", "no", "none", "solid", "rect",
+            "circle", "oval", "smd", "thru_hole", "locked", "version", "generator",
+            "kicad_pcb", "kicad_sch", "kicad_symbol_lib", "in_bom", "on_board", "pin_names",
+            "pin_numbers", "polyline", "rectangle", "arc", "text", "wire", "label",
+            "global_label", "hierarchical_label", "junction", "no_connect", "bus_entry",
+            "lib_symbols", "lib_id", "descr", "title", "paper", "title_block", "date",
+            "rev", "company", "comment", "sheet", "sheet_instances", "symbol_instances",
+            "path", "fp_arc", "fp_circle", "fp_rect", "fp_poly", "gr_line", "gr_arc",
+            "gr_circle", "gr_rect", "gr_poly", "zone", "filled_polygon", "polygon",
+            "roundrect_rratio", "solder_mask_margin", "solder_paste_margin",
+            "solder_paste_ratio", "thermal_bridge_width", "thermal_bridge_angle",
+            "layers", "drill", "tstamps", "teardrop", "chamfer_ratio", "chamfer",
+            "model", "fp_text_private", "module", "general", "page", "setup",
+            "pcbplotparams", "net_class", "dimension", "target", "drawings",
+            "tracks", "zones", "groups", "images"
+        ];
 
-        foreach (var token in _internedTokens)
+        var buckets = new (byte[] Bytes, string Str)[InternBucketCount][];
+        var builders = new List<(byte[] Bytes, string Str)>[InternBucketCount];
+
+        foreach (var token in tokens)
         {
             var bytes = Encoding.UTF8.GetBytes(token);
-            var hash = ComputeHash(bytes, 0, bytes.Length);
-            if (!groups.TryGetValue(hash, out var list))
-            {
-                list = [];
-                groups[hash] = list;
-            }
-            list.Add((bytes, token));
+            var bucket = (int)(ComputeHash(bytes, 0, bytes.Length) & (InternBucketCount - 1));
+            builders[bucket] ??= [];
+            builders[bucket].Add((bytes, token));
         }
 
-        foreach (var kvp in groups)
+        for (var i = 0; i < InternBucketCount; i++)
         {
-            pool[kvp.Key] = [.. kvp.Value];
+            buckets[i] = builders[i]?.ToArray() ?? [];
         }
 
-        return pool;
+        return buckets;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int ComputeHash(byte[] data, int start, int length)
+    private static uint ComputeHash(byte[] data, int start, int length)
     {
         // FNV-1a hash
         unchecked
         {
-            var hash = (uint)2166136261;
+            var hash = 2166136261u;
             var end = start + length;
             for (var i = start; i < end; i++)
             {
                 hash ^= data[i];
-                hash *= 16777619;
+                hash *= 16777619u;
             }
-            return (int)hash;
+            return hash;
         }
     }
 
@@ -86,28 +83,18 @@ public static class SExpressionReader
     private static string InternToken(byte[] data, int start, int length)
     {
         var hash = ComputeHash(data, start, length);
-        if (_internPool.TryGetValue(hash, out var candidates))
+        var candidates = _internBuckets[(int)(hash & (InternBucketCount - 1))];
+
+        for (var i = 0; i < candidates.Length; i++)
         {
-            foreach (var (bytes, str) in candidates)
+            ref var c = ref candidates[i];
+            if (c.Bytes.Length == length && data.AsSpan(start, length).SequenceEqual(c.Bytes))
             {
-                if (bytes.Length == length && BytesEqual(data, start, bytes, length))
-                {
-                    return str;
-                }
+                return c.Str;
             }
         }
 
         return Encoding.UTF8.GetString(data, start, length);
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool BytesEqual(byte[] a, int aStart, byte[] b, int length)
-    {
-        for (var i = 0; i < length; i++)
-        {
-            if (a[aStart + i] != b[i]) return false;
-        }
-        return true;
     }
 
     // ---------------------------------------------------------------
@@ -123,49 +110,42 @@ public static class SExpressionReader
     private static readonly SExprSymbol _symSmd = new("smd");
     private static readonly SExprSymbol _symThruHole = new("thru_hole");
 
-    private static readonly Dictionary<string, SExprSymbol> _cachedSymbols = new(StringComparer.Ordinal)
-    {
-        ["yes"] = _symYes,
-        ["no"] = _symNo,
-        ["none"] = _symNone,
-        ["solid"] = _symSolid,
-        ["hide"] = _symHide,
-        ["locked"] = _symLocked,
-        ["smd"] = _symSmd,
-        ["thru_hole"] = _symThruHole,
-    };
+    // Use a fixed array for O(1) lookup of the 8 cached symbols by interned reference
+    private static readonly (string Key, SExprSymbol Value)[] _cachedSymbolPairs =
+    [
+        ("yes", _symYes), ("no", _symNo), ("none", _symNone), ("solid", _symSolid),
+        ("hide", _symHide), ("locked", _symLocked), ("smd", _symSmd), ("thru_hole", _symThruHole),
+    ];
 
     // Cached SExprNumber for integers -1..360
     private static readonly SExprNumber[] _cachedNumbers = BuildCachedNumbers();
 
     private static SExprNumber[] BuildCachedNumbers()
     {
-        // Index 0 = -1, Index 1 = 0, ... Index 361 = 360
-        var arr = new SExprNumber[362];
+        var arr = new SExprNumber[362]; // Index 0 = -1, Index 361 = 360
         for (var i = 0; i < arr.Length; i++)
-        {
             arr[i] = new SExprNumber(i - 1);
-        }
         return arr;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static SExprNumber GetCachedNumber(double value)
     {
-        // Check if it's an integer in the cached range -1..360
         var intVal = (int)value;
-        if (value == intVal && intVal >= -1 && intVal <= 360)
-        {
+        if (value == intVal && (uint)(intVal + 1) <= 361)
             return _cachedNumbers[intVal + 1];
-        }
         return new SExprNumber(value);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static SExprSymbol GetCachedSymbol(string value)
     {
-        if (_cachedSymbols.TryGetValue(value, out var cached))
-            return cached;
+        // Since tokens are interned, we can use reference equality for the common case
+        for (var i = 0; i < _cachedSymbolPairs.Length; i++)
+        {
+            if (ReferenceEquals(_cachedSymbolPairs[i].Key, value))
+                return _cachedSymbolPairs[i].Value;
+        }
         return new SExprSymbol(value);
     }
 
@@ -219,7 +199,6 @@ public static class SExpressionReader
     /// <exception cref="FormatException">The text contains invalid S-expression syntax.</exception>
     public static SExpression Read(ReadOnlySpan<char> text)
     {
-        // Convert char span to UTF-8 bytes for the byte-based parser
         var byteCount = Encoding.UTF8.GetByteCount(text);
         var bytes = new byte[byteCount];
         Encoding.UTF8.GetBytes(text, bytes);
@@ -236,24 +215,25 @@ public static class SExpressionReader
 
         // Skip UTF-8 BOM if present
         if (data.Length >= 3 && data[0] == 0xEF && data[1] == 0xBB && data[2] == 0xBF)
-        {
             pos = 3;
-        }
 
         SkipWhitespace(data, ref pos);
 
         if (pos >= data.Length || data[pos] != (byte)'(')
-        {
             throw new FormatException("Expected '(' at start of S-expression.");
-        }
 
         return ParseExpressionIterative(data, ref pos);
     }
 
     private static SExpression ParseExpressionIterative(byte[] data, ref int pos)
     {
-        // Stack-based iterative parser using ArrayPool-rented storage per frame.
-        var frameStack = new Stack<ParseFrame>(64);
+        // Pre-allocate stack and frame pool to avoid per-node heap allocations.
+        // A typical large KiCad file may have nesting depth ~20-30, but we size
+        // generously. The frame pool is sized larger since frames are reused.
+        var stack = new ParseFrame[128];
+        var stackTop = -1;
+
+        var pool = new ParseFramePool(512);
 
         // Consume opening '('
         pos++;
@@ -261,20 +241,19 @@ public static class SExpressionReader
 
         var token = ReadToken(data, ref pos);
         if (token is null)
-        {
             throw new FormatException($"Expected token after '(' at position {pos}.");
-        }
 
-        frameStack.Push(new ParseFrame(token));
+        stack[++stackTop] = pool.Rent(token);
 
-        while (frameStack.Count > 0)
+        while (stackTop >= 0)
         {
             SkipWhitespace(data, ref pos);
 
             if (pos >= data.Length)
             {
-                // Return partial results for all remaining frames
-                ReturnAllFrames(frameStack);
+                // Return all frames to pool
+                for (var i = stackTop; i >= 0; i--)
+                    pool.Return(stack[i]);
                 throw new FormatException("Unexpected end of input; expected ')'.");
             }
 
@@ -283,18 +262,14 @@ public static class SExpressionReader
             if (ch == (byte)')')
             {
                 pos++;
-                var completed = frameStack.Pop();
-                var values = completed.CopyValues();
-                var children = completed.CopyChildren();
-                completed.Return();
-                var expr = new SExpression(completed.Token, values, children);
+                ref var completed = ref stack[stackTop--];
+                var expr = completed.BuildExpression();
+                pool.Return(completed);
 
-                if (frameStack.Count == 0)
-                {
+                if (stackTop < 0)
                     return expr;
-                }
 
-                frameStack.Peek().AddChild(expr);
+                stack[stackTop].AddChild(expr);
             }
             else if (ch == (byte)'(')
             {
@@ -304,28 +279,24 @@ public static class SExpressionReader
                 var childToken = ReadToken(data, ref pos);
                 if (childToken is null)
                 {
-                    ReturnAllFrames(frameStack);
+                    for (var i = stackTop; i >= 0; i--)
+                        pool.Return(stack[i]);
                     throw new FormatException($"Expected token after '(' at position {pos}.");
                 }
 
-                frameStack.Push(new ParseFrame(childToken));
+                if (++stackTop >= stack.Length)
+                    Array.Resize(ref stack, stack.Length * 2);
+
+                stack[stackTop] = pool.Rent(childToken);
             }
             else
             {
                 var value = ReadValue(data, ref pos);
-                frameStack.Peek().AddValue(value);
+                stack[stackTop].AddValue(value);
             }
         }
 
         throw new FormatException("Unexpected end of S-expression parsing.");
-    }
-
-    private static void ReturnAllFrames(Stack<ParseFrame> stack)
-    {
-        while (stack.Count > 0)
-        {
-            stack.Pop().Return();
-        }
     }
 
     // ---------------------------------------------------------------
@@ -357,12 +328,11 @@ public static class SExpressionReader
     // Value reading (byte-based)
     // ---------------------------------------------------------------
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static ISExpressionValue ReadValue(byte[] data, ref int pos)
     {
         if (data[pos] == (byte)'"')
-        {
             return ReadString(data, ref pos);
-        }
 
         // Read unquoted token
         var start = pos;
@@ -378,9 +348,7 @@ public static class SExpressionReader
 
         // Try fast double parse first
         if (TryParseFastDouble(data, start, length, out var number))
-        {
             return GetCachedNumber(number);
-        }
 
         // It's a symbol
         var symbolStr = InternToken(data, start, length);
@@ -401,7 +369,6 @@ public static class SExpressionReader
         var end = start + length;
         var negative = false;
 
-        // Optional leading minus
         if (data[i] == (byte)'-')
         {
             negative = true;
@@ -414,17 +381,16 @@ public static class SExpressionReader
             if (i >= end) return false;
         }
 
-        // Must start with a digit or '.'
         var firstByte = data[i];
-        if (firstByte != (byte)'.' && (firstByte < (byte)'0' || firstByte > (byte)'9'))
+        if (firstByte != (byte)'.' && (uint)(firstByte - (byte)'0') > 9)
             return false;
 
         // Integer part
         long intPart = 0;
         while (i < end)
         {
-            var d = data[i] - (byte)'0';
-            if ((uint)d > 9) break;
+            var d = (uint)(data[i] - (byte)'0');
+            if (d > 9) break;
             intPart = intPart * 10 + d;
             i++;
         }
@@ -437,15 +403,14 @@ public static class SExpressionReader
             i++;
             while (i < end)
             {
-                var d = data[i] - (byte)'0';
-                if ((uint)d > 9) break;
-                fracPart = fracPart * 10 + d;
+                var d = (uint)(data[i] - (byte)'0');
+                if (d > 9) break;
+                fracPart = fracPart * 10 + (long)d;
                 fracDigits++;
                 i++;
             }
         }
 
-        // Must have consumed everything (no exponent notation, no trailing chars)
         if (i != end) return false;
 
         if (fracDigits == 0)
@@ -459,7 +424,6 @@ public static class SExpressionReader
         }
         else
         {
-            // Extremely long fraction — fall back
             return false;
         }
 
@@ -472,8 +436,7 @@ public static class SExpressionReader
 
     private static SExprString ReadString(byte[] data, ref int pos)
     {
-        // Consume opening quote
-        pos++;
+        pos++; // consume opening quote
         var start = pos;
 
         // Fast path: scan for closing quote without escapes
@@ -481,13 +444,9 @@ public static class SExpressionReader
         {
             var ch = data[pos];
             if (ch == (byte)'\\')
-            {
-                // Escape found — fall back to slow path from 'start'
                 return ReadStringSlowPath(data, ref pos, start);
-            }
             if (ch == (byte)'"')
             {
-                // No escapes — direct UTF-8 decode
                 var str = Encoding.UTF8.GetString(data, start, pos - start);
                 pos++; // consume closing quote
                 return new SExprString(str);
@@ -500,13 +459,9 @@ public static class SExpressionReader
 
     private static SExprString ReadStringSlowPath(byte[] data, ref int pos, int contentStart)
     {
-        // We already scanned from contentStart to pos without finding escapes,
-        // but pos is now at a backslash. Copy what we have so far.
         var sb = new StringBuilder(64);
         if (pos > contentStart)
-        {
             sb.Append(Encoding.UTF8.GetString(data, contentStart, pos - contentStart));
-        }
 
         while (pos < data.Length)
         {
@@ -516,9 +471,7 @@ public static class SExpressionReader
             {
                 pos++;
                 if (pos >= data.Length)
-                {
                     throw new FormatException("Unexpected end of input in escape sequence.");
-                }
 
                 var escaped = data[pos];
                 sb.Append(escaped switch
@@ -539,7 +492,6 @@ public static class SExpressionReader
             }
             else
             {
-                // Handle multi-byte UTF-8 properly
                 if (ch < 0x80)
                 {
                     sb.Append((char)ch);
@@ -547,7 +499,6 @@ public static class SExpressionReader
                 }
                 else
                 {
-                    // Decode one UTF-8 character
                     var charStart = pos;
                     pos++;
                     while (pos < data.Length && (data[pos] & 0xC0) == 0x80)
@@ -561,30 +512,23 @@ public static class SExpressionReader
     }
 
     // ---------------------------------------------------------------
-    // Whitespace skipping (byte-based)
+    // Whitespace skipping
     // ---------------------------------------------------------------
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void SkipWhitespace(byte[] data, ref int pos)
     {
         while (pos < data.Length && data[pos] <= (byte)' ')
-        {
             pos++;
-        }
     }
 
     // ---------------------------------------------------------------
-    // ArrayPool-based parse frame
+    // Parse frame — struct-based with pooled arrays, no heap per node
     // ---------------------------------------------------------------
 
-    /// <summary>
-    /// Represents a frame in the stack-based parser, using ArrayPool-rented arrays.
-    /// </summary>
-    private sealed class ParseFrame
+    private struct ParseFrame
     {
-        private const int InitialCapacity = 8;
-
-        public string Token { get; }
+        public string Token;
 
         private ISExpressionValue[] _values;
         private int _valueCount;
@@ -592,12 +536,13 @@ public static class SExpressionReader
         private SExpression[] _children;
         private int _childCount;
 
-        public ParseFrame(string token)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Init(string token, ISExpressionValue[] values, SExpression[] children)
         {
             Token = token;
-            _values = ArrayPool<ISExpressionValue>.Shared.Rent(InitialCapacity);
+            _values = values;
             _valueCount = 0;
-            _children = ArrayPool<SExpression>.Shared.Rent(InitialCapacity);
+            _children = children;
             _childCount = 0;
         }
 
@@ -622,7 +567,7 @@ public static class SExpressionReader
         {
             var newArr = ArrayPool<ISExpressionValue>.Shared.Rent(_values.Length * 2);
             Array.Copy(_values, newArr, _valueCount);
-            ArrayPool<ISExpressionValue>.Shared.Return(_values, clearArray: true);
+            ArrayPool<ISExpressionValue>.Shared.Return(_values, clearArray: false);
             _values = newArr;
         }
 
@@ -631,30 +576,96 @@ public static class SExpressionReader
         {
             var newArr = ArrayPool<SExpression>.Shared.Rent(_children.Length * 2);
             Array.Copy(_children, newArr, _childCount);
-            ArrayPool<SExpression>.Shared.Return(_children, clearArray: true);
+            ArrayPool<SExpression>.Shared.Return(_children, clearArray: false);
             _children = newArr;
         }
 
-        public ISExpressionValue[] CopyValues()
+        public SExpression BuildExpression()
         {
-            if (_valueCount == 0) return [];
-            var result = new ISExpressionValue[_valueCount];
-            Array.Copy(_values, result, _valueCount);
-            return result;
+            ISExpressionValue[] values;
+            SExpression[] children;
+
+            if (_valueCount == 0)
+                values = [];
+            else if (_valueCount == 1)
+                values = [_values[0]];
+            else
+            {
+                values = new ISExpressionValue[_valueCount];
+                Array.Copy(_values, values, _valueCount);
+            }
+
+            if (_childCount == 0)
+                children = [];
+            else if (_childCount == 1)
+                children = [_children[0]];
+            else
+            {
+                children = new SExpression[_childCount];
+                Array.Copy(_children, children, _childCount);
+            }
+
+            return new SExpression(Token, values, children);
         }
 
-        public SExpression[] CopyChildren()
+        /// <summary>
+        /// Gets the rented arrays so the pool can reclaim them.
+        /// </summary>
+        public readonly (ISExpressionValue[] Values, SExpression[] Children) GetArrays()
+            => (_values, _children);
+    }
+
+    // ---------------------------------------------------------------
+    // ParseFrame pool — avoids renting from ArrayPool per node
+    // ---------------------------------------------------------------
+
+    private sealed class ParseFramePool
+    {
+        private readonly (ISExpressionValue[] Values, SExpression[] Children)[] _pool;
+        private int _count;
+        private const int InitialArraySize = 4;
+
+        public ParseFramePool(int capacity)
         {
-            if (_childCount == 0) return [];
-            var result = new SExpression[_childCount];
-            Array.Copy(_children, result, _childCount);
-            return result;
+            _pool = new (ISExpressionValue[], SExpression[])[capacity];
+            _count = 0;
         }
 
-        public void Return()
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ParseFrame Rent(string token)
         {
-            ArrayPool<ISExpressionValue>.Shared.Return(_values, clearArray: true);
-            ArrayPool<SExpression>.Shared.Return(_children, clearArray: true);
+            ISExpressionValue[] values;
+            SExpression[] children;
+
+            if (_count > 0)
+            {
+                _count--;
+                (values, children) = _pool[_count];
+            }
+            else
+            {
+                values = ArrayPool<ISExpressionValue>.Shared.Rent(InitialArraySize);
+                children = ArrayPool<SExpression>.Shared.Rent(InitialArraySize);
+            }
+
+            var frame = new ParseFrame();
+            frame.Init(token, values, children);
+            return frame;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Return(ParseFrame frame)
+        {
+            var (values, children) = frame.GetArrays();
+            if (_count < _pool.Length)
+            {
+                _pool[_count++] = (values, children);
+            }
+            else
+            {
+                ArrayPool<ISExpressionValue>.Shared.Return(values, clearArray: false);
+                ArrayPool<SExpression>.Shared.Return(children, clearArray: false);
+            }
         }
     }
 }
