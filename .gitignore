@@ -52,3 +52,4 @@ Thumbs.db
 ## Credentials
 *.env
 credentials.json
+/tests/OriginalCircuit.KiCad.Tests/TestData/RealWorld

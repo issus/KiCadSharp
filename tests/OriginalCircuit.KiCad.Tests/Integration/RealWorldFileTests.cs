@@ -3,6 +3,7 @@ using FluentAssertions;
 using OriginalCircuit.KiCad.Models.Pcb;
 using OriginalCircuit.KiCad.Models.Sch;
 using OriginalCircuit.KiCad.Serialization;
+using OriginalCircuit.KiCad.SExpression;
 
 namespace OriginalCircuit.KiCad.Tests.Integration;
 
@@ -162,5 +163,34 @@ public class RealWorldFileTests
         fp.Name.Should().Contain("BGA");
         fp.Pads.Should().HaveCountGreaterThanOrEqualTo(100,
             "a BGA-100 footprint should have at least 100 pads");
+    }
+
+    // ---------------------------------------------------------------
+    // Performance
+    // ---------------------------------------------------------------
+
+    [Fact]
+    [Trait("Category", "Performance")]
+    public async Task ParseLargeFile_Performance()
+    {
+        var path = GetFullPath("KiCadDemo_JetsonBaseboard/jetson-agx-thor-baseboard.kicad_pcb");
+        if (!File.Exists(path)) return;
+
+        // Warmup
+        await SExpressionReader.ReadAsync(path);
+
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        var iterations = 3;
+        for (int i = 0; i < iterations; i++)
+        {
+            await SExpressionReader.ReadAsync(path);
+        }
+        sw.Stop();
+
+        var avgMs = sw.ElapsedMilliseconds / iterations;
+        var fileSizeMB = new FileInfo(path).Length / (1024.0 * 1024.0);
+        var throughputMBs = fileSizeMB / (avgMs / 1000.0);
+
+        throughputMBs.Should().BeGreaterThan(40, $"Parser throughput was {throughputMBs:F1} MB/s ({avgMs}ms for {fileSizeMB:F1} MB)");
     }
 }

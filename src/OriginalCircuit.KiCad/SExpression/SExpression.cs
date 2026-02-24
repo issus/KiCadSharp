@@ -6,8 +6,8 @@ namespace OriginalCircuit.KiCad.SExpression;
 /// </summary>
 public sealed class SExpression
 {
-    private readonly List<ISExpressionValue> _values;
-    private readonly List<SExpression> _children;
+    private readonly ISExpressionValue[] _values;
+    private readonly SExpression[] _children;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SExpression"/> class.
@@ -16,6 +16,19 @@ public sealed class SExpression
     /// <param name="values">The inline values following the token.</param>
     /// <param name="children">The nested S-expression children.</param>
     public SExpression(string token, List<ISExpressionValue> values, List<SExpression> children)
+    {
+        Token = token;
+        _values = [.. values];
+        _children = [.. children];
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SExpression"/> class from pre-built arrays.
+    /// </summary>
+    /// <param name="token">The token name of this S-expression node.</param>
+    /// <param name="values">The inline values array.</param>
+    /// <param name="children">The nested children array.</param>
+    internal SExpression(string token, ISExpressionValue[] values, SExpression[] children)
     {
         Token = token;
         _values = values;
@@ -44,7 +57,7 @@ public sealed class SExpression
     /// <returns>The first matching child, or <c>null</c>.</returns>
     public SExpression? GetChild(string token)
     {
-        for (var i = 0; i < _children.Count; i++)
+        for (var i = 0; i < _children.Length; i++)
         {
             if (string.Equals(_children[i].Token, token, StringComparison.Ordinal))
             {
@@ -62,7 +75,7 @@ public sealed class SExpression
     /// <returns>An enumerable of matching children.</returns>
     public IEnumerable<SExpression> GetChildren(string token)
     {
-        for (var i = 0; i < _children.Count; i++)
+        for (var i = 0; i < _children.Length; i++)
         {
             if (string.Equals(_children[i].Token, token, StringComparison.Ordinal))
             {
@@ -79,7 +92,7 @@ public sealed class SExpression
     /// <returns>The string value, or <c>null</c> if the index is out of range or the value is not a string/symbol.</returns>
     public string? GetString(int index = 0)
     {
-        if ((uint)index >= (uint)_values.Count)
+        if ((uint)index >= (uint)_values.Length)
             return null;
 
         return _values[index] switch
@@ -97,7 +110,7 @@ public sealed class SExpression
     /// <returns>The numeric value, or <c>null</c> if the index is out of range or the value is not a number.</returns>
     public double? GetDouble(int index = 0)
     {
-        if ((uint)index >= (uint)_values.Count)
+        if ((uint)index >= (uint)_values.Length)
             return null;
 
         return _values[index] is SExprNumber n ? n.Value : null;
@@ -121,7 +134,7 @@ public sealed class SExpression
     /// <returns>The boolean value, or <c>null</c> if the index is out of range or the value is not a yes/no symbol.</returns>
     public bool? GetBool(int index = 0)
     {
-        if ((uint)index >= (uint)_values.Count)
+        if ((uint)index >= (uint)_values.Length)
             return null;
 
         if (_values[index] is SExprSymbol s)

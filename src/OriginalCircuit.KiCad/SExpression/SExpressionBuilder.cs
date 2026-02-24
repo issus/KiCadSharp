@@ -93,6 +93,6 @@ public sealed class SExpressionBuilder
     /// <returns>The constructed S-expression node.</returns>
     public SExpression Build()
     {
-        return new SExpression(_token, [.. _values], [.. _children]);
+        return new SExpression(_token, _values.ToArray(), _children.ToArray());
     }
 }
