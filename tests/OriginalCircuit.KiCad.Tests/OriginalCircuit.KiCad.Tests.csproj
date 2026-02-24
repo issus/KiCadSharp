@@ -11,6 +11,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\OriginalCircuit.KiCad\OriginalCircuit.KiCad.csproj" />
+    <ProjectReference Include="..\..\src\OriginalCircuit.KiCad.Rendering\OriginalCircuit.KiCad.Rendering.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Update="TestData\**\*" CopyToOutputDirectory="PreserveNewest" />

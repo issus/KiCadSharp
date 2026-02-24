@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <PackageId>OriginalCircuit.KiCad.Rendering</PackageId>
+    <Description>Rendering support for KiCad EDA files (schematic symbols, PCB footprints) to PNG and SVG</Description>
+    <PackageTags>kicad;eda;pcb;schematic;rendering;png;svg</PackageTags>
+    <IsPackable>true</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\OriginalCircuit.KiCad\OriginalCircuit.KiCad.csproj" />
+    <ProjectReference Include="..\..\..\OriginalCircuit.Eda.Rendering\src\OriginalCircuit.Eda.Rendering.Core\OriginalCircuit.Eda.Rendering.Core.csproj" />
+    <ProjectReference Include="..\..\..\OriginalCircuit.Eda.Rendering\src\OriginalCircuit.Eda.Rendering.Raster\OriginalCircuit.Eda.Rendering.Raster.csproj" />
+    <ProjectReference Include="..\..\..\OriginalCircuit.Eda.Rendering\src\OriginalCircuit.Eda.Rendering.Svg\OriginalCircuit.Eda.Rendering.Svg.csproj" />
+  </ItemGroup>
+
+</Project>
