@@ -10,21 +10,21 @@ namespace OriginalCircuit.KiCad.Models.Sch;
 public sealed class KiCadSchBusEntry : ISchBusEntry
 {
     /// <inheritdoc />
-    public CoordPoint Location { get; internal set; }
+    public CoordPoint Location { get; set; }
 
     /// <inheritdoc />
-    public CoordPoint Corner { get; internal set; }
+    public CoordPoint Corner { get; set; }
 
     /// <inheritdoc />
-    public EdaColor Color { get; internal set; }
+    public EdaColor Color { get; set; }
 
     /// <inheritdoc />
-    public Coord LineWidth { get; internal set; }
+    public Coord LineWidth { get; set; }
 
     /// <summary>
     /// Gets the UUID of the bus entry.
     /// </summary>
-    public string? Uuid { get; internal set; }
+    public string? Uuid { get; set; }
 
     /// <inheritdoc />
     public CoordRect Bounds => new(Location, Corner);

@@ -17,19 +17,19 @@ public sealed class KiCadSchLabel : ISchLabel
     public CoordPoint Location { get; set; }
 
     /// <inheritdoc />
-    public EdaColor Color { get; internal set; }
+    public EdaColor Color { get; set; }
 
     /// <inheritdoc />
-    public TextJustification Justification { get; internal set; }
+    public TextJustification Justification { get; set; }
 
     /// <inheritdoc />
-    public double Rotation { get; internal set; }
+    public double Rotation { get; set; }
 
     /// <inheritdoc />
-    public bool IsMirrored { get; internal set; }
+    public bool IsMirrored { get; set; }
 
     /// <inheritdoc />
-    public bool IsHidden { get; internal set; }
+    public bool IsHidden { get; set; }
 
     /// <inheritdoc />
     public CoordRect Bounds => new(Location, Location);

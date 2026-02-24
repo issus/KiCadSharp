@@ -15,22 +15,22 @@ public sealed class KiCadSymLib : ISchLibrary
     /// <summary>
     /// Gets the file format version number.
     /// </summary>
-    public int Version { get; internal set; }
+    public int Version { get; set; }
 
     /// <summary>
     /// Gets the generator name.
     /// </summary>
-    public string? Generator { get; internal set; }
+    public string? Generator { get; set; }
 
     /// <summary>
     /// Gets the generator version.
     /// </summary>
-    public string? GeneratorVersion { get; internal set; }
+    public string? GeneratorVersion { get; set; }
 
     /// <summary>
     /// Gets the diagnostics collected during parsing.
     /// </summary>
-    public IReadOnlyList<KiCadDiagnostic> Diagnostics { get; internal set; } = [];
+    public IReadOnlyList<KiCadDiagnostic> Diagnostics { get; set; } = [];
 
     /// <inheritdoc />
     public IReadOnlyList<KiCadSchComponent> Components => _components;

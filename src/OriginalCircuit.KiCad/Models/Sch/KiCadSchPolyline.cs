@@ -11,16 +11,16 @@ namespace OriginalCircuit.KiCad.Models.Sch;
 public sealed class KiCadSchPolyline : ISchPolyline
 {
     /// <inheritdoc />
-    public IReadOnlyList<CoordPoint> Vertices { get; internal set; } = [];
+    public IReadOnlyList<CoordPoint> Vertices { get; set; } = [];
 
     /// <inheritdoc />
-    public EdaColor Color { get; internal set; }
+    public EdaColor Color { get; set; }
 
     /// <inheritdoc />
-    public Coord LineWidth { get; internal set; }
+    public Coord LineWidth { get; set; }
 
     /// <inheritdoc />
-    public LineStyle LineStyle { get; internal set; }
+    public LineStyle LineStyle { get; set; }
 
     /// <inheritdoc />
     public CoordRect Bounds => PointsBounds.Compute(Vertices);

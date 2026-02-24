@@ -10,18 +10,18 @@ namespace OriginalCircuit.KiCad.Models.Sch;
 public sealed class KiCadSchJunction : ISchJunction
 {
     /// <inheritdoc />
-    public CoordPoint Location { get; internal set; }
+    public CoordPoint Location { get; set; }
 
     /// <inheritdoc />
-    public EdaColor Color { get; internal set; }
+    public EdaColor Color { get; set; }
 
     /// <inheritdoc />
-    public Coord Size { get; internal set; }
+    public Coord Size { get; set; }
 
     /// <summary>
     /// Gets the UUID of the junction.
     /// </summary>
-    public string? Uuid { get; internal set; }
+    public string? Uuid { get; set; }
 
     /// <inheritdoc />
     public CoordRect Bounds

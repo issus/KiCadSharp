@@ -10,21 +10,21 @@ namespace OriginalCircuit.KiCad.Models.Sch;
 public sealed class KiCadSchSheetPin : ISchSheetPin
 {
     /// <inheritdoc />
-    public string Name { get; internal set; } = "";
+    public string Name { get; set; } = "";
 
     /// <inheritdoc />
-    public int IoType { get; internal set; }
+    public int IoType { get; set; }
 
     /// <inheritdoc />
-    public int Side { get; internal set; }
+    public int Side { get; set; }
 
     /// <inheritdoc />
-    public CoordPoint Location { get; internal set; }
+    public CoordPoint Location { get; set; }
 
     /// <summary>
     /// Gets the UUID of the sheet pin.
     /// </summary>
-    public string? Uuid { get; internal set; }
+    public string? Uuid { get; set; }
 
     /// <inheritdoc />
     public CoordRect Bounds => new(Location, Location);

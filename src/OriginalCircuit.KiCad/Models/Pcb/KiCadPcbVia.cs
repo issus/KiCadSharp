@@ -19,55 +19,55 @@ public sealed class KiCadPcbVia : IPcbVia
     public Coord HoleSize { get; set; }
 
     /// <inheritdoc />
-    public int StartLayer { get; internal set; }
+    public int StartLayer { get; set; }
 
     /// <inheritdoc />
-    public int EndLayer { get; internal set; }
+    public int EndLayer { get; set; }
 
     /// <summary>
     /// Gets the start layer name.
     /// </summary>
-    public string? StartLayerName { get; internal set; }
+    public string? StartLayerName { get; set; }
 
     /// <summary>
     /// Gets the end layer name.
     /// </summary>
-    public string? EndLayerName { get; internal set; }
+    public string? EndLayerName { get; set; }
 
     /// <summary>
     /// Gets the via type (through, blind, micro).
     /// </summary>
-    public ViaType ViaType { get; internal set; }
+    public ViaType ViaType { get; set; }
 
     /// <summary>
     /// Gets the net number.
     /// </summary>
-    public int Net { get; internal set; }
+    public int Net { get; set; }
 
     /// <summary>
     /// Gets the UUID / tstamp.
     /// </summary>
-    public string? Uuid { get; internal set; }
+    public string? Uuid { get; set; }
 
     /// <summary>
     /// Gets whether this via is free (not locked to a net).
     /// </summary>
-    public bool IsFree { get; internal set; }
+    public bool IsFree { get; set; }
 
     /// <summary>
     /// Gets whether this via is locked.
     /// </summary>
-    public bool IsLocked { get; internal set; }
+    public bool IsLocked { get; set; }
 
     /// <summary>
     /// Gets whether to remove unused layers.
     /// </summary>
-    public bool RemoveUnusedLayers { get; internal set; }
+    public bool RemoveUnusedLayers { get; set; }
 
     /// <summary>
     /// Gets whether to keep end layers.
     /// </summary>
-    public bool KeepEndLayers { get; internal set; }
+    public bool KeepEndLayers { get; set; }
 
     /// <inheritdoc />
     public CoordRect Bounds

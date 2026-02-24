@@ -11,37 +11,37 @@ namespace OriginalCircuit.KiCad.Models.Sch;
 public sealed class KiCadSchArc : ISchArc
 {
     /// <inheritdoc />
-    public CoordPoint Center { get; internal set; }
+    public CoordPoint Center { get; set; }
 
     /// <inheritdoc />
-    public Coord Radius { get; internal set; }
+    public Coord Radius { get; set; }
 
     /// <inheritdoc />
-    public double StartAngle { get; internal set; }
+    public double StartAngle { get; set; }
 
     /// <inheritdoc />
-    public double EndAngle { get; internal set; }
+    public double EndAngle { get; set; }
 
     /// <inheritdoc />
-    public EdaColor Color { get; internal set; }
+    public EdaColor Color { get; set; }
 
     /// <inheritdoc />
-    public Coord LineWidth { get; internal set; }
+    public Coord LineWidth { get; set; }
 
     /// <summary>
     /// Gets the original start point from the KiCad file.
     /// </summary>
-    public CoordPoint ArcStart { get; internal set; }
+    public CoordPoint ArcStart { get; set; }
 
     /// <summary>
     /// Gets the original mid point from the KiCad file.
     /// </summary>
-    public CoordPoint ArcMid { get; internal set; }
+    public CoordPoint ArcMid { get; set; }
 
     /// <summary>
     /// Gets the original end point from the KiCad file.
     /// </summary>
-    public CoordPoint ArcEnd { get; internal set; }
+    public CoordPoint ArcEnd { get; set; }
 
     /// <inheritdoc />
     public CoordRect Bounds

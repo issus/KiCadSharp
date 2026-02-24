@@ -11,24 +11,24 @@ namespace OriginalCircuit.KiCad.Models.Sch;
 public sealed class KiCadSchPolygon : ISchPolygon
 {
     /// <inheritdoc />
-    public IReadOnlyList<CoordPoint> Vertices { get; internal set; } = [];
+    public IReadOnlyList<CoordPoint> Vertices { get; set; } = [];
 
     /// <inheritdoc />
-    public EdaColor Color { get; internal set; }
+    public EdaColor Color { get; set; }
 
     /// <inheritdoc />
-    public EdaColor FillColor { get; internal set; }
+    public EdaColor FillColor { get; set; }
 
     /// <inheritdoc />
-    public Coord LineWidth { get; internal set; }
+    public Coord LineWidth { get; set; }
 
     /// <inheritdoc />
-    public bool IsFilled { get; internal set; }
+    public bool IsFilled { get; set; }
 
     /// <summary>
     /// Gets the KiCad fill type.
     /// </summary>
-    public SchFillType FillType { get; internal set; }
+    public SchFillType FillType { get; set; }
 
     /// <inheritdoc />
     public CoordRect Bounds => PointsBounds.Compute(Vertices);

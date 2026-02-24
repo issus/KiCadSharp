@@ -13,64 +13,64 @@ public sealed class KiCadSch : ISchDocument
     /// <summary>
     /// Gets the file format version number.
     /// </summary>
-    public int Version { get; internal set; }
+    public int Version { get; set; }
 
     /// <summary>
     /// Gets the generator name.
     /// </summary>
-    public string? Generator { get; internal set; }
+    public string? Generator { get; set; }
 
     /// <summary>
     /// Gets the generator version.
     /// </summary>
-    public string? GeneratorVersion { get; internal set; }
+    public string? GeneratorVersion { get; set; }
 
     /// <summary>
     /// Gets the UUID of the document.
     /// </summary>
-    public string? Uuid { get; internal set; }
+    public string? Uuid { get; set; }
 
     /// <summary>
     /// Gets the diagnostics collected during parsing.
     /// </summary>
-    public IReadOnlyList<KiCadDiagnostic> Diagnostics { get; internal set; } = [];
+    public IReadOnlyList<KiCadDiagnostic> Diagnostics { get; set; } = [];
 
     /// <inheritdoc />
-    public IReadOnlyList<ISchComponent> Components { get; internal set; } = [];
+    public IReadOnlyList<ISchComponent> Components { get; set; } = [];
 
     /// <inheritdoc />
-    public IReadOnlyList<ISchWire> Wires { get; internal set; } = [];
+    public IReadOnlyList<ISchWire> Wires { get; set; } = [];
 
     /// <inheritdoc />
-    public IReadOnlyList<ISchNetLabel> NetLabels { get; internal set; } = [];
+    public IReadOnlyList<ISchNetLabel> NetLabels { get; set; } = [];
 
     /// <inheritdoc />
-    public IReadOnlyList<ISchJunction> Junctions { get; internal set; } = [];
+    public IReadOnlyList<ISchJunction> Junctions { get; set; } = [];
 
     /// <inheritdoc />
-    public IReadOnlyList<ISchPowerObject> PowerObjects { get; internal set; } = [];
+    public IReadOnlyList<ISchPowerObject> PowerObjects { get; set; } = [];
 
     /// <inheritdoc />
-    public IReadOnlyList<ISchLabel> Labels { get; internal set; } = [];
+    public IReadOnlyList<ISchLabel> Labels { get; set; } = [];
 
     /// <inheritdoc />
-    public IReadOnlyList<ISchNoConnect> NoConnects { get; internal set; } = [];
+    public IReadOnlyList<ISchNoConnect> NoConnects { get; set; } = [];
 
     /// <inheritdoc />
-    public IReadOnlyList<ISchBus> Buses { get; internal set; } = [];
+    public IReadOnlyList<ISchBus> Buses { get; set; } = [];
 
     /// <inheritdoc />
-    public IReadOnlyList<ISchBusEntry> BusEntries { get; internal set; } = [];
+    public IReadOnlyList<ISchBusEntry> BusEntries { get; set; } = [];
 
     /// <summary>
     /// Gets the sheets in this document.
     /// </summary>
-    public IReadOnlyList<KiCadSchSheet> Sheets { get; internal set; } = [];
+    public IReadOnlyList<KiCadSchSheet> Sheets { get; set; } = [];
 
     /// <summary>
     /// Gets the symbol library instances embedded in this document.
     /// </summary>
-    public IReadOnlyList<KiCadSchComponent> LibSymbols { get; internal set; } = [];
+    public IReadOnlyList<KiCadSchComponent> LibSymbols { get; set; } = [];
 
     /// <inheritdoc />
     public CoordRect Bounds

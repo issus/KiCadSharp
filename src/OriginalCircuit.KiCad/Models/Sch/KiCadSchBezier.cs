@@ -10,13 +10,13 @@ namespace OriginalCircuit.KiCad.Models.Sch;
 public sealed class KiCadSchBezier : ISchBezier
 {
     /// <inheritdoc />
-    public IReadOnlyList<CoordPoint> ControlPoints { get; internal set; } = [];
+    public IReadOnlyList<CoordPoint> ControlPoints { get; set; } = [];
 
     /// <inheritdoc />
-    public EdaColor Color { get; internal set; }
+    public EdaColor Color { get; set; }
 
     /// <inheritdoc />
-    public Coord LineWidth { get; internal set; }
+    public Coord LineWidth { get; set; }
 
     /// <inheritdoc />
     public CoordRect Bounds => ComputeBounds();

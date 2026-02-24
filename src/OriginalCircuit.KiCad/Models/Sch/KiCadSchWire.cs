@@ -10,18 +10,18 @@ namespace OriginalCircuit.KiCad.Models.Sch;
 public sealed class KiCadSchWire : ISchWire
 {
     /// <inheritdoc />
-    public IReadOnlyList<CoordPoint> Vertices { get; internal set; } = [];
+    public IReadOnlyList<CoordPoint> Vertices { get; set; } = [];
 
     /// <inheritdoc />
-    public EdaColor Color { get; internal set; }
+    public EdaColor Color { get; set; }
 
     /// <inheritdoc />
-    public Coord LineWidth { get; internal set; }
+    public Coord LineWidth { get; set; }
 
     /// <summary>
     /// Gets the UUID of the wire.
     /// </summary>
-    public string? Uuid { get; internal set; }
+    public string? Uuid { get; set; }
 
     /// <inheritdoc />
     public CoordRect Bounds => PointsBounds.Compute(Vertices);

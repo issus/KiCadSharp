@@ -10,35 +10,35 @@ namespace OriginalCircuit.KiCad.Models.Pcb;
 public sealed class KiCadPcbRegion : IPcbRegion
 {
     /// <inheritdoc />
-    public IReadOnlyList<CoordPoint> Outline { get; internal set; } = [];
+    public IReadOnlyList<CoordPoint> Outline { get; set; } = [];
 
     /// <inheritdoc />
-    public int Layer { get; internal set; }
+    public int Layer { get; set; }
 
     /// <summary>
     /// Gets the layer name as a string.
     /// </summary>
-    public string? LayerName { get; internal set; }
+    public string? LayerName { get; set; }
 
     /// <summary>
     /// Gets the net number.
     /// </summary>
-    public int Net { get; internal set; }
+    public int Net { get; set; }
 
     /// <summary>
     /// Gets the net name.
     /// </summary>
-    public string? NetName { get; internal set; }
+    public string? NetName { get; set; }
 
     /// <summary>
     /// Gets the zone priority.
     /// </summary>
-    public int Priority { get; internal set; }
+    public int Priority { get; set; }
 
     /// <summary>
     /// Gets the UUID / tstamp.
     /// </summary>
-    public string? Uuid { get; internal set; }
+    public string? Uuid { get; set; }
 
     /// <inheritdoc />
     public CoordRect Bounds => PointsBounds.Compute(Outline);

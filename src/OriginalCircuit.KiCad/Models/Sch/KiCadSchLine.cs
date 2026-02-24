@@ -17,13 +17,13 @@ public sealed class KiCadSchLine : ISchLine
     public CoordPoint End { get; set; }
 
     /// <inheritdoc />
-    public EdaColor Color { get; internal set; }
+    public EdaColor Color { get; set; }
 
     /// <inheritdoc />
-    public Coord Width { get; internal set; }
+    public Coord Width { get; set; }
 
     /// <inheritdoc />
-    public LineStyle LineStyle { get; internal set; }
+    public LineStyle LineStyle { get; set; }
 
     /// <inheritdoc />
     public CoordRect Bounds => new(Start, End);

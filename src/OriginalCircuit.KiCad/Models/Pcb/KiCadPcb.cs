@@ -13,53 +13,53 @@ public sealed class KiCadPcb : IPcbDocument
     /// <summary>
     /// Gets the file format version number.
     /// </summary>
-    public int Version { get; internal set; }
+    public int Version { get; set; }
 
     /// <summary>
     /// Gets the generator name.
     /// </summary>
-    public string? Generator { get; internal set; }
+    public string? Generator { get; set; }
 
     /// <summary>
     /// Gets the generator version.
     /// </summary>
-    public string? GeneratorVersion { get; internal set; }
+    public string? GeneratorVersion { get; set; }
 
     /// <summary>
     /// Gets the diagnostics collected during parsing.
     /// </summary>
-    public IReadOnlyList<KiCadDiagnostic> Diagnostics { get; internal set; } = [];
+    public IReadOnlyList<KiCadDiagnostic> Diagnostics { get; set; } = [];
 
     /// <inheritdoc />
-    public IReadOnlyList<IPcbComponent> Components { get; internal set; } = [];
+    public IReadOnlyList<IPcbComponent> Components { get; set; } = [];
 
     /// <inheritdoc />
-    public IReadOnlyList<IPcbPad> Pads { get; internal set; } = [];
+    public IReadOnlyList<IPcbPad> Pads { get; set; } = [];
 
     /// <inheritdoc />
-    public IReadOnlyList<IPcbVia> Vias { get; internal set; } = [];
+    public IReadOnlyList<IPcbVia> Vias { get; set; } = [];
 
     /// <inheritdoc />
-    public IReadOnlyList<IPcbTrack> Tracks { get; internal set; } = [];
+    public IReadOnlyList<IPcbTrack> Tracks { get; set; } = [];
 
     /// <inheritdoc />
-    public IReadOnlyList<IPcbArc> Arcs { get; internal set; } = [];
+    public IReadOnlyList<IPcbArc> Arcs { get; set; } = [];
 
     /// <inheritdoc />
-    public IReadOnlyList<IPcbText> Texts { get; internal set; } = [];
+    public IReadOnlyList<IPcbText> Texts { get; set; } = [];
 
     /// <inheritdoc />
-    public IReadOnlyList<IPcbRegion> Regions { get; internal set; } = [];
+    public IReadOnlyList<IPcbRegion> Regions { get; set; } = [];
 
     /// <summary>
     /// Gets the net definitions as a list of (number, name) tuples.
     /// </summary>
-    public IReadOnlyList<(int Number, string Name)> Nets { get; internal set; } = [];
+    public IReadOnlyList<(int Number, string Name)> Nets { get; set; } = [];
 
     /// <summary>
     /// Gets the board thickness.
     /// </summary>
-    public Coord BoardThickness { get; internal set; }
+    public Coord BoardThickness { get; set; }
 
     /// <inheritdoc />
     public CoordRect Bounds

@@ -18,48 +18,48 @@ public sealed class KiCadPcbText : IPcbText
     public CoordPoint Location { get; set; }
 
     /// <inheritdoc />
-    public Coord Height { get; internal set; }
+    public Coord Height { get; set; }
 
     /// <inheritdoc />
-    public Coord StrokeWidth { get; internal set; }
+    public Coord StrokeWidth { get; set; }
 
     /// <inheritdoc />
-    public double Rotation { get; internal set; }
+    public double Rotation { get; set; }
 
     /// <inheritdoc />
-    public int Layer { get; internal set; }
+    public int Layer { get; set; }
 
     /// <summary>
     /// Gets the layer name as a string.
     /// </summary>
-    public string? LayerName { get; internal set; }
+    public string? LayerName { get; set; }
 
     /// <inheritdoc />
-    public bool IsMirrored { get; internal set; }
+    public bool IsMirrored { get; set; }
 
     /// <inheritdoc />
-    public string? FontName { get; internal set; }
+    public string? FontName { get; set; }
 
     /// <inheritdoc />
-    public bool FontBold { get; internal set; }
+    public bool FontBold { get; set; }
 
     /// <inheritdoc />
-    public bool FontItalic { get; internal set; }
+    public bool FontItalic { get; set; }
 
     /// <summary>
     /// Gets the text type (for fp_text: reference, value, user).
     /// </summary>
-    public string? TextType { get; internal set; }
+    public string? TextType { get; set; }
 
     /// <summary>
     /// Gets the UUID / tstamp.
     /// </summary>
-    public string? Uuid { get; internal set; }
+    public string? Uuid { get; set; }
 
     /// <summary>
     /// Gets whether this text is hidden.
     /// </summary>
-    public bool IsHidden { get; internal set; }
+    public bool IsHidden { get; set; }
 
     /// <inheritdoc />
     public CoordRect Bounds => new(Location, Location);

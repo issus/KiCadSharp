@@ -23,45 +23,45 @@ public sealed class KiCadPcbArc : IPcbArc
     public double EndAngle { get; set; }
 
     /// <inheritdoc />
-    public Coord Width { get; internal set; }
+    public Coord Width { get; set; }
 
     /// <inheritdoc />
-    public int Layer { get; internal set; }
+    public int Layer { get; set; }
 
     /// <summary>
     /// Gets the layer name as a string.
     /// </summary>
-    public string? LayerName { get; internal set; }
+    public string? LayerName { get; set; }
 
     /// <summary>
     /// Gets the original start point from the KiCad file.
     /// </summary>
-    public CoordPoint ArcStart { get; internal set; }
+    public CoordPoint ArcStart { get; set; }
 
     /// <summary>
     /// Gets the original mid point from the KiCad file.
     /// </summary>
-    public CoordPoint ArcMid { get; internal set; }
+    public CoordPoint ArcMid { get; set; }
 
     /// <summary>
     /// Gets the original end point from the KiCad file.
     /// </summary>
-    public CoordPoint ArcEnd { get; internal set; }
+    public CoordPoint ArcEnd { get; set; }
 
     /// <summary>
     /// Gets the net number.
     /// </summary>
-    public int Net { get; internal set; }
+    public int Net { get; set; }
 
     /// <summary>
     /// Gets the UUID / tstamp.
     /// </summary>
-    public string? Uuid { get; internal set; }
+    public string? Uuid { get; set; }
 
     /// <summary>
     /// Gets whether this arc is locked.
     /// </summary>
-    public bool IsLocked { get; internal set; }
+    public bool IsLocked { get; set; }
 
     /// <inheritdoc />
     public CoordRect Bounds

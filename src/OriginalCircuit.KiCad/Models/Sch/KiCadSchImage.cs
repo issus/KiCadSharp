@@ -10,23 +10,23 @@ namespace OriginalCircuit.KiCad.Models.Sch;
 public sealed class KiCadSchImage : ISchImage
 {
     /// <inheritdoc />
-    public CoordPoint Corner1 { get; internal set; }
+    public CoordPoint Corner1 { get; set; }
 
     /// <inheritdoc />
-    public CoordPoint Corner2 { get; internal set; }
+    public CoordPoint Corner2 { get; set; }
 
     /// <inheritdoc />
-    public byte[]? ImageData { get; internal set; }
+    public byte[]? ImageData { get; set; }
 
     /// <summary>
     /// Gets the scale factor of the image.
     /// </summary>
-    public double Scale { get; internal set; } = 1.0;
+    public double Scale { get; set; } = 1.0;
 
     /// <summary>
     /// Gets the UUID of the image.
     /// </summary>
-    public string? Uuid { get; internal set; }
+    public string? Uuid { get; set; }
 
     /// <inheritdoc />
     public CoordRect Bounds => new(Corner1, Corner2);

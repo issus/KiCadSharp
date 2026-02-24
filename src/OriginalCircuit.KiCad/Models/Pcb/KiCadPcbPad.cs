@@ -17,111 +17,111 @@ public sealed class KiCadPcbPad : IPcbPad
     public CoordPoint Location { get; set; }
 
     /// <inheritdoc />
-    public double Rotation { get; internal set; }
+    public double Rotation { get; set; }
 
     /// <inheritdoc />
-    public PadShape Shape { get; internal set; }
+    public PadShape Shape { get; set; }
 
     /// <inheritdoc />
-    public CoordPoint Size { get; internal set; }
+    public CoordPoint Size { get; set; }
 
     /// <inheritdoc />
-    public Coord HoleSize { get; internal set; }
+    public Coord HoleSize { get; set; }
 
     /// <inheritdoc />
-    public PadHoleType HoleType { get; internal set; }
+    public PadHoleType HoleType { get; set; }
 
     /// <inheritdoc />
-    public bool IsPlated { get; internal set; } = true;
+    public bool IsPlated { get; set; } = true;
 
     /// <inheritdoc />
-    public int Layer { get; internal set; }
+    public int Layer { get; set; }
 
     /// <inheritdoc />
-    public Coord SolderMaskExpansion { get; internal set; }
+    public Coord SolderMaskExpansion { get; set; }
 
     /// <inheritdoc />
-    public int CornerRadiusPercentage { get; internal set; }
+    public int CornerRadiusPercentage { get; set; }
 
     /// <summary>
     /// Gets the KiCad pad type.
     /// </summary>
-    public PadType PadType { get; internal set; }
+    public PadType PadType { get; set; }
 
     /// <summary>
     /// Gets the layers this pad is on as a list of layer names.
     /// </summary>
-    public IReadOnlyList<string> Layers { get; internal set; } = [];
+    public IReadOnlyList<string> Layers { get; set; } = [];
 
     /// <summary>
     /// Gets the net number.
     /// </summary>
-    public int Net { get; internal set; }
+    public int Net { get; set; }
 
     /// <summary>
     /// Gets the net name.
     /// </summary>
-    public string? NetName { get; internal set; }
+    public string? NetName { get; set; }
 
     /// <summary>
     /// Gets the zone connection type.
     /// </summary>
-    public ZoneConnectionType ZoneConnect { get; internal set; }
+    public ZoneConnectionType ZoneConnect { get; set; }
 
     /// <summary>
     /// Gets the thermal relief width.
     /// </summary>
-    public Coord ThermalWidth { get; internal set; }
+    public Coord ThermalWidth { get; set; }
 
     /// <summary>
     /// Gets the thermal relief gap.
     /// </summary>
-    public Coord ThermalGap { get; internal set; }
+    public Coord ThermalGap { get; set; }
 
     /// <summary>
     /// Gets the pin function name.
     /// </summary>
-    public string? PinFunction { get; internal set; }
+    public string? PinFunction { get; set; }
 
     /// <summary>
     /// Gets the pin type.
     /// </summary>
-    public string? PinType { get; internal set; }
+    public string? PinType { get; set; }
 
     /// <summary>
     /// Gets the die length for wire bonding.
     /// </summary>
-    public Coord DieLength { get; internal set; }
+    public Coord DieLength { get; set; }
 
     /// <summary>
     /// Gets whether to remove unused layers on this pad.
     /// </summary>
-    public bool RemoveUnusedLayers { get; internal set; }
+    public bool RemoveUnusedLayers { get; set; }
 
     /// <summary>
     /// Gets whether to keep end layers on this pad.
     /// </summary>
-    public bool KeepEndLayers { get; internal set; }
+    public bool KeepEndLayers { get; set; }
 
     /// <summary>
     /// Gets the solder paste margin.
     /// </summary>
-    public Coord SolderPasteMargin { get; internal set; }
+    public Coord SolderPasteMargin { get; set; }
 
     /// <summary>
     /// Gets the solder paste ratio.
     /// </summary>
-    public double SolderPasteRatio { get; internal set; }
+    public double SolderPasteRatio { get; set; }
 
     /// <summary>
     /// Gets the clearance override for this pad.
     /// </summary>
-    public Coord Clearance { get; internal set; }
+    public Coord Clearance { get; set; }
 
     /// <summary>
     /// Gets the UUID / tstamp.
     /// </summary>
-    public string? Uuid { get; internal set; }
+    public string? Uuid { get; set; }
 
     /// <inheritdoc />
     public CoordRect Bounds => CoordRect.FromCenterAndSize(Location, Size.X, Size.Y);

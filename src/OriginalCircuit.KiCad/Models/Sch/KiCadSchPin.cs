@@ -23,24 +23,24 @@ public sealed class KiCadSchPin : ISchPin
     public Coord Length { get; set; }
 
     /// <inheritdoc />
-    public PinOrientation Orientation { get; internal set; }
+    public PinOrientation Orientation { get; set; }
 
     /// <inheritdoc />
-    public PinElectricalType ElectricalType { get; internal set; }
+    public PinElectricalType ElectricalType { get; set; }
 
     /// <inheritdoc />
-    public bool ShowName { get; internal set; } = true;
+    public bool ShowName { get; set; } = true;
 
     /// <inheritdoc />
-    public bool ShowDesignator { get; internal set; } = true;
+    public bool ShowDesignator { get; set; } = true;
 
     /// <inheritdoc />
-    public bool IsHidden { get; internal set; }
+    public bool IsHidden { get; set; }
 
     /// <summary>
     /// Gets the KiCad-specific graphic style for the pin.
     /// </summary>
-    public PinGraphicStyle GraphicStyle { get; internal set; }
+    public PinGraphicStyle GraphicStyle { get; set; }
 
     /// <inheritdoc />
     public CoordRect Bounds

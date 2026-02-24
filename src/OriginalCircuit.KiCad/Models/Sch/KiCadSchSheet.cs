@@ -10,33 +10,33 @@ namespace OriginalCircuit.KiCad.Models.Sch;
 public sealed class KiCadSchSheet : ISchSheet
 {
     /// <inheritdoc />
-    public CoordPoint Location { get; internal set; }
+    public CoordPoint Location { get; set; }
 
     /// <inheritdoc />
-    public CoordPoint Size { get; internal set; }
+    public CoordPoint Size { get; set; }
 
     /// <inheritdoc />
-    public string SheetName { get; internal set; } = "";
+    public string SheetName { get; set; } = "";
 
     /// <inheritdoc />
-    public string FileName { get; internal set; } = "";
+    public string FileName { get; set; } = "";
 
     /// <inheritdoc />
-    public IReadOnlyList<ISchSheetPin> Pins { get; internal set; } = [];
+    public IReadOnlyList<ISchSheetPin> Pins { get; set; } = [];
 
     /// <inheritdoc />
-    public EdaColor Color { get; internal set; }
+    public EdaColor Color { get; set; }
 
     /// <inheritdoc />
-    public EdaColor FillColor { get; internal set; }
+    public EdaColor FillColor { get; set; }
 
     /// <inheritdoc />
-    public Coord LineWidth { get; internal set; }
+    public Coord LineWidth { get; set; }
 
     /// <summary>
     /// Gets the UUID of the sheet.
     /// </summary>
-    public string? Uuid { get; internal set; }
+    public string? Uuid { get; set; }
 
     /// <inheritdoc />
     public CoordRect Bounds => new(Location, new CoordPoint(Location.X + Size.X, Location.Y + Size.Y));

@@ -11,24 +11,24 @@ namespace OriginalCircuit.KiCad.Models.Sch;
 public sealed class KiCadSchNetLabel : ISchNetLabel
 {
     /// <inheritdoc />
-    public CoordPoint Location { get; internal set; }
+    public CoordPoint Location { get; set; }
 
     /// <inheritdoc />
-    public string Text { get; internal set; } = "";
+    public string Text { get; set; } = "";
 
     /// <inheritdoc />
-    public EdaColor Color { get; internal set; }
+    public EdaColor Color { get; set; }
 
     /// <inheritdoc />
-    public int Orientation { get; internal set; }
+    public int Orientation { get; set; }
 
     /// <inheritdoc />
-    public TextJustification Justification { get; internal set; }
+    public TextJustification Justification { get; set; }
 
     /// <summary>
     /// Gets the UUID of the net label.
     /// </summary>
-    public string? Uuid { get; internal set; }
+    public string? Uuid { get; set; }
 
     /// <inheritdoc />
     public CoordRect Bounds => new(Location, Location);
