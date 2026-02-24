@@ -6,6 +6,6 @@
     <IsPackable>true</IsPackable>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\OriginalCircuit.Eda.Abstractions\src\OriginalCircuit.Eda.Abstractions\OriginalCircuit.Eda.Abstractions.csproj" />
+    <ProjectReference Include="..\..\shared\OriginalCircuit.Eda.Abstractions\src\OriginalCircuit.Eda.Abstractions\OriginalCircuit.Eda.Abstractions.csproj" />
   </ItemGroup>
 </Project>
