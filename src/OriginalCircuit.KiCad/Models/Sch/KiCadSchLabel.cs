@@ -32,5 +32,13 @@ public sealed class KiCadSchLabel : ISchLabel
     public bool IsHidden { get; set; }
 
     /// <inheritdoc />
-    public CoordRect Bounds => new(Location, Location);
+    public CoordRect Bounds
+    {
+        get
+        {
+            var fontSize = Coord.FromMm(1.27);
+            var textWidth = Coord.FromMm(Text.Length * fontSize.ToMm() * 0.6);
+            return CoordRect.FromCenterAndSize(Location, textWidth, fontSize);
+        }
+    }
 }

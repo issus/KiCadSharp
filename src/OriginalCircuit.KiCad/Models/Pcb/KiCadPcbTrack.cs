@@ -42,5 +42,5 @@ public sealed class KiCadPcbTrack : IPcbTrack
     public bool IsLocked { get; set; }
 
     /// <inheritdoc />
-    public CoordRect Bounds => new(Start, End);
+    public CoordRect Bounds => new CoordRect(Start, End).Inflate(Width / 2);
 }

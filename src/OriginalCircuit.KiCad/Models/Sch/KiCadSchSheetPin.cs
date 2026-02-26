@@ -27,5 +27,13 @@ public sealed class KiCadSchSheetPin : ISchSheetPin
     public string? Uuid { get; set; }
 
     /// <inheritdoc />
-    public CoordRect Bounds => new(Location, Location);
+    public CoordRect Bounds
+    {
+        get
+        {
+            var fontSize = Coord.FromMm(1.27);
+            var textWidth = Coord.FromMm(Name.Length * fontSize.ToMm() * 0.6);
+            return CoordRect.FromCenterAndSize(Location, textWidth, fontSize);
+        }
+    }
 }

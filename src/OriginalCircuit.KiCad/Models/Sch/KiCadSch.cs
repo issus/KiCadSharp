@@ -115,6 +115,7 @@ public sealed class KiCadSch : ISchDocument
 
     public void AddComponent(ISchComponent component)
     {
+        ArgumentNullException.ThrowIfNull(component);
         if (component is not KiCadSchComponent kcomp)
             throw new ArgumentException($"Expected {nameof(KiCadSchComponent)}", nameof(component));
         _components.Add(kcomp);
@@ -124,6 +125,7 @@ public sealed class KiCadSch : ISchDocument
 
     public void AddWire(ISchWire wire)
     {
+        ArgumentNullException.ThrowIfNull(wire);
         if (wire is not KiCadSchWire kwire)
             throw new ArgumentException($"Expected {nameof(KiCadSchWire)}", nameof(wire));
         _wires.Add(kwire);
@@ -133,6 +135,7 @@ public sealed class KiCadSch : ISchDocument
 
     public void AddNetLabel(ISchNetLabel netLabel)
     {
+        ArgumentNullException.ThrowIfNull(netLabel);
         if (netLabel is not KiCadSchNetLabel knl)
             throw new ArgumentException($"Expected {nameof(KiCadSchNetLabel)}", nameof(netLabel));
         _netLabels.Add(knl);
@@ -142,6 +145,7 @@ public sealed class KiCadSch : ISchDocument
 
     public void AddJunction(ISchJunction junction)
     {
+        ArgumentNullException.ThrowIfNull(junction);
         if (junction is not KiCadSchJunction kj)
             throw new ArgumentException($"Expected {nameof(KiCadSchJunction)}", nameof(junction));
         _junctions.Add(kj);
@@ -151,6 +155,7 @@ public sealed class KiCadSch : ISchDocument
 
     public void AddPowerObject(ISchPowerObject powerObject)
     {
+        ArgumentNullException.ThrowIfNull(powerObject);
         if (powerObject is not KiCadSchPowerObject kpo)
             throw new ArgumentException($"Expected {nameof(KiCadSchPowerObject)}", nameof(powerObject));
         _powerObjects.Add(kpo);
@@ -160,6 +165,7 @@ public sealed class KiCadSch : ISchDocument
 
     public void AddLabel(ISchLabel label)
     {
+        ArgumentNullException.ThrowIfNull(label);
         if (label is not KiCadSchLabel klabel)
             throw new ArgumentException($"Expected {nameof(KiCadSchLabel)}", nameof(label));
         _labels.Add(klabel);
@@ -169,6 +175,7 @@ public sealed class KiCadSch : ISchDocument
 
     public void AddNoConnect(ISchNoConnect noConnect)
     {
+        ArgumentNullException.ThrowIfNull(noConnect);
         if (noConnect is not KiCadSchNoConnect knc)
             throw new ArgumentException($"Expected {nameof(KiCadSchNoConnect)}", nameof(noConnect));
         _noConnects.Add(knc);
@@ -178,6 +185,7 @@ public sealed class KiCadSch : ISchDocument
 
     public void AddBus(ISchBus bus)
     {
+        ArgumentNullException.ThrowIfNull(bus);
         if (bus is not KiCadSchBus kbus)
             throw new ArgumentException($"Expected {nameof(KiCadSchBus)}", nameof(bus));
         _buses.Add(kbus);
@@ -187,6 +195,7 @@ public sealed class KiCadSch : ISchDocument
 
     public void AddBusEntry(ISchBusEntry busEntry)
     {
+        ArgumentNullException.ThrowIfNull(busEntry);
         if (busEntry is not KiCadSchBusEntry kbe)
             throw new ArgumentException($"Expected {nameof(KiCadSchBusEntry)}", nameof(busEntry));
         _busEntries.Add(kbe);

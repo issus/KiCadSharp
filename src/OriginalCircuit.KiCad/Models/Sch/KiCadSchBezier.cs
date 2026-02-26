@@ -19,23 +19,5 @@ public sealed class KiCadSchBezier : ISchBezier
     public Coord LineWidth { get; set; }
 
     /// <inheritdoc />
-    public CoordRect Bounds => ComputeBounds();
-
-    private CoordRect ComputeBounds()
-    {
-        if (ControlPoints.Count == 0) return CoordRect.Empty;
-        var minX = ControlPoints[0].X;
-        var minY = ControlPoints[0].Y;
-        var maxX = minX;
-        var maxY = minY;
-        for (var i = 1; i < ControlPoints.Count; i++)
-        {
-            var p = ControlPoints[i];
-            minX = Coord.Min(minX, p.X);
-            minY = Coord.Min(minY, p.Y);
-            maxX = Coord.Max(maxX, p.X);
-            maxY = Coord.Max(maxY, p.Y);
-        }
-        return new CoordRect(new CoordPoint(minX, minY), new CoordPoint(maxX, maxY));
-    }
+    public CoordRect Bounds => PointsBounds.Compute(ControlPoints);
 }

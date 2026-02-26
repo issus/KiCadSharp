@@ -100,6 +100,7 @@ public sealed class KiCadPcb : IPcbDocument
 
     public void AddComponent(IPcbComponent component)
     {
+        ArgumentNullException.ThrowIfNull(component);
         if (component is not KiCadPcbComponent kcomp)
             throw new ArgumentException($"Expected {nameof(KiCadPcbComponent)}", nameof(component));
         _components.Add(kcomp);
@@ -109,6 +110,7 @@ public sealed class KiCadPcb : IPcbDocument
 
     public void AddPad(IPcbPad pad)
     {
+        ArgumentNullException.ThrowIfNull(pad);
         if (pad is not KiCadPcbPad kpad)
             throw new ArgumentException($"Expected {nameof(KiCadPcbPad)}", nameof(pad));
         _pads.Add(kpad);
@@ -118,6 +120,7 @@ public sealed class KiCadPcb : IPcbDocument
 
     public void AddVia(IPcbVia via)
     {
+        ArgumentNullException.ThrowIfNull(via);
         if (via is not KiCadPcbVia kvia)
             throw new ArgumentException($"Expected {nameof(KiCadPcbVia)}", nameof(via));
         _vias.Add(kvia);
@@ -127,6 +130,7 @@ public sealed class KiCadPcb : IPcbDocument
 
     public void AddTrack(IPcbTrack track)
     {
+        ArgumentNullException.ThrowIfNull(track);
         if (track is not KiCadPcbTrack ktrack)
             throw new ArgumentException($"Expected {nameof(KiCadPcbTrack)}", nameof(track));
         _tracks.Add(ktrack);
@@ -136,6 +140,7 @@ public sealed class KiCadPcb : IPcbDocument
 
     public void AddArc(IPcbArc arc)
     {
+        ArgumentNullException.ThrowIfNull(arc);
         if (arc is not KiCadPcbArc karc)
             throw new ArgumentException($"Expected {nameof(KiCadPcbArc)}", nameof(arc));
         _arcs.Add(karc);
@@ -145,6 +150,7 @@ public sealed class KiCadPcb : IPcbDocument
 
     public void AddText(IPcbText text)
     {
+        ArgumentNullException.ThrowIfNull(text);
         if (text is not KiCadPcbText ktext)
             throw new ArgumentException($"Expected {nameof(KiCadPcbText)}", nameof(text));
         _texts.Add(ktext);
@@ -154,6 +160,7 @@ public sealed class KiCadPcb : IPcbDocument
 
     public void AddRegion(IPcbRegion region)
     {
+        ArgumentNullException.ThrowIfNull(region);
         if (region is not KiCadPcbRegion kregion)
             throw new ArgumentException($"Expected {nameof(KiCadPcbRegion)}", nameof(region));
         _regions.Add(kregion);

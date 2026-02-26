@@ -45,5 +45,14 @@ public sealed class KiCadSchParameter : ISchParameter
     public Coord FontSizeHeight { get; set; }
 
     /// <inheritdoc />
-    public CoordRect Bounds => new(Location, Location);
+    public CoordRect Bounds
+    {
+        get
+        {
+            var fontH = FontSizeHeight != Coord.Zero ? FontSizeHeight : Coord.FromMm(1.27);
+            var fontW = FontSizeWidth != Coord.Zero ? FontSizeWidth : Coord.FromMm(1.27);
+            var textWidth = Coord.FromMm(Value.Length * fontW.ToMm() * 0.6);
+            return CoordRect.FromCenterAndSize(Location, textWidth, fontH);
+        }
+    }
 }

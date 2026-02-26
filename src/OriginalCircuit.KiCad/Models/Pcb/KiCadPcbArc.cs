@@ -64,14 +64,5 @@ public sealed class KiCadPcbArc : IPcbArc
     public bool IsLocked { get; set; }
 
     /// <inheritdoc />
-    public CoordRect Bounds
-    {
-        get
-        {
-            var r = Radius;
-            return new CoordRect(
-                new CoordPoint(Center.X - r, Center.Y - r),
-                new CoordPoint(Center.X + r, Center.Y + r));
-        }
-    }
+    public CoordRect Bounds => PointsBounds.Compute([ArcStart, ArcMid, ArcEnd]);
 }

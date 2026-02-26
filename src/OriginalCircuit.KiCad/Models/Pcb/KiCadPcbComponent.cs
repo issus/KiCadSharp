@@ -147,6 +147,21 @@ public sealed class KiCadPcbComponent : IPcbComponent
     public string? Model3D { get; set; }
 
     /// <summary>
+    /// Gets the 3D model offset (X, Y in mm; Z is not stored).
+    /// </summary>
+    public CoordPoint Model3DOffset { get; set; }
+
+    /// <summary>
+    /// Gets the 3D model scale (X, Y factors).
+    /// </summary>
+    public CoordPoint Model3DScale { get; set; } = new(Coord.FromMm(1), Coord.FromMm(1));
+
+    /// <summary>
+    /// Gets the 3D model rotation (X, Y angles in degrees).
+    /// </summary>
+    public CoordPoint Model3DRotation { get; set; }
+
+    /// <summary>
     /// Gets the UUID / tstamp.
     /// </summary>
     public string? Uuid { get; set; }
@@ -182,6 +197,7 @@ public sealed class KiCadPcbComponent : IPcbComponent
 
     public void AddPad(IPcbPad pad)
     {
+        ArgumentNullException.ThrowIfNull(pad);
         if (pad is not KiCadPcbPad kpad)
             throw new ArgumentException($"Expected {nameof(KiCadPcbPad)}", nameof(pad));
         _pads.Add(kpad);
@@ -191,6 +207,7 @@ public sealed class KiCadPcbComponent : IPcbComponent
 
     public void AddTrack(IPcbTrack track)
     {
+        ArgumentNullException.ThrowIfNull(track);
         if (track is not KiCadPcbTrack ktrack)
             throw new ArgumentException($"Expected {nameof(KiCadPcbTrack)}", nameof(track));
         _tracks.Add(ktrack);
@@ -200,6 +217,7 @@ public sealed class KiCadPcbComponent : IPcbComponent
 
     public void AddVia(IPcbVia via)
     {
+        ArgumentNullException.ThrowIfNull(via);
         if (via is not KiCadPcbVia kvia)
             throw new ArgumentException($"Expected {nameof(KiCadPcbVia)}", nameof(via));
         _vias.Add(kvia);
@@ -209,6 +227,7 @@ public sealed class KiCadPcbComponent : IPcbComponent
 
     public void AddArc(IPcbArc arc)
     {
+        ArgumentNullException.ThrowIfNull(arc);
         if (arc is not KiCadPcbArc karc)
             throw new ArgumentException($"Expected {nameof(KiCadPcbArc)}", nameof(arc));
         _arcs.Add(karc);
@@ -218,6 +237,7 @@ public sealed class KiCadPcbComponent : IPcbComponent
 
     public void AddText(IPcbText text)
     {
+        ArgumentNullException.ThrowIfNull(text);
         if (text is not KiCadPcbText ktext)
             throw new ArgumentException($"Expected {nameof(KiCadPcbText)}", nameof(text));
         _texts.Add(ktext);
@@ -227,6 +247,7 @@ public sealed class KiCadPcbComponent : IPcbComponent
 
     public void AddRegion(IPcbRegion region)
     {
+        ArgumentNullException.ThrowIfNull(region);
         if (region is not KiCadPcbRegion kregion)
             throw new ArgumentException($"Expected {nameof(KiCadPcbRegion)}", nameof(region));
         _regions.Add(kregion);
@@ -237,7 +258,11 @@ public sealed class KiCadPcbComponent : IPcbComponent
     /// <summary>
     /// Adds a property to this footprint.
     /// </summary>
-    public void AddProperty(KiCadSchParameter property) => _properties.Add(property);
+    public void AddProperty(KiCadSchParameter property)
+    {
+        ArgumentNullException.ThrowIfNull(property);
+        _properties.Add(property);
+    }
 
     /// <summary>
     /// Removes a property from this footprint.

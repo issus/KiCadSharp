@@ -36,6 +36,36 @@ public sealed class KiCadSchComponent : ISchComponent
     /// <inheritdoc />
     public int PartCount { get; set; } = 1;
 
+    /// <summary>
+    /// Gets the unique identifier for this component instance.
+    /// </summary>
+    public string? Uuid { get; set; }
+
+    /// <summary>
+    /// Gets the location of this placed component in the schematic.
+    /// </summary>
+    public CoordPoint Location { get; set; }
+
+    /// <summary>
+    /// Gets the rotation angle in degrees.
+    /// </summary>
+    public double Rotation { get; set; }
+
+    /// <summary>
+    /// Gets whether the component is mirrored along the X axis.
+    /// </summary>
+    public bool IsMirroredX { get; set; }
+
+    /// <summary>
+    /// Gets whether the component is mirrored along the Y axis.
+    /// </summary>
+    public bool IsMirroredY { get; set; }
+
+    /// <summary>
+    /// Gets the unit number for multi-unit symbols.
+    /// </summary>
+    public int Unit { get; set; } = 1;
+
     /// <inheritdoc />
     public IReadOnlyList<ISchPin> Pins => _pins;
     internal List<KiCadSchPin> PinList => _pins;
@@ -157,6 +187,7 @@ public sealed class KiCadSchComponent : ISchComponent
 
     public void AddPin(ISchPin pin)
     {
+        ArgumentNullException.ThrowIfNull(pin);
         if (pin is not KiCadSchPin kpin)
             throw new ArgumentException($"Expected {nameof(KiCadSchPin)}", nameof(pin));
         _pins.Add(kpin);
@@ -166,6 +197,7 @@ public sealed class KiCadSchComponent : ISchComponent
 
     public void AddLine(ISchLine line)
     {
+        ArgumentNullException.ThrowIfNull(line);
         if (line is not KiCadSchLine kline)
             throw new ArgumentException($"Expected {nameof(KiCadSchLine)}", nameof(line));
         _lines.Add(kline);
@@ -175,6 +207,7 @@ public sealed class KiCadSchComponent : ISchComponent
 
     public void AddRectangle(ISchRectangle rectangle)
     {
+        ArgumentNullException.ThrowIfNull(rectangle);
         if (rectangle is not KiCadSchRectangle krect)
             throw new ArgumentException($"Expected {nameof(KiCadSchRectangle)}", nameof(rectangle));
         _rectangles.Add(krect);
@@ -184,6 +217,7 @@ public sealed class KiCadSchComponent : ISchComponent
 
     public void AddLabel(ISchLabel label)
     {
+        ArgumentNullException.ThrowIfNull(label);
         if (label is not KiCadSchLabel klabel)
             throw new ArgumentException($"Expected {nameof(KiCadSchLabel)}", nameof(label));
         _labels.Add(klabel);
@@ -193,6 +227,7 @@ public sealed class KiCadSchComponent : ISchComponent
 
     public void AddWire(ISchWire wire)
     {
+        ArgumentNullException.ThrowIfNull(wire);
         if (wire is not KiCadSchWire kwire)
             throw new ArgumentException($"Expected {nameof(KiCadSchWire)}", nameof(wire));
         _wires.Add(kwire);
@@ -202,6 +237,7 @@ public sealed class KiCadSchComponent : ISchComponent
 
     public void AddPolyline(ISchPolyline polyline)
     {
+        ArgumentNullException.ThrowIfNull(polyline);
         if (polyline is not KiCadSchPolyline kpoly)
             throw new ArgumentException($"Expected {nameof(KiCadSchPolyline)}", nameof(polyline));
         _polylines.Add(kpoly);
@@ -211,6 +247,7 @@ public sealed class KiCadSchComponent : ISchComponent
 
     public void AddPolygon(ISchPolygon polygon)
     {
+        ArgumentNullException.ThrowIfNull(polygon);
         if (polygon is not KiCadSchPolygon kpoly)
             throw new ArgumentException($"Expected {nameof(KiCadSchPolygon)}", nameof(polygon));
         _polygons.Add(kpoly);
@@ -220,6 +257,7 @@ public sealed class KiCadSchComponent : ISchComponent
 
     public void AddArc(ISchArc arc)
     {
+        ArgumentNullException.ThrowIfNull(arc);
         if (arc is not KiCadSchArc karc)
             throw new ArgumentException($"Expected {nameof(KiCadSchArc)}", nameof(arc));
         _arcs.Add(karc);
@@ -229,6 +267,7 @@ public sealed class KiCadSchComponent : ISchComponent
 
     public void AddCircle(ISchCircle circle)
     {
+        ArgumentNullException.ThrowIfNull(circle);
         if (circle is not KiCadSchCircle kcircle)
             throw new ArgumentException($"Expected {nameof(KiCadSchCircle)}", nameof(circle));
         _circles.Add(kcircle);
@@ -238,6 +277,7 @@ public sealed class KiCadSchComponent : ISchComponent
 
     public void AddBezier(ISchBezier bezier)
     {
+        ArgumentNullException.ThrowIfNull(bezier);
         if (bezier is not KiCadSchBezier kbez)
             throw new ArgumentException($"Expected {nameof(KiCadSchBezier)}", nameof(bezier));
         _beziers.Add(kbez);
@@ -247,6 +287,7 @@ public sealed class KiCadSchComponent : ISchComponent
 
     public void AddNetLabel(ISchNetLabel netLabel)
     {
+        ArgumentNullException.ThrowIfNull(netLabel);
         if (netLabel is not KiCadSchNetLabel knl)
             throw new ArgumentException($"Expected {nameof(KiCadSchNetLabel)}", nameof(netLabel));
         _netLabels.Add(knl);
@@ -256,6 +297,7 @@ public sealed class KiCadSchComponent : ISchComponent
 
     public void AddJunction(ISchJunction junction)
     {
+        ArgumentNullException.ThrowIfNull(junction);
         if (junction is not KiCadSchJunction kj)
             throw new ArgumentException($"Expected {nameof(KiCadSchJunction)}", nameof(junction));
         _junctions.Add(kj);
@@ -265,6 +307,7 @@ public sealed class KiCadSchComponent : ISchComponent
 
     public void AddImage(ISchImage image)
     {
+        ArgumentNullException.ThrowIfNull(image);
         if (image is not KiCadSchImage kimg)
             throw new ArgumentException($"Expected {nameof(KiCadSchImage)}", nameof(image));
         _images.Add(kimg);
@@ -274,6 +317,7 @@ public sealed class KiCadSchComponent : ISchComponent
 
     public void AddParameter(ISchParameter parameter)
     {
+        ArgumentNullException.ThrowIfNull(parameter);
         if (parameter is not KiCadSchParameter kparam)
             throw new ArgumentException($"Expected {nameof(KiCadSchParameter)}", nameof(parameter));
         _parameters.Add(kparam);
@@ -284,7 +328,11 @@ public sealed class KiCadSchComponent : ISchComponent
     /// <summary>
     /// Adds a sub-symbol to this component.
     /// </summary>
-    public void AddSubSymbol(KiCadSchComponent subSymbol) => _subSymbols.Add(subSymbol);
+    public void AddSubSymbol(KiCadSchComponent subSymbol)
+    {
+        ArgumentNullException.ThrowIfNull(subSymbol);
+        _subSymbols.Add(subSymbol);
+    }
 
     /// <summary>
     /// Removes a sub-symbol from this component.

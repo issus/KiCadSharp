@@ -62,5 +62,13 @@ public sealed class KiCadPcbText : IPcbText
     public bool IsHidden { get; set; }
 
     /// <inheritdoc />
-    public CoordRect Bounds => new(Location, Location);
+    public CoordRect Bounds
+    {
+        get
+        {
+            var fontSize = Height != Coord.Zero ? Height : Coord.FromMm(1.27);
+            var textWidth = Coord.FromMm((Text?.Length ?? 0) * fontSize.ToMm() * 0.6);
+            return CoordRect.FromCenterAndSize(Location, textWidth, fontSize);
+        }
+    }
 }

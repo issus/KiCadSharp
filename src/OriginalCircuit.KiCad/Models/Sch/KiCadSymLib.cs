@@ -66,6 +66,7 @@ public sealed class KiCadSymLib : ISchLibrary
     /// <inheritdoc />
     public void Add(ISchComponent component)
     {
+        ArgumentNullException.ThrowIfNull(component);
         if (component is KiCadSchComponent kc)
             _components.Add(kc);
         else
@@ -76,7 +77,11 @@ public sealed class KiCadSymLib : ISchLibrary
     /// Adds a KiCad schematic component to the library.
     /// </summary>
     /// <param name="component">The component to add.</param>
-    public void Add(KiCadSchComponent component) => _components.Add(component);
+    public void Add(KiCadSchComponent component)
+    {
+        ArgumentNullException.ThrowIfNull(component);
+        _components.Add(component);
+    }
 
     /// <inheritdoc />
     public async ValueTask SaveAsync(string path, SaveOptions? options = null, CancellationToken ct = default)
