@@ -49,6 +49,9 @@ TestResult.xml
 .DS_Store
 Thumbs.db
 
+## Benchmark results
+BenchmarkDotNet.Artifacts/
+
 ## Credentials
 *.env
 credentials.json

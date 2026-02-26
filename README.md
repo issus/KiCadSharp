@@ -1,5 +1,7 @@
 # OriginalCircuit.KiCad
 
+[![CI](https://github.com/issus/KiCadSharp/actions/workflows/ci.yml/badge.svg)](https://github.com/issus/KiCadSharp/actions/workflows/ci.yml)
+[![NuGet](https://img.shields.io/nuget/v/OriginalCircuit.KiCad)](https://www.nuget.org/packages/OriginalCircuit.KiCad)
 [![License](https://img.shields.io/github/license/issus/KiCadSharp)](LICENSE)
 
 A high-performance .NET library for reading and writing KiCad EDA files without requiring KiCad to be installed. It supports symbol libraries, footprints, schematic documents, and PCB layouts, and provides cross-platform rendering to raster images and SVG.
@@ -21,11 +23,10 @@ Install the core library:
 dotnet add package OriginalCircuit.KiCad
 ```
 
-Optional rendering packages:
+Optional rendering package (includes both raster and SVG output):
 
 ```
-dotnet add package OriginalCircuit.KiCad.Rendering.Raster   # PNG/JPG via SkiaSharp
-dotnet add package OriginalCircuit.KiCad.Rendering.Svg      # Vector SVG output
+dotnet add package OriginalCircuit.KiCad.Rendering
 ```
 
 ## Quick Start
