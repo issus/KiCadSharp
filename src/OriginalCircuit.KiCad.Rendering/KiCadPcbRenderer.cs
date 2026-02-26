@@ -69,13 +69,15 @@ public sealed class KiCadPcbRenderer
         foreach (var pad in component.Pads)
         {
             var p = pad;
-            items.Add((KiCadLayerColors.GetPriority("F.Cu"), () => RenderPad(p, ctx)));
+            var padLayer = p is KiCadPcbPad kp ? kp.Layers.FirstOrDefault() ?? "F.Cu" : "F.Cu";
+            items.Add((KiCadLayerColors.GetPriority(padLayer), () => RenderPad(p, ctx)));
         }
 
         foreach (var via in component.Vias)
         {
             var v = via;
-            items.Add((KiCadLayerColors.GetPriority("F.Cu") + 1, () => RenderVia(v, ctx)));
+            var viaLayer = v is KiCadPcbVia kv ? kv.StartLayerName ?? "F.Cu" : "F.Cu";
+            items.Add((KiCadLayerColors.GetPriority(viaLayer) + 1, () => RenderVia(v, ctx)));
         }
 
         // Sort by priority (lower drawn first) and render
