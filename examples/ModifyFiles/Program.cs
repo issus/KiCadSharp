@@ -15,7 +15,8 @@
 //   - Modify properties:      change properties on loaded components
 //
 // Documents (KiCadSch, KiCadPcb):
-//   - Modify collections by assigning new lists to the collection properties
+//   - Add items:              doc.AddWire(wire), doc.AddTrack(track), etc.
+//   - Remove items:           doc.RemoveWire(wire), doc.RemoveTrack(track), etc.
 //   - Access existing items via typed collections (Wires, Tracks, etc.)
 //
 // SAVING
@@ -54,47 +55,33 @@ Console.WriteLine("=== Modifying Symbol Library ===");
 // Step 1: Create and save an initial library with 2 symbols
 var symLib = new KiCadSymLib { Version = 20231120, Generator = "test" };
 
-symLib.Add(new KiCadSchComponent
+var rSymbol = new KiCadSchComponent
 {
     Name = "R",
     Description = "Resistor",
     InBom = true,
-    OnBoard = true,
-    Parameters = [new KiCadSchParameter { Name = "Reference", Value = "R", FontSizeWidth = Coord.FromMm(1.27), FontSizeHeight = Coord.FromMm(1.27) }],
-    SubSymbols =
-    [
-        new KiCadSchComponent
-        {
-            Name = "R_1_1",
-            Pins = (IReadOnlyList<ISchPin>)new List<KiCadSchPin>
-            {
-                new() { Name = "~", Designator = "1", Location = new CoordPoint(Coord.Zero, Coord.FromMm(3.81)), Length = Coord.FromMm(1.27), Orientation = PinOrientation.Down, ElectricalType = PinElectricalType.Passive },
-                new() { Name = "~", Designator = "2", Location = new CoordPoint(Coord.Zero, Coord.FromMm(-3.81)), Length = Coord.FromMm(1.27), Orientation = PinOrientation.Up, ElectricalType = PinElectricalType.Passive }
-            }
-        }
-    ]
-});
+    OnBoard = true
+};
+rSymbol.AddParameter(new KiCadSchParameter { Name = "Reference", Value = "R", FontSizeWidth = Coord.FromMm(1.27), FontSizeHeight = Coord.FromMm(1.27) });
+var rPins = new KiCadSchComponent { Name = "R_1_1" };
+rPins.AddPin(new KiCadSchPin { Name = "~", Designator = "1", Location = new CoordPoint(Coord.Zero, Coord.FromMm(3.81)), Length = Coord.FromMm(1.27), Orientation = PinOrientation.Down, ElectricalType = PinElectricalType.Passive });
+rPins.AddPin(new KiCadSchPin { Name = "~", Designator = "2", Location = new CoordPoint(Coord.Zero, Coord.FromMm(-3.81)), Length = Coord.FromMm(1.27), Orientation = PinOrientation.Up, ElectricalType = PinElectricalType.Passive });
+rSymbol.AddSubSymbol(rPins);
+symLib.Add(rSymbol);
 
-symLib.Add(new KiCadSchComponent
+var cSymbol = new KiCadSchComponent
 {
     Name = "C",
     Description = "Capacitor",
     InBom = true,
-    OnBoard = true,
-    Parameters = [new KiCadSchParameter { Name = "Reference", Value = "C", FontSizeWidth = Coord.FromMm(1.27), FontSizeHeight = Coord.FromMm(1.27) }],
-    SubSymbols =
-    [
-        new KiCadSchComponent
-        {
-            Name = "C_1_1",
-            Pins = (IReadOnlyList<ISchPin>)new List<KiCadSchPin>
-            {
-                new() { Name = "~", Designator = "1", Location = new CoordPoint(Coord.Zero, Coord.FromMm(2.54)), Length = Coord.FromMm(1.27), Orientation = PinOrientation.Down, ElectricalType = PinElectricalType.Passive },
-                new() { Name = "~", Designator = "2", Location = new CoordPoint(Coord.Zero, Coord.FromMm(-2.54)), Length = Coord.FromMm(1.27), Orientation = PinOrientation.Up, ElectricalType = PinElectricalType.Passive }
-            }
-        }
-    ]
-});
+    OnBoard = true
+};
+cSymbol.AddParameter(new KiCadSchParameter { Name = "Reference", Value = "C", FontSizeWidth = Coord.FromMm(1.27), FontSizeHeight = Coord.FromMm(1.27) });
+var cPins = new KiCadSchComponent { Name = "C_1_1" };
+cPins.AddPin(new KiCadSchPin { Name = "~", Designator = "1", Location = new CoordPoint(Coord.Zero, Coord.FromMm(2.54)), Length = Coord.FromMm(1.27), Orientation = PinOrientation.Down, ElectricalType = PinElectricalType.Passive });
+cPins.AddPin(new KiCadSchPin { Name = "~", Designator = "2", Location = new CoordPoint(Coord.Zero, Coord.FromMm(-2.54)), Length = Coord.FromMm(1.27), Orientation = PinOrientation.Up, ElectricalType = PinElectricalType.Passive });
+cSymbol.AddSubSymbol(cPins);
+symLib.Add(cSymbol);
 
 var symLibPath = Path.Combine(tempDir, "Modified.kicad_sym");
 await symLib.SaveAsync(symLibPath);
@@ -108,26 +95,19 @@ loadedSymLib.Remove("R");
 Console.WriteLine($"  After removing 'R': {loadedSymLib.Count} symbol(s)");
 
 // Step 4: Add a new symbol
-loadedSymLib.Add(new KiCadSchComponent
+var lSymbol = new KiCadSchComponent
 {
     Name = "L",
     Description = "Inductor",
     InBom = true,
-    OnBoard = true,
-    Parameters = [new KiCadSchParameter { Name = "Reference", Value = "L", FontSizeWidth = Coord.FromMm(1.27), FontSizeHeight = Coord.FromMm(1.27) }],
-    SubSymbols =
-    [
-        new KiCadSchComponent
-        {
-            Name = "L_1_1",
-            Pins = (IReadOnlyList<ISchPin>)new List<KiCadSchPin>
-            {
-                new() { Name = "~", Designator = "1", Location = new CoordPoint(Coord.Zero, Coord.FromMm(2.54)), Length = Coord.FromMm(1.27), Orientation = PinOrientation.Down, ElectricalType = PinElectricalType.Passive },
-                new() { Name = "~", Designator = "2", Location = new CoordPoint(Coord.Zero, Coord.FromMm(-2.54)), Length = Coord.FromMm(1.27), Orientation = PinOrientation.Up, ElectricalType = PinElectricalType.Passive }
-            }
-        }
-    ]
-});
+    OnBoard = true
+};
+lSymbol.AddParameter(new KiCadSchParameter { Name = "Reference", Value = "L", FontSizeWidth = Coord.FromMm(1.27), FontSizeHeight = Coord.FromMm(1.27) });
+var lPins = new KiCadSchComponent { Name = "L_1_1" };
+lPins.AddPin(new KiCadSchPin { Name = "~", Designator = "1", Location = new CoordPoint(Coord.Zero, Coord.FromMm(2.54)), Length = Coord.FromMm(1.27), Orientation = PinOrientation.Down, ElectricalType = PinElectricalType.Passive });
+lPins.AddPin(new KiCadSchPin { Name = "~", Designator = "2", Location = new CoordPoint(Coord.Zero, Coord.FromMm(-2.54)), Length = Coord.FromMm(1.27), Orientation = PinOrientation.Up, ElectricalType = PinElectricalType.Passive });
+lSymbol.AddSubSymbol(lPins);
+loadedSymLib.Add(lSymbol);
 Console.WriteLine($"  After adding 'L': {loadedSymLib.Count} symbol(s)");
 
 // Step 5: Save and verify
@@ -173,13 +153,10 @@ var fp = new KiCadPcbComponent
     Name = "R_0805",
     Description = "0805 Resistor",
     LayerName = "F.Cu",
-    Attributes = FootprintAttribute.Smd,
-    Pads = (IReadOnlyList<IPcbPad>)new List<KiCadPcbPad>
-    {
-        new() { Designator = "1", Location = new CoordPoint(Coord.FromMm(-0.9), Coord.Zero), Size = new CoordPoint(Coord.FromMm(1.0), Coord.FromMm(1.4)), Shape = PadShape.RoundRect, PadType = PadType.Smd, Layers = ["F.Cu", "F.Paste", "F.Mask"] },
-        new() { Designator = "2", Location = new CoordPoint(Coord.FromMm(0.9), Coord.Zero), Size = new CoordPoint(Coord.FromMm(1.0), Coord.FromMm(1.4)), Shape = PadShape.RoundRect, PadType = PadType.Smd, Layers = ["F.Cu", "F.Paste", "F.Mask"] }
-    }
+    Attributes = FootprintAttribute.Smd
 };
+fp.AddPad(new KiCadPcbPad { Designator = "1", Location = new CoordPoint(Coord.FromMm(-0.9), Coord.Zero), Size = new CoordPoint(Coord.FromMm(1.0), Coord.FromMm(1.4)), Shape = PadShape.RoundRect, PadType = PadType.Smd, Layers = ["F.Cu", "F.Paste", "F.Mask"] });
+fp.AddPad(new KiCadPcbPad { Designator = "2", Location = new CoordPoint(Coord.FromMm(0.9), Coord.Zero), Size = new CoordPoint(Coord.FromMm(1.0), Coord.FromMm(1.4)), Shape = PadShape.RoundRect, PadType = PadType.Smd, Layers = ["F.Cu", "F.Paste", "F.Mask"] });
 
 var fpPath = Path.Combine(tempDir, "Modified.kicad_mod");
 await FootprintWriter.WriteAsync(fp, fpPath);
@@ -214,12 +191,9 @@ var sch = new KiCadSch
 {
     Version = 20231120,
     Generator = "test",
-    Uuid = Guid.NewGuid().ToString("D"),
-    Wires = (IReadOnlyList<ISchWire>)new List<KiCadSchWire>
-    {
-        new() { Vertices = [new CoordPoint(Coord.FromMm(100), Coord.FromMm(100)), new CoordPoint(Coord.FromMm(110), Coord.FromMm(100))], Uuid = Guid.NewGuid().ToString("D") }
-    }
+    Uuid = Guid.NewGuid().ToString("D")
 };
+sch.AddWire(new KiCadSchWire { Vertices = [new CoordPoint(Coord.FromMm(100), Coord.FromMm(100)), new CoordPoint(Coord.FromMm(110), Coord.FromMm(100))], Uuid = Guid.NewGuid().ToString("D") });
 
 var schPath = Path.Combine(tempDir, "Modified.kicad_sch");
 await sch.SaveAsync(schPath);
@@ -228,24 +202,20 @@ Console.WriteLine($"  Initial: {sch.Wires.Count} wire, {sch.NetLabels.Count} net
 // Load and add more connectivity
 var loadedSch = await SchReader.ReadAsync(schPath);
 
-// Add a new wire by creating a new list that includes existing + new wires
-var wires = loadedSch.Wires.Cast<KiCadSchWire>().ToList();
-wires.Add(new KiCadSchWire
+// Add a new wire directly
+loadedSch.AddWire(new KiCadSchWire
 {
     Vertices = [new CoordPoint(Coord.FromMm(110), Coord.FromMm(100)), new CoordPoint(Coord.FromMm(110), Coord.FromMm(90))],
     Uuid = Guid.NewGuid().ToString("D")
 });
-loadedSch.Wires = wires;
 
 // Add a net label
-var netLabels = loadedSch.NetLabels.Cast<KiCadSchNetLabel>().ToList();
-netLabels.Add(new KiCadSchNetLabel
+loadedSch.AddNetLabel(new KiCadSchNetLabel
 {
     Text = "DATA_BUS",
     Location = new CoordPoint(Coord.FromMm(110), Coord.FromMm(90)),
     Uuid = Guid.NewGuid().ToString("D")
 });
-loadedSch.NetLabels = netLabels;
 
 Console.WriteLine($"  After modification: {loadedSch.Wires.Count} wires, {loadedSch.NetLabels.Count} net labels");
 
@@ -271,13 +241,12 @@ var pcb = new KiCadPcb
 {
     Version = 20231014,
     Generator = "test",
-    BoardThickness = Coord.FromMm(1.6),
-    Nets = [(0, ""), (1, "VCC"), (2, "GND")],
-    Tracks = (IReadOnlyList<IPcbTrack>)new List<KiCadPcbTrack>
-    {
-        new() { Start = new CoordPoint(Coord.FromMm(100), Coord.FromMm(100)), End = new CoordPoint(Coord.FromMm(110), Coord.FromMm(100)), Width = Coord.FromMm(0.25), LayerName = "F.Cu", Net = 1, Uuid = Guid.NewGuid().ToString("D") }
-    }
+    BoardThickness = Coord.FromMm(1.6)
 };
+pcb.AddNet(0, "");
+pcb.AddNet(1, "VCC");
+pcb.AddNet(2, "GND");
+pcb.AddTrack(new KiCadPcbTrack { Start = new CoordPoint(Coord.FromMm(100), Coord.FromMm(100)), End = new CoordPoint(Coord.FromMm(110), Coord.FromMm(100)), Width = Coord.FromMm(0.25), LayerName = "F.Cu", Net = 1, Uuid = Guid.NewGuid().ToString("D") });
 
 var pcbPath = Path.Combine(tempDir, "Modified.kicad_pcb");
 await pcb.SaveAsync(pcbPath);
@@ -286,9 +255,8 @@ Console.WriteLine($"  Initial: {pcb.Tracks.Count} track, {pcb.Vias.Count} vias")
 // Load and add more routing
 var loadedPcb = await PcbReader.ReadAsync(pcbPath);
 
-// Add tracks by extending the collection
-var tracks = loadedPcb.Tracks.Cast<KiCadPcbTrack>().ToList();
-tracks.Add(new KiCadPcbTrack
+// Add tracks directly
+loadedPcb.AddTrack(new KiCadPcbTrack
 {
     Start = new CoordPoint(Coord.FromMm(110), Coord.FromMm(100)),
     End = new CoordPoint(Coord.FromMm(110), Coord.FromMm(90)),
@@ -297,7 +265,7 @@ tracks.Add(new KiCadPcbTrack
     Net = 1,
     Uuid = Guid.NewGuid().ToString("D")
 });
-tracks.Add(new KiCadPcbTrack
+loadedPcb.AddTrack(new KiCadPcbTrack
 {
     Start = new CoordPoint(Coord.FromMm(110), Coord.FromMm(90)),
     End = new CoordPoint(Coord.FromMm(120), Coord.FromMm(90)),
@@ -306,11 +274,9 @@ tracks.Add(new KiCadPcbTrack
     Net = 1,
     Uuid = Guid.NewGuid().ToString("D")
 });
-loadedPcb.Tracks = tracks;
 
 // Add a via at the corner
-var vias = loadedPcb.Vias.Cast<KiCadPcbVia>().ToList();
-vias.Add(new KiCadPcbVia
+loadedPcb.AddVia(new KiCadPcbVia
 {
     Location = new CoordPoint(Coord.FromMm(110), Coord.FromMm(100)),
     Diameter = Coord.FromMm(0.8),
@@ -320,7 +286,6 @@ vias.Add(new KiCadPcbVia
     Net = 1,
     Uuid = Guid.NewGuid().ToString("D")
 });
-loadedPcb.Vias = vias;
 
 Console.WriteLine($"  After modification: {loadedPcb.Tracks.Count} tracks, {loadedPcb.Vias.Count} vias");
 

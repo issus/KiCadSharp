@@ -73,61 +73,46 @@ var resistor = new KiCadSchComponent
     Description = "Resistor",
     InBom = true,
     OnBoard = true,
-    PinNamesOffset = Coord.FromMm(1.0),
-    Parameters =
-    [
-        new KiCadSchParameter { Name = "Reference", Value = "R", Location = new CoordPoint(Coord.FromMm(2.032), Coord.Zero), Orientation = 90, FontSizeWidth = Coord.FromMm(1.27), FontSizeHeight = Coord.FromMm(1.27) },
-        new KiCadSchParameter { Name = "Value", Value = "R", Location = new CoordPoint(Coord.FromMm(-2.032), Coord.Zero), Orientation = 90, FontSizeWidth = Coord.FromMm(1.27), FontSizeHeight = Coord.FromMm(1.27) }
-    ],
-    // SubSymbols hold the graphical body
-    SubSymbols =
-    [
-        // Graphics unit: the rectangle body
-        new KiCadSchComponent
-        {
-            Name = "R_0_1",
-            Rectangles = (IReadOnlyList<ISchRectangle>)new List<KiCadSchRectangle>
-            {
-                new()
-                {
-                    Corner1 = new CoordPoint(Coord.FromMm(-1.016), Coord.FromMm(-2.54)),
-                    Corner2 = new CoordPoint(Coord.FromMm(1.016), Coord.FromMm(2.54)),
-                    LineWidth = Coord.FromMm(0.254),
-                    FillType = SchFillType.Background,
-                    IsFilled = true
-                }
-            }
-        },
-        // Pin unit: pins live here
-        new KiCadSchComponent
-        {
-            Name = "R_1_1",
-            Pins = (IReadOnlyList<ISchPin>)new List<KiCadSchPin>
-            {
-                new()
-                {
-                    Name = "~",
-                    Designator = "1",
-                    Location = new CoordPoint(Coord.Zero, Coord.FromMm(3.81)),
-                    Length = Coord.FromMm(1.27),
-                    Orientation = PinOrientation.Down,
-                    ElectricalType = PinElectricalType.Passive,
-                    GraphicStyle = PinGraphicStyle.Line
-                },
-                new()
-                {
-                    Name = "~",
-                    Designator = "2",
-                    Location = new CoordPoint(Coord.Zero, Coord.FromMm(-3.81)),
-                    Length = Coord.FromMm(1.27),
-                    Orientation = PinOrientation.Up,
-                    ElectricalType = PinElectricalType.Passive,
-                    GraphicStyle = PinGraphicStyle.Line
-                }
-            }
-        }
-    ]
+    PinNamesOffset = Coord.FromMm(1.0)
 };
+resistor.AddParameter(new KiCadSchParameter { Name = "Reference", Value = "R", Location = new CoordPoint(Coord.FromMm(2.032), Coord.Zero), Orientation = 90, FontSizeWidth = Coord.FromMm(1.27), FontSizeHeight = Coord.FromMm(1.27) });
+resistor.AddParameter(new KiCadSchParameter { Name = "Value", Value = "R", Location = new CoordPoint(Coord.FromMm(-2.032), Coord.Zero), Orientation = 90, FontSizeWidth = Coord.FromMm(1.27), FontSizeHeight = Coord.FromMm(1.27) });
+
+// Graphics unit: the rectangle body
+var resistorGraphics = new KiCadSchComponent { Name = "R_0_1" };
+resistorGraphics.AddRectangle(new KiCadSchRectangle
+{
+    Corner1 = new CoordPoint(Coord.FromMm(-1.016), Coord.FromMm(-2.54)),
+    Corner2 = new CoordPoint(Coord.FromMm(1.016), Coord.FromMm(2.54)),
+    LineWidth = Coord.FromMm(0.254),
+    FillType = SchFillType.Background,
+    IsFilled = true
+});
+resistor.AddSubSymbol(resistorGraphics);
+
+// Pin unit: pins live here
+var resistorPins = new KiCadSchComponent { Name = "R_1_1" };
+resistorPins.AddPin(new KiCadSchPin
+{
+    Name = "~",
+    Designator = "1",
+    Location = new CoordPoint(Coord.Zero, Coord.FromMm(3.81)),
+    Length = Coord.FromMm(1.27),
+    Orientation = PinOrientation.Down,
+    ElectricalType = PinElectricalType.Passive,
+    GraphicStyle = PinGraphicStyle.Line
+});
+resistorPins.AddPin(new KiCadSchPin
+{
+    Name = "~",
+    Designator = "2",
+    Location = new CoordPoint(Coord.Zero, Coord.FromMm(-3.81)),
+    Length = Coord.FromMm(1.27),
+    Orientation = PinOrientation.Up,
+    ElectricalType = PinElectricalType.Passive,
+    GraphicStyle = PinGraphicStyle.Line
+});
+resistor.AddSubSymbol(resistorPins);
 
 symLib.Add(resistor);
 
@@ -138,75 +123,61 @@ var opamp = new KiCadSchComponent
     Name = "OPA",
     Description = "Operational Amplifier",
     InBom = true,
-    OnBoard = true,
-    Parameters =
-    [
-        new KiCadSchParameter { Name = "Reference", Value = "U", Location = new CoordPoint(Coord.FromMm(5.08), Coord.FromMm(3.81)), FontSizeWidth = Coord.FromMm(1.27), FontSizeHeight = Coord.FromMm(1.27) },
-        new KiCadSchParameter { Name = "Value", Value = "OPA", Location = new CoordPoint(Coord.FromMm(5.08), Coord.FromMm(-3.81)), FontSizeWidth = Coord.FromMm(1.27), FontSizeHeight = Coord.FromMm(1.27) }
-    ],
-    SubSymbols =
-    [
-        // Graphics unit: triangle body using a polygon
-        new KiCadSchComponent
-        {
-            Name = "OPA_0_1",
-            Polygons = (IReadOnlyList<ISchPolygon>)new List<KiCadSchPolygon>
-            {
-                new()
-                {
-                    Vertices =
-                    [
-                        new CoordPoint(Coord.FromMm(-2.54), Coord.FromMm(-5.08)),
-                        new CoordPoint(Coord.FromMm(-2.54), Coord.FromMm(5.08)),
-                        new CoordPoint(Coord.FromMm(5.08), Coord.Zero),
-                        new CoordPoint(Coord.FromMm(-2.54), Coord.FromMm(-5.08))
-                    ],
-                    LineWidth = Coord.FromMm(0.254),
-                    FillType = SchFillType.Background,
-                    IsFilled = true
-                }
-            }
-        },
-        // Pin unit
-        new KiCadSchComponent
-        {
-            Name = "OPA_1_1",
-            Pins = (IReadOnlyList<ISchPin>)new List<KiCadSchPin>
-            {
-                new()
-                {
-                    Name = "+",
-                    Designator = "1",
-                    Location = new CoordPoint(Coord.FromMm(-5.08), Coord.FromMm(2.54)),
-                    Length = Coord.FromMm(2.54),
-                    Orientation = PinOrientation.Right,
-                    ElectricalType = PinElectricalType.Input,
-                    GraphicStyle = PinGraphicStyle.Line
-                },
-                new()
-                {
-                    Name = "-",
-                    Designator = "2",
-                    Location = new CoordPoint(Coord.FromMm(-5.08), Coord.FromMm(-2.54)),
-                    Length = Coord.FromMm(2.54),
-                    Orientation = PinOrientation.Right,
-                    ElectricalType = PinElectricalType.Input,
-                    GraphicStyle = PinGraphicStyle.Line
-                },
-                new()
-                {
-                    Name = "OUT",
-                    Designator = "3",
-                    Location = new CoordPoint(Coord.FromMm(7.62), Coord.Zero),
-                    Length = Coord.FromMm(2.54),
-                    Orientation = PinOrientation.Left,
-                    ElectricalType = PinElectricalType.Output,
-                    GraphicStyle = PinGraphicStyle.Line
-                }
-            }
-        }
-    ]
+    OnBoard = true
 };
+opamp.AddParameter(new KiCadSchParameter { Name = "Reference", Value = "U", Location = new CoordPoint(Coord.FromMm(5.08), Coord.FromMm(3.81)), FontSizeWidth = Coord.FromMm(1.27), FontSizeHeight = Coord.FromMm(1.27) });
+opamp.AddParameter(new KiCadSchParameter { Name = "Value", Value = "OPA", Location = new CoordPoint(Coord.FromMm(5.08), Coord.FromMm(-3.81)), FontSizeWidth = Coord.FromMm(1.27), FontSizeHeight = Coord.FromMm(1.27) });
+
+// Graphics unit: triangle body using a polygon
+var opampGraphics = new KiCadSchComponent { Name = "OPA_0_1" };
+opampGraphics.AddPolygon(new KiCadSchPolygon
+{
+    Vertices =
+    [
+        new CoordPoint(Coord.FromMm(-2.54), Coord.FromMm(-5.08)),
+        new CoordPoint(Coord.FromMm(-2.54), Coord.FromMm(5.08)),
+        new CoordPoint(Coord.FromMm(5.08), Coord.Zero),
+        new CoordPoint(Coord.FromMm(-2.54), Coord.FromMm(-5.08))
+    ],
+    LineWidth = Coord.FromMm(0.254),
+    FillType = SchFillType.Background,
+    IsFilled = true
+});
+opamp.AddSubSymbol(opampGraphics);
+
+// Pin unit
+var opampPins = new KiCadSchComponent { Name = "OPA_1_1" };
+opampPins.AddPin(new KiCadSchPin
+{
+    Name = "+",
+    Designator = "1",
+    Location = new CoordPoint(Coord.FromMm(-5.08), Coord.FromMm(2.54)),
+    Length = Coord.FromMm(2.54),
+    Orientation = PinOrientation.Right,
+    ElectricalType = PinElectricalType.Input,
+    GraphicStyle = PinGraphicStyle.Line
+});
+opampPins.AddPin(new KiCadSchPin
+{
+    Name = "-",
+    Designator = "2",
+    Location = new CoordPoint(Coord.FromMm(-5.08), Coord.FromMm(-2.54)),
+    Length = Coord.FromMm(2.54),
+    Orientation = PinOrientation.Right,
+    ElectricalType = PinElectricalType.Input,
+    GraphicStyle = PinGraphicStyle.Line
+});
+opampPins.AddPin(new KiCadSchPin
+{
+    Name = "OUT",
+    Designator = "3",
+    Location = new CoordPoint(Coord.FromMm(7.62), Coord.Zero),
+    Length = Coord.FromMm(2.54),
+    Orientation = PinOrientation.Left,
+    ElectricalType = PinElectricalType.Output,
+    GraphicStyle = PinGraphicStyle.Line
+});
+opamp.AddSubSymbol(opampPins);
 
 symLib.Add(opamp);
 
@@ -244,50 +215,34 @@ var resistorFp = new KiCadPcbComponent
     Description = "Resistor SMD 0805 (2012 Metric)",
     LayerName = "F.Cu",
     Tags = "resistor smd 0805",
-    Attributes = FootprintAttribute.Smd,
-    // Properties describe the reference and value text fields
-    Properties =
-    [
-        new KiCadSchParameter { Name = "Reference", Value = "REF**", Location = new CoordPoint(Coord.Zero, Coord.FromMm(-1.65)), FontSizeWidth = Coord.FromMm(1.0), FontSizeHeight = Coord.FromMm(1.0) },
-        new KiCadSchParameter { Name = "Value", Value = "R_0805", Location = new CoordPoint(Coord.Zero, Coord.FromMm(1.65)), FontSizeWidth = Coord.FromMm(1.0), FontSizeHeight = Coord.FromMm(1.0) }
-    ],
-    // Rounded-rectangle SMD pads
-    Pads = (IReadOnlyList<IPcbPad>)new List<KiCadPcbPad>
-    {
-        new()
-        {
-            Designator = "1",
-            Location = new CoordPoint(Coord.FromMm(-0.9125), Coord.Zero),
-            Size = new CoordPoint(Coord.FromMm(1.025), Coord.FromMm(1.4)),
-            Shape = PadShape.RoundRect,
-            PadType = PadType.Smd,
-            CornerRadiusPercentage = 25,
-            Layers = ["F.Cu", "F.Paste", "F.Mask"]
-        },
-        new()
-        {
-            Designator = "2",
-            Location = new CoordPoint(Coord.FromMm(0.9125), Coord.Zero),
-            Size = new CoordPoint(Coord.FromMm(1.025), Coord.FromMm(1.4)),
-            Shape = PadShape.RoundRect,
-            PadType = PadType.Smd,
-            CornerRadiusPercentage = 25,
-            Layers = ["F.Cu", "F.Paste", "F.Mask"]
-        }
-    },
-    // Silkscreen lines
-    Tracks = (IReadOnlyList<IPcbTrack>)new List<KiCadPcbTrack>
-    {
-        new() { Start = new CoordPoint(Coord.FromMm(-0.261252), Coord.FromMm(-0.71)), End = new CoordPoint(Coord.FromMm(0.261252), Coord.FromMm(-0.71)), Width = Coord.FromMm(0.12), LayerName = "F.SilkS" },
-        new() { Start = new CoordPoint(Coord.FromMm(-0.261252), Coord.FromMm(0.71)), End = new CoordPoint(Coord.FromMm(0.261252), Coord.FromMm(0.71)), Width = Coord.FromMm(0.12), LayerName = "F.SilkS" }
-    },
-    // Reference and value text
-    Texts = (IReadOnlyList<IPcbText>)new List<KiCadPcbText>
-    {
-        new() { Text = "REF**", TextType = "reference", Location = new CoordPoint(Coord.Zero, Coord.FromMm(-1.65)), Height = Coord.FromMm(1.0), LayerName = "F.SilkS" },
-        new() { Text = "R_0805", TextType = "value", Location = new CoordPoint(Coord.Zero, Coord.FromMm(1.65)), Height = Coord.FromMm(1.0), LayerName = "F.Fab" }
-    }
+    Attributes = FootprintAttribute.Smd
 };
+resistorFp.AddProperty(new KiCadSchParameter { Name = "Reference", Value = "REF**", Location = new CoordPoint(Coord.Zero, Coord.FromMm(-1.65)), FontSizeWidth = Coord.FromMm(1.0), FontSizeHeight = Coord.FromMm(1.0) });
+resistorFp.AddProperty(new KiCadSchParameter { Name = "Value", Value = "R_0805", Location = new CoordPoint(Coord.Zero, Coord.FromMm(1.65)), FontSizeWidth = Coord.FromMm(1.0), FontSizeHeight = Coord.FromMm(1.0) });
+resistorFp.AddPad(new KiCadPcbPad
+{
+    Designator = "1",
+    Location = new CoordPoint(Coord.FromMm(-0.9125), Coord.Zero),
+    Size = new CoordPoint(Coord.FromMm(1.025), Coord.FromMm(1.4)),
+    Shape = PadShape.RoundRect,
+    PadType = PadType.Smd,
+    CornerRadiusPercentage = 25,
+    Layers = ["F.Cu", "F.Paste", "F.Mask"]
+});
+resistorFp.AddPad(new KiCadPcbPad
+{
+    Designator = "2",
+    Location = new CoordPoint(Coord.FromMm(0.9125), Coord.Zero),
+    Size = new CoordPoint(Coord.FromMm(1.025), Coord.FromMm(1.4)),
+    Shape = PadShape.RoundRect,
+    PadType = PadType.Smd,
+    CornerRadiusPercentage = 25,
+    Layers = ["F.Cu", "F.Paste", "F.Mask"]
+});
+resistorFp.AddTrack(new KiCadPcbTrack { Start = new CoordPoint(Coord.FromMm(-0.261252), Coord.FromMm(-0.71)), End = new CoordPoint(Coord.FromMm(0.261252), Coord.FromMm(-0.71)), Width = Coord.FromMm(0.12), LayerName = "F.SilkS" });
+resistorFp.AddTrack(new KiCadPcbTrack { Start = new CoordPoint(Coord.FromMm(-0.261252), Coord.FromMm(0.71)), End = new CoordPoint(Coord.FromMm(0.261252), Coord.FromMm(0.71)), Width = Coord.FromMm(0.12), LayerName = "F.SilkS" });
+resistorFp.AddText(new KiCadPcbText { Text = "REF**", TextType = "reference", Location = new CoordPoint(Coord.Zero, Coord.FromMm(-1.65)), Height = Coord.FromMm(1.0), LayerName = "F.SilkS" });
+resistorFp.AddText(new KiCadPcbText { Text = "R_0805", TextType = "value", Location = new CoordPoint(Coord.Zero, Coord.FromMm(1.65)), Height = Coord.FromMm(1.0), LayerName = "F.Fab" });
 
 var fpPath = Path.Combine(outputDir, "R_0805_2012Metric.kicad_mod");
 await FootprintWriter.WriteAsync(resistorFp, fpPath);
@@ -316,42 +271,33 @@ var sch = new KiCadSch
     Version = 20231120,
     Generator = "KiCadSharpExample",
     GeneratorVersion = "1.0",
-    Uuid = Guid.NewGuid().ToString("D"),
-    // Wires create electrical connections between pins
-    Wires = (IReadOnlyList<ISchWire>)new List<KiCadSchWire>
-    {
-        new()
-        {
-            Vertices = [new CoordPoint(Coord.FromMm(127), Coord.FromMm(80.01)), new CoordPoint(Coord.FromMm(127), Coord.FromMm(73.66))],
-            Uuid = Guid.NewGuid().ToString("D")
-        },
-        new()
-        {
-            Vertices = [new CoordPoint(Coord.FromMm(127), Coord.FromMm(95.25)), new CoordPoint(Coord.FromMm(127), Coord.FromMm(101.6))],
-            Uuid = Guid.NewGuid().ToString("D")
-        }
-    },
-    // Net labels name wire segments
-    NetLabels = (IReadOnlyList<ISchNetLabel>)new List<KiCadSchNetLabel>
-    {
-        new()
-        {
-            Text = "VCC",
-            Location = new CoordPoint(Coord.FromMm(127), Coord.FromMm(73.66)),
-            Uuid = Guid.NewGuid().ToString("D")
-        }
-    },
-    // Junctions mark intentional wire connections
-    Junctions = (IReadOnlyList<ISchJunction>)new List<KiCadSchJunction>
-    {
-        new()
-        {
-            Location = new CoordPoint(Coord.FromMm(127), Coord.FromMm(73.66)),
-            Size = Coord.FromMm(0.9),
-            Uuid = Guid.NewGuid().ToString("D")
-        }
-    }
+    Uuid = Guid.NewGuid().ToString("D")
 };
+// Wires create electrical connections between pins
+sch.AddWire(new KiCadSchWire
+{
+    Vertices = [new CoordPoint(Coord.FromMm(127), Coord.FromMm(80.01)), new CoordPoint(Coord.FromMm(127), Coord.FromMm(73.66))],
+    Uuid = Guid.NewGuid().ToString("D")
+});
+sch.AddWire(new KiCadSchWire
+{
+    Vertices = [new CoordPoint(Coord.FromMm(127), Coord.FromMm(95.25)), new CoordPoint(Coord.FromMm(127), Coord.FromMm(101.6))],
+    Uuid = Guid.NewGuid().ToString("D")
+});
+// Net labels name wire segments
+sch.AddNetLabel(new KiCadSchNetLabel
+{
+    Text = "VCC",
+    Location = new CoordPoint(Coord.FromMm(127), Coord.FromMm(73.66)),
+    Uuid = Guid.NewGuid().ToString("D")
+});
+// Junctions mark intentional wire connections
+sch.AddJunction(new KiCadSchJunction
+{
+    Location = new CoordPoint(Coord.FromMm(127), Coord.FromMm(73.66)),
+    Size = Coord.FromMm(0.9),
+    Uuid = Guid.NewGuid().ToString("D")
+});
 
 var schPath = Path.Combine(outputDir, "MySchematic.kicad_sch");
 await sch.SaveAsync(schPath);
@@ -380,58 +326,52 @@ var pcb = new KiCadPcb
     Version = 20231014,
     Generator = "KiCadSharpExample",
     GeneratorVersion = "1.0",
-    BoardThickness = Coord.FromMm(1.6),
-    // Net definitions
-    Nets = [(0, ""), (1, "VCC"), (2, "GND"), (3, "SIG")],
-    // Copper traces
-    Tracks = (IReadOnlyList<IPcbTrack>)new List<KiCadPcbTrack>
-    {
-        new()
-        {
-            Start = new CoordPoint(Coord.FromMm(100), Coord.FromMm(100)),
-            End = new CoordPoint(Coord.FromMm(110), Coord.FromMm(100)),
-            Width = Coord.FromMm(0.25),
-            LayerName = "F.Cu",
-            Net = 1,
-            Uuid = Guid.NewGuid().ToString("D")
-        },
-        new()
-        {
-            Start = new CoordPoint(Coord.FromMm(110), Coord.FromMm(100)),
-            End = new CoordPoint(Coord.FromMm(110), Coord.FromMm(110)),
-            Width = Coord.FromMm(0.25),
-            LayerName = "F.Cu",
-            Net = 1,
-            Uuid = Guid.NewGuid().ToString("D")
-        }
-    },
-    // Vias connect copper between layers
-    Vias = (IReadOnlyList<IPcbVia>)new List<KiCadPcbVia>
-    {
-        new()
-        {
-            Location = new CoordPoint(Coord.FromMm(110), Coord.FromMm(110)),
-            Diameter = Coord.FromMm(0.8),
-            HoleSize = Coord.FromMm(0.4),
-            StartLayerName = "F.Cu",
-            EndLayerName = "B.Cu",
-            Net = 1,
-            Uuid = Guid.NewGuid().ToString("D")
-        }
-    },
-    // Board text
-    Texts = (IReadOnlyList<IPcbText>)new List<KiCadPcbText>
-    {
-        new()
-        {
-            Text = "KiCadSharp Example Board",
-            Location = new CoordPoint(Coord.FromMm(105), Coord.FromMm(95)),
-            Height = Coord.FromMm(1.5),
-            LayerName = "F.SilkS",
-            Uuid = Guid.NewGuid().ToString("D")
-        }
-    }
+    BoardThickness = Coord.FromMm(1.6)
 };
+// Net definitions
+pcb.AddNet(0, "");
+pcb.AddNet(1, "VCC");
+pcb.AddNet(2, "GND");
+pcb.AddNet(3, "SIG");
+// Copper traces
+pcb.AddTrack(new KiCadPcbTrack
+{
+    Start = new CoordPoint(Coord.FromMm(100), Coord.FromMm(100)),
+    End = new CoordPoint(Coord.FromMm(110), Coord.FromMm(100)),
+    Width = Coord.FromMm(0.25),
+    LayerName = "F.Cu",
+    Net = 1,
+    Uuid = Guid.NewGuid().ToString("D")
+});
+pcb.AddTrack(new KiCadPcbTrack
+{
+    Start = new CoordPoint(Coord.FromMm(110), Coord.FromMm(100)),
+    End = new CoordPoint(Coord.FromMm(110), Coord.FromMm(110)),
+    Width = Coord.FromMm(0.25),
+    LayerName = "F.Cu",
+    Net = 1,
+    Uuid = Guid.NewGuid().ToString("D")
+});
+// Vias connect copper between layers
+pcb.AddVia(new KiCadPcbVia
+{
+    Location = new CoordPoint(Coord.FromMm(110), Coord.FromMm(110)),
+    Diameter = Coord.FromMm(0.8),
+    HoleSize = Coord.FromMm(0.4),
+    StartLayerName = "F.Cu",
+    EndLayerName = "B.Cu",
+    Net = 1,
+    Uuid = Guid.NewGuid().ToString("D")
+});
+// Board text
+pcb.AddText(new KiCadPcbText
+{
+    Text = "KiCadSharp Example Board",
+    Location = new CoordPoint(Coord.FromMm(105), Coord.FromMm(95)),
+    Height = Coord.FromMm(1.5),
+    LayerName = "F.SilkS",
+    Uuid = Guid.NewGuid().ToString("D")
+});
 
 var pcbPath = Path.Combine(outputDir, "MyBoard.kicad_pcb");
 await pcb.SaveAsync(pcbPath);

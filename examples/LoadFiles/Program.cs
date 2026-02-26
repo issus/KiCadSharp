@@ -226,33 +226,19 @@ static async Task CreateTestFilesAsync(string dir)
         Name = "R",
         Description = "Resistor",
         InBom = true,
-        OnBoard = true,
-        Parameters =
-        [
-            new KiCadSchParameter { Name = "Reference", Value = "R", FontSizeWidth = Coord.FromMm(1.27), FontSizeHeight = Coord.FromMm(1.27) },
-            new KiCadSchParameter { Name = "Value", Value = "R", FontSizeWidth = Coord.FromMm(1.27), FontSizeHeight = Coord.FromMm(1.27) }
-        ],
-        SubSymbols =
-        [
-            new KiCadSchComponent
-            {
-                Name = "R_0_1",
-                Rectangles = (IReadOnlyList<ISchRectangle>)new List<KiCadSchRectangle>
-                {
-                    new() { Corner1 = new CoordPoint(Coord.FromMm(-1.016), Coord.FromMm(-2.54)), Corner2 = new CoordPoint(Coord.FromMm(1.016), Coord.FromMm(2.54)), LineWidth = Coord.FromMm(0.254), FillType = SchFillType.Background, IsFilled = true }
-                }
-            },
-            new KiCadSchComponent
-            {
-                Name = "R_1_1",
-                Pins = (IReadOnlyList<ISchPin>)new List<KiCadSchPin>
-                {
-                    new() { Name = "~", Designator = "1", Location = new CoordPoint(Coord.Zero, Coord.FromMm(3.81)), Length = Coord.FromMm(1.27), Orientation = PinOrientation.Down, ElectricalType = PinElectricalType.Passive },
-                    new() { Name = "~", Designator = "2", Location = new CoordPoint(Coord.Zero, Coord.FromMm(-3.81)), Length = Coord.FromMm(1.27), Orientation = PinOrientation.Up, ElectricalType = PinElectricalType.Passive }
-                }
-            }
-        ]
+        OnBoard = true
     };
+    resistor.AddParameter(new KiCadSchParameter { Name = "Reference", Value = "R", FontSizeWidth = Coord.FromMm(1.27), FontSizeHeight = Coord.FromMm(1.27) });
+    resistor.AddParameter(new KiCadSchParameter { Name = "Value", Value = "R", FontSizeWidth = Coord.FromMm(1.27), FontSizeHeight = Coord.FromMm(1.27) });
+
+    var rGraphics = new KiCadSchComponent { Name = "R_0_1" };
+    rGraphics.AddRectangle(new KiCadSchRectangle { Corner1 = new CoordPoint(Coord.FromMm(-1.016), Coord.FromMm(-2.54)), Corner2 = new CoordPoint(Coord.FromMm(1.016), Coord.FromMm(2.54)), LineWidth = Coord.FromMm(0.254), FillType = SchFillType.Background, IsFilled = true });
+    resistor.AddSubSymbol(rGraphics);
+
+    var rPins = new KiCadSchComponent { Name = "R_1_1" };
+    rPins.AddPin(new KiCadSchPin { Name = "~", Designator = "1", Location = new CoordPoint(Coord.Zero, Coord.FromMm(3.81)), Length = Coord.FromMm(1.27), Orientation = PinOrientation.Down, ElectricalType = PinElectricalType.Passive });
+    rPins.AddPin(new KiCadSchPin { Name = "~", Designator = "2", Location = new CoordPoint(Coord.Zero, Coord.FromMm(-3.81)), Length = Coord.FromMm(1.27), Orientation = PinOrientation.Up, ElectricalType = PinElectricalType.Passive });
+    resistor.AddSubSymbol(rPins);
     symLib.Add(resistor);
     await SymLibWriter.WriteAsync(symLib, Path.Combine(dir, "Test.kicad_sym"));
 
@@ -262,21 +248,12 @@ static async Task CreateTestFilesAsync(string dir)
         Name = "R_0805",
         Description = "0805 Resistor",
         LayerName = "F.Cu",
-        Attributes = FootprintAttribute.Smd,
-        Pads = (IReadOnlyList<IPcbPad>)new List<KiCadPcbPad>
-        {
-            new() { Designator = "1", Location = new CoordPoint(Coord.FromMm(-0.9), Coord.Zero), Size = new CoordPoint(Coord.FromMm(1.0), Coord.FromMm(1.4)), Shape = PadShape.RoundRect, PadType = PadType.Smd, CornerRadiusPercentage = 25, Layers = ["F.Cu", "F.Paste", "F.Mask"] },
-            new() { Designator = "2", Location = new CoordPoint(Coord.FromMm(0.9), Coord.Zero), Size = new CoordPoint(Coord.FromMm(1.0), Coord.FromMm(1.4)), Shape = PadShape.RoundRect, PadType = PadType.Smd, CornerRadiusPercentage = 25, Layers = ["F.Cu", "F.Paste", "F.Mask"] }
-        },
-        Tracks = (IReadOnlyList<IPcbTrack>)new List<KiCadPcbTrack>
-        {
-            new() { Start = new CoordPoint(Coord.FromMm(-0.26), Coord.FromMm(-0.71)), End = new CoordPoint(Coord.FromMm(0.26), Coord.FromMm(-0.71)), Width = Coord.FromMm(0.12), LayerName = "F.SilkS" }
-        },
-        Texts = (IReadOnlyList<IPcbText>)new List<KiCadPcbText>
-        {
-            new() { Text = "REF**", TextType = "reference", Location = new CoordPoint(Coord.Zero, Coord.FromMm(-1.5)), Height = Coord.FromMm(1.0), LayerName = "F.SilkS" }
-        }
+        Attributes = FootprintAttribute.Smd
     };
+    fp.AddPad(new KiCadPcbPad { Designator = "1", Location = new CoordPoint(Coord.FromMm(-0.9), Coord.Zero), Size = new CoordPoint(Coord.FromMm(1.0), Coord.FromMm(1.4)), Shape = PadShape.RoundRect, PadType = PadType.Smd, CornerRadiusPercentage = 25, Layers = ["F.Cu", "F.Paste", "F.Mask"] });
+    fp.AddPad(new KiCadPcbPad { Designator = "2", Location = new CoordPoint(Coord.FromMm(0.9), Coord.Zero), Size = new CoordPoint(Coord.FromMm(1.0), Coord.FromMm(1.4)), Shape = PadShape.RoundRect, PadType = PadType.Smd, CornerRadiusPercentage = 25, Layers = ["F.Cu", "F.Paste", "F.Mask"] });
+    fp.AddTrack(new KiCadPcbTrack { Start = new CoordPoint(Coord.FromMm(-0.26), Coord.FromMm(-0.71)), End = new CoordPoint(Coord.FromMm(0.26), Coord.FromMm(-0.71)), Width = Coord.FromMm(0.12), LayerName = "F.SilkS" });
+    fp.AddText(new KiCadPcbText { Text = "REF**", TextType = "reference", Location = new CoordPoint(Coord.Zero, Coord.FromMm(-1.5)), Height = Coord.FromMm(1.0), LayerName = "F.SilkS" });
     await FootprintWriter.WriteAsync(fp, Path.Combine(dir, "Test.kicad_mod"));
 
     // Schematic
@@ -284,20 +261,11 @@ static async Task CreateTestFilesAsync(string dir)
     {
         Version = 20231120,
         Generator = "test",
-        Uuid = Guid.NewGuid().ToString("D"),
-        Wires = (IReadOnlyList<ISchWire>)new List<KiCadSchWire>
-        {
-            new() { Vertices = [new CoordPoint(Coord.FromMm(127), Coord.FromMm(80)), new CoordPoint(Coord.FromMm(127), Coord.FromMm(73.66))], Uuid = Guid.NewGuid().ToString("D") }
-        },
-        NetLabels = (IReadOnlyList<ISchNetLabel>)new List<KiCadSchNetLabel>
-        {
-            new() { Text = "VCC", Location = new CoordPoint(Coord.FromMm(127), Coord.FromMm(73.66)), Uuid = Guid.NewGuid().ToString("D") }
-        },
-        Junctions = (IReadOnlyList<ISchJunction>)new List<KiCadSchJunction>
-        {
-            new() { Location = new CoordPoint(Coord.FromMm(127), Coord.FromMm(73.66)), Size = Coord.FromMm(0.9), Uuid = Guid.NewGuid().ToString("D") }
-        }
+        Uuid = Guid.NewGuid().ToString("D")
     };
+    sch.AddWire(new KiCadSchWire { Vertices = [new CoordPoint(Coord.FromMm(127), Coord.FromMm(80)), new CoordPoint(Coord.FromMm(127), Coord.FromMm(73.66))], Uuid = Guid.NewGuid().ToString("D") });
+    sch.AddNetLabel(new KiCadSchNetLabel { Text = "VCC", Location = new CoordPoint(Coord.FromMm(127), Coord.FromMm(73.66)), Uuid = Guid.NewGuid().ToString("D") });
+    sch.AddJunction(new KiCadSchJunction { Location = new CoordPoint(Coord.FromMm(127), Coord.FromMm(73.66)), Size = Coord.FromMm(0.9), Uuid = Guid.NewGuid().ToString("D") });
     await sch.SaveAsync(Path.Combine(dir, "Test.kicad_sch"));
 
     // PCB
@@ -305,16 +273,12 @@ static async Task CreateTestFilesAsync(string dir)
     {
         Version = 20231014,
         Generator = "test",
-        BoardThickness = Coord.FromMm(1.6),
-        Nets = [(0, ""), (1, "VCC"), (2, "GND")],
-        Tracks = (IReadOnlyList<IPcbTrack>)new List<KiCadPcbTrack>
-        {
-            new() { Start = new CoordPoint(Coord.FromMm(100), Coord.FromMm(100)), End = new CoordPoint(Coord.FromMm(110), Coord.FromMm(100)), Width = Coord.FromMm(0.25), LayerName = "F.Cu", Net = 1, Uuid = Guid.NewGuid().ToString("D") }
-        },
-        Vias = (IReadOnlyList<IPcbVia>)new List<KiCadPcbVia>
-        {
-            new() { Location = new CoordPoint(Coord.FromMm(110), Coord.FromMm(100)), Diameter = Coord.FromMm(0.8), HoleSize = Coord.FromMm(0.4), StartLayerName = "F.Cu", EndLayerName = "B.Cu", Net = 1, Uuid = Guid.NewGuid().ToString("D") }
-        }
+        BoardThickness = Coord.FromMm(1.6)
     };
+    pcb.AddNet(0, "");
+    pcb.AddNet(1, "VCC");
+    pcb.AddNet(2, "GND");
+    pcb.AddTrack(new KiCadPcbTrack { Start = new CoordPoint(Coord.FromMm(100), Coord.FromMm(100)), End = new CoordPoint(Coord.FromMm(110), Coord.FromMm(100)), Width = Coord.FromMm(0.25), LayerName = "F.Cu", Net = 1, Uuid = Guid.NewGuid().ToString("D") });
+    pcb.AddVia(new KiCadPcbVia { Location = new CoordPoint(Coord.FromMm(110), Coord.FromMm(100)), Diameter = Coord.FromMm(0.8), HoleSize = Coord.FromMm(0.4), StartLayerName = "F.Cu", EndLayerName = "B.Cu", Net = 1, Uuid = Guid.NewGuid().ToString("D") });
     await pcb.SaveAsync(Path.Combine(dir, "Test.kicad_pcb"));
 }
