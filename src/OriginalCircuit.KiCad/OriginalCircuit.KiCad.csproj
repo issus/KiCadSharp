@@ -4,6 +4,8 @@
     <Description>Read and write KiCad EDA files (.kicad_sym, .kicad_sch, .kicad_mod, .kicad_pcb)</Description>
     <PackageTags>kicad;eda;pcb;schematic;footprint;symbol;electronics</PackageTags>
     <IsPackable>true</IsPackable>
+    <IsTrimmable>true</IsTrimmable>
+    <IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\shared\OriginalCircuit.Eda.Abstractions\src\OriginalCircuit.Eda.Abstractions\OriginalCircuit.Eda.Abstractions.csproj" />
