@@ -20,7 +20,15 @@ public static class SymLibReader
     /// <returns>The parsed symbol library.</returns>
     public static async ValueTask<KiCadSymLib> ReadAsync(string path, CancellationToken ct = default)
     {
-        var root = await SExpressionReader.ReadAsync(path, ct).ConfigureAwait(false);
+        SExpression.SExpression root;
+        try
+        {
+            root = await SExpressionReader.ReadAsync(path, ct).ConfigureAwait(false);
+        }
+        catch (FormatException ex)
+        {
+            throw new KiCadFileException($"Failed to parse S-expression: {ex.Message}", path, innerException: ex);
+        }
         return Parse(root);
     }
 
@@ -32,7 +40,15 @@ public static class SymLibReader
     /// <returns>The parsed symbol library.</returns>
     public static async ValueTask<KiCadSymLib> ReadAsync(Stream stream, CancellationToken ct = default)
     {
-        var root = await SExpressionReader.ReadAsync(stream, ct).ConfigureAwait(false);
+        SExpression.SExpression root;
+        try
+        {
+            root = await SExpressionReader.ReadAsync(stream, ct).ConfigureAwait(false);
+        }
+        catch (FormatException ex)
+        {
+            throw new KiCadFileException($"Failed to parse S-expression: {ex.Message}", ex);
+        }
         return Parse(root);
     }
 
@@ -158,6 +174,18 @@ public static class SymLibReader
                     break;
                 case "text":
                     labels.Add(ParseTextLabel(child));
+                    break;
+                case "property":
+                case "pin_names":
+                case "pin_numbers":
+                case "in_bom":
+                case "on_board":
+                case "extends":
+                    // Known tokens handled elsewhere
+                    break;
+                default:
+                    diagnostics.Add(new KiCadDiagnostic(DiagnosticSeverity.Warning,
+                        $"Unknown symbol token '{child.Token}' was ignored", child.Token));
                     break;
             }
         }

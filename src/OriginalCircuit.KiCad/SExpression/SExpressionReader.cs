@@ -1,4 +1,5 @@
 using System.Buffers;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
 
@@ -11,6 +12,8 @@ namespace OriginalCircuit.KiCad.SExpression;
 /// </summary>
 public static class SExpressionReader
 {
+    private const int MaxNestingDepth = 1000;
+
     // ---------------------------------------------------------------
     // String intern pool — common KiCad tokens as UTF-8 byte arrays
     // ---------------------------------------------------------------
@@ -188,6 +191,10 @@ public static class SExpressionReader
     {
         using var ms = new MemoryStream();
         await stream.CopyToAsync(ms, ct).ConfigureAwait(false);
+        // MemoryStream created with default constructor always returns true from TryGetBuffer,
+        // allowing us to avoid a copy compared to ToArray().
+        if (ms.TryGetBuffer(out var buffer))
+            return ParseBytes(buffer.Array!, buffer.Offset, buffer.Count);
         return ParseBytes(ms.ToArray());
     }
 
@@ -209,23 +216,40 @@ public static class SExpressionReader
     // Byte-based parser core
     // ---------------------------------------------------------------
 
-    private static SExpression ParseBytes(byte[] data)
+    private static SExpression ParseBytes(byte[] data) => ParseBytes(data, 0, data.Length);
+
+    private static SExpression ParseBytes(byte[] data, int offset, int length)
     {
-        var pos = 0;
+        var pos = offset;
+        var end = offset + length;
 
         // Skip UTF-8 BOM if present
-        if (data.Length >= 3 && data[0] == 0xEF && data[1] == 0xBB && data[2] == 0xBF)
-            pos = 3;
+        if (length >= 3 && data[pos] == 0xEF && data[pos + 1] == 0xBB && data[pos + 2] == 0xBF)
+            pos += 3;
 
-        SkipWhitespace(data, ref pos);
+        SkipWhitespace(data, ref pos, end);
 
-        if (pos >= data.Length || data[pos] != (byte)'(')
-            throw new FormatException("Expected '(' at start of S-expression.");
+        if (pos >= end || data[pos] != (byte)'(')
+        {
+            var (line, col) = GetLineColumn(data, offset, pos);
+            throw new FormatException($"Expected '(' at start of S-expression at line {line}, column {col}.");
+        }
 
-        return ParseExpressionIterative(data, ref pos);
+        return ParseExpressionIterative(data, ref pos, end);
     }
 
-    private static SExpression ParseExpressionIterative(byte[] data, ref int pos)
+    private static (int Line, int Column) GetLineColumn(byte[] data, int start, int pos)
+    {
+        int line = 1, col = 1;
+        for (int i = start; i < pos && i < data.Length; i++)
+        {
+            if (data[i] == (byte)'\n') { line++; col = 1; }
+            else col++;
+        }
+        return (line, col);
+    }
+
+    private static SExpression ParseExpressionIterative(byte[] data, ref int pos, int end)
     {
         // Pre-allocate stack and frame pool to avoid per-node heap allocations.
         // A typical large KiCad file may have nesting depth ~20-30, but we size
@@ -237,23 +261,27 @@ public static class SExpressionReader
 
         // Consume opening '('
         pos++;
-        SkipWhitespace(data, ref pos);
+        SkipWhitespace(data, ref pos, end);
 
-        var token = ReadToken(data, ref pos);
+        var token = ReadToken(data, ref pos, end);
         if (token is null)
-            throw new FormatException($"Expected token after '(' at position {pos}.");
+        {
+            var (line, col) = GetLineColumn(data, 0, pos);
+            throw new FormatException($"Expected token after '(' at line {line}, column {col}.");
+        }
 
         stack[++stackTop] = pool.Rent(token);
 
         while (stackTop >= 0)
         {
-            SkipWhitespace(data, ref pos);
+            SkipWhitespace(data, ref pos, end);
 
-            if (pos >= data.Length)
+            if (pos >= end)
             {
                 // Return all frames to pool
                 for (var i = stackTop; i >= 0; i--)
                     pool.Return(stack[i]);
+                pool.ReturnAll();
                 throw new FormatException("Unexpected end of input; expected ')'.");
             }
 
@@ -267,35 +295,50 @@ public static class SExpressionReader
                 pool.Return(completed);
 
                 if (stackTop < 0)
+                {
+                    pool.ReturnAll();
                     return expr;
+                }
 
                 stack[stackTop].AddChild(expr);
             }
             else if (ch == (byte)'(')
             {
                 pos++;
-                SkipWhitespace(data, ref pos);
+                SkipWhitespace(data, ref pos, end);
 
-                var childToken = ReadToken(data, ref pos);
+                var childToken = ReadToken(data, ref pos, end);
                 if (childToken is null)
                 {
                     for (var i = stackTop; i >= 0; i--)
                         pool.Return(stack[i]);
-                    throw new FormatException($"Expected token after '(' at position {pos}.");
+                    pool.ReturnAll();
+                    var (line, col) = GetLineColumn(data, 0, pos);
+                    throw new FormatException($"Expected token after '(' at line {line}, column {col}.");
                 }
 
-                if (++stackTop >= stack.Length)
+                if (++stackTop >= MaxNestingDepth)
+                {
+                    for (var i = stackTop - 1; i >= 0; i--)
+                        pool.Return(stack[i]);
+                    pool.ReturnAll();
+                    var (line, col) = GetLineColumn(data, 0, pos);
+                    throw new FormatException($"S-expression nesting depth exceeds maximum of {MaxNestingDepth} at line {line}, column {col}.");
+                }
+
+                if (stackTop >= stack.Length)
                     Array.Resize(ref stack, stack.Length * 2);
 
                 stack[stackTop] = pool.Rent(childToken);
             }
             else
             {
-                var value = ReadValue(data, ref pos);
+                var value = ReadValue(data, ref pos, end);
                 stack[stackTop].AddValue(value);
             }
         }
 
+        pool.ReturnAll();
         throw new FormatException("Unexpected end of S-expression parsing.");
     }
 
@@ -304,13 +347,13 @@ public static class SExpressionReader
     // ---------------------------------------------------------------
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static string? ReadToken(byte[] data, ref int pos)
+    private static string? ReadToken(byte[] data, ref int pos, int end)
     {
-        if (pos >= data.Length)
+        if (pos >= end)
             return null;
 
         var start = pos;
-        while (pos < data.Length)
+        while (pos < end)
         {
             var ch = data[pos];
             if (ch == (byte)'(' || ch == (byte)')' || ch == (byte)'"' || ch <= (byte)' ')
@@ -329,14 +372,14 @@ public static class SExpressionReader
     // ---------------------------------------------------------------
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static ISExpressionValue ReadValue(byte[] data, ref int pos)
+    private static ISExpressionValue ReadValue(byte[] data, ref int pos, int end)
     {
         if (data[pos] == (byte)'"')
-            return ReadString(data, ref pos);
+            return ReadString(data, ref pos, end);
 
         // Read unquoted token
         var start = pos;
-        while (pos < data.Length)
+        while (pos < end)
         {
             var ch = data[pos];
             if (ch == (byte)'(' || ch == (byte)')' || ch == (byte)'"' || ch <= (byte)' ')
@@ -391,6 +434,7 @@ public static class SExpressionReader
         {
             var d = (uint)(data[i] - (byte)'0');
             if (d > 9) break;
+            if (intPart > long.MaxValue / 10) return false; // overflow — fall back to symbol
             intPart = intPart * 10 + d;
             i++;
         }
@@ -405,10 +449,23 @@ public static class SExpressionReader
             {
                 var d = (uint)(data[i] - (byte)'0');
                 if (d > 9) break;
+                if (fracPart > long.MaxValue / 10) return false; // overflow — fall back to symbol
                 fracPart = fracPart * 10 + (long)d;
                 fracDigits++;
                 i++;
             }
+        }
+
+        // Scientific notation — fall back to standard parser
+        if (i < end && (data[i] == (byte)'e' || data[i] == (byte)'E'))
+        {
+            var str = Encoding.UTF8.GetString(data, start, length);
+            if (double.TryParse(str, NumberStyles.Float, CultureInfo.InvariantCulture, out var sciVal))
+            {
+                result = sciVal;
+                return true;
+            }
+            return false;
         }
 
         if (i != end) return false;
@@ -434,17 +491,17 @@ public static class SExpressionReader
     // String reading (byte-based, fast-path for no escapes)
     // ---------------------------------------------------------------
 
-    private static SExprString ReadString(byte[] data, ref int pos)
+    private static SExprString ReadString(byte[] data, ref int pos, int end)
     {
         pos++; // consume opening quote
         var start = pos;
 
         // Fast path: scan for closing quote without escapes
-        while (pos < data.Length)
+        while (pos < end)
         {
             var ch = data[pos];
             if (ch == (byte)'\\')
-                return ReadStringSlowPath(data, ref pos, start);
+                return ReadStringSlowPath(data, ref pos, start, end);
             if (ch == (byte)'"')
             {
                 var str = Encoding.UTF8.GetString(data, start, pos - start);
@@ -457,23 +514,24 @@ public static class SExpressionReader
         throw new FormatException("Unterminated string literal.");
     }
 
-    private static SExprString ReadStringSlowPath(byte[] data, ref int pos, int contentStart)
+    private static SExprString ReadStringSlowPath(byte[] data, ref int pos, int contentStart, int end)
     {
         var sb = new StringBuilder(64);
         if (pos > contentStart)
             sb.Append(Encoding.UTF8.GetString(data, contentStart, pos - contentStart));
 
-        while (pos < data.Length)
+        while (pos < end)
         {
             var ch = data[pos];
 
             if (ch == (byte)'\\')
             {
                 pos++;
-                if (pos >= data.Length)
+                if (pos >= end)
                     throw new FormatException("Unexpected end of input in escape sequence.");
 
                 var escaped = data[pos];
+                // Unknown escape sequences are passed through as-is (KiCad is permissive here)
                 sb.Append(escaped switch
                 {
                     (byte)'n' => '\n',
@@ -501,7 +559,7 @@ public static class SExpressionReader
                 {
                     var charStart = pos;
                     pos++;
-                    while (pos < data.Length && (data[pos] & 0xC0) == 0x80)
+                    while (pos < end && (data[pos] & 0xC0) == 0x80)
                         pos++;
                     sb.Append(Encoding.UTF8.GetString(data, charStart, pos - charStart));
                 }
@@ -516,9 +574,9 @@ public static class SExpressionReader
     // ---------------------------------------------------------------
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void SkipWhitespace(byte[] data, ref int pos)
+    private static void SkipWhitespace(byte[] data, ref int pos, int end)
     {
-        while (pos < data.Length && data[pos] <= (byte)' ')
+        while (pos < end && data[pos] <= (byte)' ')
             pos++;
     }
 
@@ -666,6 +724,19 @@ public static class SExpressionReader
                 ArrayPool<ISExpressionValue>.Shared.Return(values, clearArray: false);
                 ArrayPool<SExpression>.Shared.Return(children, clearArray: false);
             }
+        }
+
+        /// <summary>
+        /// Returns all held arrays back to the shared ArrayPool.
+        /// </summary>
+        public void ReturnAll()
+        {
+            for (int i = 0; i < _count; i++)
+            {
+                ArrayPool<ISExpressionValue>.Shared.Return(_pool[i].Values, clearArray: false);
+                ArrayPool<SExpression>.Shared.Return(_pool[i].Children, clearArray: false);
+            }
+            _count = 0;
         }
     }
 }

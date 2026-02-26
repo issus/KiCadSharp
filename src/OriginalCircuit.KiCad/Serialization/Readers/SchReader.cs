@@ -20,7 +20,15 @@ public static class SchReader
     /// <returns>The parsed schematic document.</returns>
     public static async ValueTask<KiCadSch> ReadAsync(string path, CancellationToken ct = default)
     {
-        var root = await SExpressionReader.ReadAsync(path, ct).ConfigureAwait(false);
+        SExpression.SExpression root;
+        try
+        {
+            root = await SExpressionReader.ReadAsync(path, ct).ConfigureAwait(false);
+        }
+        catch (FormatException ex)
+        {
+            throw new KiCadFileException($"Failed to parse S-expression: {ex.Message}", path, innerException: ex);
+        }
         return Parse(root);
     }
 
@@ -32,7 +40,15 @@ public static class SchReader
     /// <returns>The parsed schematic document.</returns>
     public static async ValueTask<KiCadSch> ReadAsync(Stream stream, CancellationToken ct = default)
     {
-        var root = await SExpressionReader.ReadAsync(stream, ct).ConfigureAwait(false);
+        SExpression.SExpression root;
+        try
+        {
+            root = await SExpressionReader.ReadAsync(stream, ct).ConfigureAwait(false);
+        }
+        catch (FormatException ex)
+        {
+            throw new KiCadFileException($"Failed to parse S-expression: {ex.Message}", ex);
+        }
         return Parse(root);
     }
 
@@ -123,11 +139,26 @@ public static class SchReader
                     case "power_port":
                         powerObjects.Add(ParsePowerPort(child));
                         break;
+                    case "version":
+                    case "generator":
+                    case "generator_version":
+                    case "uuid":
+                    case "lib_symbols":
+                    case "paper":
+                    case "title_block":
+                    case "sheet_instances":
+                    case "symbol_instances":
+                        // Known tokens handled elsewhere or intentionally skipped
+                        break;
+                    default:
+                        diagnostics.Add(new KiCadDiagnostic(DiagnosticSeverity.Warning,
+                            $"Unknown schematic token '{child.Token}' was ignored", child.Token));
+                        break;
                 }
             }
             catch (Exception ex)
             {
-                diagnostics.Add(new KiCadDiagnostic(DiagnosticSeverity.Warning,
+                diagnostics.Add(new KiCadDiagnostic(DiagnosticSeverity.Error,
                     $"Failed to parse {child.Token}: {ex.Message}", child.GetString()));
             }
         }

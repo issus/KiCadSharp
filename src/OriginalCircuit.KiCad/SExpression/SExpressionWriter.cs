@@ -5,6 +5,7 @@ namespace OriginalCircuit.KiCad.SExpression;
 /// <summary>
 /// Writes S-expression trees back to text with proper formatting.
 /// Produces human-readable output matching KiCad conventions.
+/// Uses an iterative approach to avoid stack overflow on deeply nested trees.
 /// </summary>
 public static class SExpressionWriter
 {
@@ -46,76 +47,116 @@ public static class SExpressionWriter
     public static string Write(SExpression expr)
     {
         var sb = new StringBuilder(4096);
-        WriteNode(sb, expr, 0);
+        WriteNodeIterative(sb, expr);
         return sb.ToString();
     }
 
-    private static void WriteNode(StringBuilder sb, SExpression expr, int indent)
+    private struct WriteFrame
     {
-        sb.Append('(');
-        sb.Append(expr.Token);
+        public SExpression Node;
+        public int Indent;
+        public bool IsCompact;
+        public int ChildIndex;
+    }
 
-        // Write inline values
-        foreach (var value in expr.Values)
-        {
-            sb.Append(' ');
-            WriteValue(sb, value);
-        }
+    private static void WriteNodeIterative(StringBuilder sb, SExpression root)
+    {
+        var stack = new List<WriteFrame>(32);
+        stack.Add(new WriteFrame { Node = root, Indent = 0, IsCompact = false, ChildIndex = 0 });
 
-        if (expr.Children.Count == 0)
+        while (stack.Count > 0)
         {
-            sb.Append(')');
-            return;
-        }
+            var idx = stack.Count - 1;
+            var frame = stack[idx];
+            var node = frame.Node;
 
-        // If the node has only simple children (no grandchildren), keep them compact
-        var allChildrenSimple = true;
-        foreach (var child in expr.Children)
-        {
-            if (child.Children.Count > 0)
+            if (frame.ChildIndex == 0)
             {
-                allChildrenSimple = false;
-                break;
-            }
-        }
+                // First visit: write opening token and values
+                sb.Append('(');
+                sb.Append(node.Token);
 
-        if (allChildrenSimple && expr.Children.Count <= 2 && expr.Values.Count == 0)
-        {
-            // Keep short simple children inline
-            var totalLen = expr.Token.Length;
-            foreach (var child in expr.Children)
-            {
-                totalLen += 2 + child.Token.Length;
-                foreach (var v in child.Values)
-                {
-                    totalLen += 1 + v.ToString()!.Length;
-                }
-            }
-
-            if (totalLen < 80)
-            {
-                foreach (var child in expr.Children)
+                foreach (var value in node.Values)
                 {
                     sb.Append(' ');
-                    WriteNode(sb, child, 0);
+                    WriteValue(sb, value);
+                }
+
+                if (node.Children.Count == 0)
+                {
+                    sb.Append(')');
+                    stack.RemoveAt(idx);
+                    continue;
+                }
+
+                // Determine compactness
+                frame.IsCompact = ShouldUseCompact(node);
+                stack[idx] = frame;
+            }
+
+            if (frame.ChildIndex < node.Children.Count)
+            {
+                var child = node.Children[frame.ChildIndex];
+
+                // Write prefix before child
+                if (frame.IsCompact)
+                {
+                    sb.Append(' ');
+                }
+                else
+                {
+                    sb.AppendLine();
+                    sb.Append(' ', (frame.Indent + 1) * 2);
+                }
+
+                // Advance child index
+                frame.ChildIndex++;
+                stack[idx] = frame;
+
+                // Push child frame
+                stack.Add(new WriteFrame
+                {
+                    Node = child,
+                    Indent = frame.Indent + 1,
+                    IsCompact = false,
+                    ChildIndex = 0
+                });
+            }
+            else
+            {
+                // All children processed, write closing
+                if (!frame.IsCompact)
+                {
+                    sb.AppendLine();
+                    sb.Append(' ', frame.Indent * 2);
                 }
                 sb.Append(')');
-                return;
+                stack.RemoveAt(idx);
             }
         }
+    }
 
-        // Write children on separate lines
-        var childIndent = indent + 1;
-        foreach (var child in expr.Children)
+    private static bool ShouldUseCompact(SExpression node)
+    {
+        if (node.Children.Count > 2 || node.Values.Count > 0)
+            return false;
+
+        foreach (var child in node.Children)
         {
-            sb.AppendLine();
-            sb.Append(' ', childIndent * 2);
-            WriteNode(sb, child, childIndent);
+            if (child.Children.Count > 0)
+                return false;
         }
 
-        sb.AppendLine();
-        sb.Append(' ', indent * 2);
-        sb.Append(')');
+        var totalLen = node.Token.Length;
+        foreach (var child in node.Children)
+        {
+            totalLen += 2 + child.Token.Length;
+            foreach (var v in child.Values)
+            {
+                totalLen += 1 + (v.ToString()?.Length ?? 0);
+            }
+        }
+        return totalLen < 80;
     }
 
     private static void WriteValue(StringBuilder sb, ISExpressionValue value)
@@ -136,7 +177,7 @@ public static class SExpressionWriter
 
     private static void WriteQuotedString(StringBuilder sb, string value)
     {
-        if (!NeedsQuoting(value))
+        if (!NeedsEscaping(value))
         {
             sb.Append('"');
             sb.Append(value);
@@ -172,14 +213,12 @@ public static class SExpressionWriter
         sb.Append('"');
     }
 
-    private static bool NeedsQuoting(string value)
+    private static bool NeedsEscaping(string value)
     {
         foreach (var ch in value)
         {
             if (ch == '"' || ch == '\\' || ch == '\n' || ch == '\r' || ch == '\t')
-            {
                 return true;
-            }
         }
         return false;
     }

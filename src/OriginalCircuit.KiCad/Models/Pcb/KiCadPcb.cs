@@ -1,3 +1,4 @@
+using OriginalCircuit.Eda.Enums;
 using OriginalCircuit.Eda.Models;
 using OriginalCircuit.Eda.Models.Pcb;
 using OriginalCircuit.Eda.Primitives;
@@ -40,6 +41,9 @@ public sealed class KiCadPcb : IPcbDocument
     /// </summary>
     public IReadOnlyList<KiCadDiagnostic> Diagnostics => _diagnostics;
     internal List<KiCadDiagnostic> DiagnosticList => _diagnostics;
+
+    /// <summary>Returns true if any diagnostic has Error severity.</summary>
+    public bool HasErrors => _diagnostics.Any(d => d.Severity == DiagnosticSeverity.Error);
 
     /// <inheritdoc />
     public IReadOnlyList<IPcbComponent> Components => _components;

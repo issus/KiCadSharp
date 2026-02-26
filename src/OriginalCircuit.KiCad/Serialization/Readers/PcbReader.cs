@@ -20,7 +20,15 @@ public static class PcbReader
     /// <returns>The parsed PCB document.</returns>
     public static async ValueTask<KiCadPcb> ReadAsync(string path, CancellationToken ct = default)
     {
-        var root = await SExpressionReader.ReadAsync(path, ct).ConfigureAwait(false);
+        SExpression.SExpression root;
+        try
+        {
+            root = await SExpressionReader.ReadAsync(path, ct).ConfigureAwait(false);
+        }
+        catch (FormatException ex)
+        {
+            throw new KiCadFileException($"Failed to parse S-expression: {ex.Message}", path, innerException: ex);
+        }
         return Parse(root);
     }
 
@@ -32,7 +40,15 @@ public static class PcbReader
     /// <returns>The parsed PCB document.</returns>
     public static async ValueTask<KiCadPcb> ReadAsync(Stream stream, CancellationToken ct = default)
     {
-        var root = await SExpressionReader.ReadAsync(stream, ct).ConfigureAwait(false);
+        SExpression.SExpression root;
+        try
+        {
+            root = await SExpressionReader.ReadAsync(stream, ct).ConfigureAwait(false);
+        }
+        catch (FormatException ex)
+        {
+            throw new KiCadFileException($"Failed to parse S-expression: {ex.Message}", ex);
+        }
         return Parse(root);
     }
 
@@ -96,11 +112,34 @@ public static class PcbReader
                         var zoneRegions = ParseZone(child);
                         regions.AddRange(zoneRegions);
                         break;
+                    case "version":
+                    case "generator":
+                    case "generator_version":
+                    case "general":
+                    case "paper":
+                    case "title_block":
+                    case "setup":
+                    case "layers":
+                    case "net_class":
+                    case "gr_line":
+                    case "gr_arc":
+                    case "gr_circle":
+                    case "gr_rect":
+                    case "gr_poly":
+                    case "dimension":
+                    case "target":
+                    case "group":
+                        // Known tokens handled elsewhere or intentionally skipped
+                        break;
+                    default:
+                        diagnostics.Add(new KiCadDiagnostic(DiagnosticSeverity.Warning,
+                            $"Unknown PCB token '{child.Token}' was ignored", child.Token));
+                        break;
                 }
             }
             catch (Exception ex)
             {
-                diagnostics.Add(new KiCadDiagnostic(DiagnosticSeverity.Warning,
+                diagnostics.Add(new KiCadDiagnostic(DiagnosticSeverity.Error,
                     $"Failed to parse {child.Token}: {ex.Message}", child.GetString()));
             }
         }

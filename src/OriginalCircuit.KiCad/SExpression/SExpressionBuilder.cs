@@ -15,6 +15,7 @@ public sealed class SExpressionBuilder
     /// <param name="token">The token name for the S-expression node.</param>
     public SExpressionBuilder(string token)
     {
+        ArgumentNullException.ThrowIfNull(token);
         _token = token;
     }
 
@@ -25,6 +26,7 @@ public sealed class SExpressionBuilder
     /// <returns>This builder for method chaining.</returns>
     public SExpressionBuilder AddValue(string value)
     {
+        ArgumentNullException.ThrowIfNull(value);
         _values.Add(new SExprString(value));
         return this;
     }
@@ -47,6 +49,7 @@ public sealed class SExpressionBuilder
     /// <returns>This builder for method chaining.</returns>
     public SExpressionBuilder AddSymbol(string symbol)
     {
+        ArgumentNullException.ThrowIfNull(symbol);
         _values.Add(new SExprSymbol(symbol));
         return this;
     }
@@ -69,6 +72,7 @@ public sealed class SExpressionBuilder
     /// <returns>This builder for method chaining.</returns>
     public SExpressionBuilder AddChild(SExpression child)
     {
+        ArgumentNullException.ThrowIfNull(child);
         _children.Add(child);
         return this;
     }
@@ -81,6 +85,8 @@ public sealed class SExpressionBuilder
     /// <returns>This builder for method chaining.</returns>
     public SExpressionBuilder AddChild(string token, Action<SExpressionBuilder> configure)
     {
+        ArgumentNullException.ThrowIfNull(token);
+        ArgumentNullException.ThrowIfNull(configure);
         var childBuilder = new SExpressionBuilder(token);
         configure(childBuilder);
         _children.Add(childBuilder.Build());

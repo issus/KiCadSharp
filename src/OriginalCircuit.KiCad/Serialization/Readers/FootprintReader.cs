@@ -21,7 +21,15 @@ public static class FootprintReader
     /// <returns>The parsed footprint component.</returns>
     public static async ValueTask<KiCadPcbComponent> ReadAsync(string path, CancellationToken ct = default)
     {
-        var root = await SExpressionReader.ReadAsync(path, ct).ConfigureAwait(false);
+        SExpression.SExpression root;
+        try
+        {
+            root = await SExpressionReader.ReadAsync(path, ct).ConfigureAwait(false);
+        }
+        catch (FormatException ex)
+        {
+            throw new KiCadFileException($"Failed to parse S-expression: {ex.Message}", path, innerException: ex);
+        }
         return ParseFootprint(root);
     }
 
@@ -33,7 +41,15 @@ public static class FootprintReader
     /// <returns>The parsed footprint component.</returns>
     public static async ValueTask<KiCadPcbComponent> ReadAsync(Stream stream, CancellationToken ct = default)
     {
-        var root = await SExpressionReader.ReadAsync(stream, ct).ConfigureAwait(false);
+        SExpression.SExpression root;
+        try
+        {
+            root = await SExpressionReader.ReadAsync(stream, ct).ConfigureAwait(false);
+        }
+        catch (FormatException ex)
+        {
+            throw new KiCadFileException($"Failed to parse S-expression: {ex.Message}", ex);
+        }
         return ParseFootprint(root);
     }
 
@@ -142,11 +158,37 @@ public static class FootprintReader
                     case "property":
                         properties.Add(SymLibReader.ParseProperty(child));
                         break;
+                    case "fp_poly":
+                        diagnostics.Add(new KiCadDiagnostic(DiagnosticSeverity.Warning,
+                            "Footprint polygon (fp_poly) parsing not yet implemented", child.Token));
+                        break;
+                    case "layer":
+                    case "descr":
+                    case "tags":
+                    case "path":
+                    case "uuid":
+                    case "tstamp":
+                    case "at":
+                    case "attr":
+                    case "clearance":
+                    case "solder_mask_margin":
+                    case "solder_paste_margin":
+                    case "solder_paste_ratio":
+                    case "thermal_width":
+                    case "thermal_gap":
+                    case "zone_connect":
+                    case "fp_text_private":
+                        // Known tokens handled elsewhere or intentionally skipped
+                        break;
+                    default:
+                        diagnostics.Add(new KiCadDiagnostic(DiagnosticSeverity.Warning,
+                            $"Unknown footprint token '{child.Token}' was ignored", child.Token));
+                        break;
                 }
             }
             catch (Exception ex)
             {
-                diagnostics.Add(new KiCadDiagnostic(DiagnosticSeverity.Warning,
+                diagnostics.Add(new KiCadDiagnostic(DiagnosticSeverity.Error,
                     $"Failed to parse {child.Token}: {ex.Message}", child.GetString()));
             }
         }
