@@ -57,6 +57,8 @@ public static class SchReader
         if (root.Token != "kicad_sch")
             throw new KiCadFileException($"Expected 'kicad_sch' root token, got '{root.Token}'.");
 
+        const int MaxTestedVersion = 20231120;
+
         var sch = new KiCadSch
         {
             Version = root.GetChild("version")?.GetInt() ?? 0,
@@ -66,6 +68,12 @@ public static class SchReader
         };
 
         var diagnostics = new List<KiCadDiagnostic>();
+
+        if (sch.Version > MaxTestedVersion)
+        {
+            diagnostics.Add(new KiCadDiagnostic(DiagnosticSeverity.Warning,
+                $"File format version {sch.Version} is newer than the maximum tested version {MaxTestedVersion}. Some features may not be parsed correctly."));
+        }
         var wires = new List<KiCadSchWire>();
         var junctions = new List<KiCadSchJunction>();
         var netLabels = new List<KiCadSchNetLabel>();

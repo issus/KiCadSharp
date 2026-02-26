@@ -85,6 +85,7 @@ public sealed class KiCadPcb : IPcbDocument
     public Coord BoardThickness { get; set; }
 
     /// <inheritdoc />
+    /// <remarks>This property is computed on each access. Cache the result if accessing repeatedly.</remarks>
     public CoordRect Bounds
     {
         get
@@ -205,5 +206,6 @@ public sealed class KiCadPcb : IPcbDocument
     }
 
     /// <inheritdoc />
+    /// <remarks>No resources to dispose in the current implementation. Included for API consistency.</remarks>
     public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 }

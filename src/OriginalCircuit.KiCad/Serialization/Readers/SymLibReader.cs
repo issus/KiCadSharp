@@ -57,6 +57,8 @@ public static class SymLibReader
         if (root.Token != "kicad_symbol_lib")
             throw new KiCadFileException($"Expected 'kicad_symbol_lib' root token, got '{root.Token}'.");
 
+        const int MaxTestedVersion = 20231120;
+
         var lib = new KiCadSymLib
         {
             Version = root.GetChild("version")?.GetInt() ?? 0,
@@ -65,6 +67,12 @@ public static class SymLibReader
         };
 
         var diagnostics = new List<KiCadDiagnostic>();
+
+        if (lib.Version > MaxTestedVersion)
+        {
+            diagnostics.Add(new KiCadDiagnostic(DiagnosticSeverity.Warning,
+                $"File format version {lib.Version} is newer than the maximum tested version {MaxTestedVersion}. Some features may not be parsed correctly."));
+        }
 
         foreach (var symbolNode in root.GetChildren("symbol"))
         {

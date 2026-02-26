@@ -182,6 +182,7 @@ public sealed class KiCadPcbComponent : IPcbComponent
     public bool HasErrors => _diagnostics.Any(d => d.Severity == DiagnosticSeverity.Error);
 
     /// <inheritdoc />
+    /// <remarks>This property is computed on each access. Cache the result if accessing repeatedly.</remarks>
     public CoordRect Bounds
     {
         get

@@ -96,5 +96,6 @@ public sealed class KiCadSymLib : ISchLibrary
     }
 
     /// <inheritdoc />
+    /// <remarks>No resources to dispose in the current implementation. Included for API consistency.</remarks>
     public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 }

@@ -102,6 +102,7 @@ public sealed class KiCadSch : ISchDocument
     internal List<KiCadSchComponent> LibSymbolList => _libSymbols;
 
     /// <inheritdoc />
+    /// <remarks>This property is computed on each access. Cache the result if accessing repeatedly.</remarks>
     public CoordRect Bounds
     {
         get
@@ -234,5 +235,6 @@ public sealed class KiCadSch : ISchDocument
     }
 
     /// <inheritdoc />
+    /// <remarks>No resources to dispose in the current implementation. Included for API consistency.</remarks>
     public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 }

@@ -57,6 +57,8 @@ public static class PcbReader
         if (root.Token != "kicad_pcb")
             throw new KiCadFileException($"Expected 'kicad_pcb' root token, got '{root.Token}'.");
 
+        const int MaxTestedVersion = 20231120;
+
         var pcb = new KiCadPcb
         {
             Version = root.GetChild("version")?.GetInt() ?? 0,
@@ -65,6 +67,12 @@ public static class PcbReader
         };
 
         var diagnostics = new List<KiCadDiagnostic>();
+
+        if (pcb.Version > MaxTestedVersion)
+        {
+            diagnostics.Add(new KiCadDiagnostic(DiagnosticSeverity.Warning,
+                $"File format version {pcb.Version} is newer than the maximum tested version {MaxTestedVersion}. Some features may not be parsed correctly."));
+        }
         var components = new List<KiCadPcbComponent>();
         var tracks = new List<KiCadPcbTrack>();
         var vias = new List<KiCadPcbVia>();

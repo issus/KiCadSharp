@@ -80,16 +80,20 @@ internal static class SExpressionHelper
         var sizeNode = font?.GetChild("size");
         var fontH = Coord.FromMm(sizeNode?.GetDouble(0) ?? 1.27);
         var fontW = Coord.FromMm(sizeNode?.GetDouble(1) ?? 1.27);
-        var isBold = font?.GetChildren("bold").Any() == true || font?.GetString()?.Contains("bold") == true;
-        var isItalic = font?.GetChildren("italic").Any() == true || font?.GetString()?.Contains("italic") == true;
+        // Bold/italic can appear as child elements (font (bold) (italic))
+        // or as symbol values within the font node (font bold italic)
+        var isBold = font?.GetChild("bold") is not null;
+        var isItalic = font?.GetChild("italic") is not null;
 
-        // Check for bold/italic as symbols in font values
-        foreach (var val in font?.Values ?? (IReadOnlyList<ISExpressionValue>)[])
+        if (font is not null)
         {
-            if (val is SExprSymbol sym)
+            foreach (var val in font.Values)
             {
-                if (sym.Value == "bold") isBold = true;
-                if (sym.Value == "italic") isItalic = true;
+                if (val is SExprSymbol sym)
+                {
+                    if (sym.Value == "bold") isBold = true;
+                    if (sym.Value == "italic") isItalic = true;
+                }
             }
         }
 
@@ -123,7 +127,7 @@ internal static class SExpressionHelper
             "none" => SchFillType.None,
             "outline" => SchFillType.Filled,
             "background" => SchFillType.Background,
-            "color" => SchFillType.Filled,
+            "color" => SchFillType.Color,
             _ => SchFillType.None
         };
 
@@ -449,6 +453,7 @@ internal static class SExpressionHelper
             SchFillType.None => "none",
             SchFillType.Filled => "outline",
             SchFillType.Background => "background",
+            SchFillType.Color => "color",
             _ => "none"
         };
     }
