@@ -48,35 +48,44 @@ internal static class WriterHelper
     /// <summary>
     /// Builds a <c>(stroke (width W) (type T))</c> node.
     /// </summary>
-    public static SExpr BuildStroke(Coord width, LineStyle style = LineStyle.Solid)
+    public static SExpr BuildStroke(Coord width, LineStyle style = LineStyle.Solid, EdaColor color = default)
     {
-        return new SExpressionBuilder("stroke")
+        var b = new SExpressionBuilder("stroke")
             .AddChild("width", w => w.AddValue(width.ToMm()))
-            .AddChild("type", t => t.AddSymbol(SExpressionHelper.LineStyleToString(style)))
-            .Build();
+            .AddChild("type", t => t.AddSymbol(SExpressionHelper.LineStyleToString(style)));
+        if (color != default)
+            b.AddChild(BuildColor(color));
+        return b.Build();
     }
 
     /// <summary>
     /// Builds a <c>(fill (type T))</c> node.
     /// </summary>
-    public static SExpr BuildFill(SchFillType fillType)
+    public static SExpr BuildFill(SchFillType fillType, EdaColor color = default)
     {
-        return new SExpressionBuilder("fill")
-            .AddChild("type", t => t.AddSymbol(SExpressionHelper.SchFillTypeToString(fillType)))
-            .Build();
+        var b = new SExpressionBuilder("fill")
+            .AddChild("type", t => t.AddSymbol(SExpressionHelper.SchFillTypeToString(fillType)));
+        if (color != default)
+            b.AddChild(BuildColor(color));
+        return b.Build();
     }
 
     /// <summary>
     /// Builds a <c>(effects (font (size H W)))</c> node.
     /// </summary>
-    public static SExpr BuildTextEffects(Coord fontH, Coord fontW, TextJustification justification = TextJustification.MiddleCenter, bool hide = false, bool isMirrored = false)
+    public static SExpr BuildTextEffects(Coord fontH, Coord fontW, TextJustification justification = TextJustification.MiddleCenter, bool hide = false, bool isMirrored = false, bool isBold = false, bool isItalic = false)
     {
         var b = new SExpressionBuilder("effects")
-            .AddChild("font", f => f.AddChild("size", s =>
+            .AddChild("font", f =>
             {
-                s.AddValue(fontH.ToMm());
-                s.AddValue(fontW.ToMm());
-            }));
+                f.AddChild("size", s =>
+                {
+                    s.AddValue(fontH.ToMm());
+                    s.AddValue(fontW.ToMm());
+                });
+                if (isBold) f.AddChild("bold", _ => { });
+                if (isItalic) f.AddChild("italic", _ => { });
+            });
 
         if (justification != TextJustification.MiddleCenter || isMirrored)
         {

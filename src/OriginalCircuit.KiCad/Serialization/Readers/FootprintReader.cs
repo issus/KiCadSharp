@@ -118,7 +118,10 @@ public static class FootprintReader
         var zcNode = node.GetChild("zone_connect");
         if (zcNode is not null)
         {
-            component.ZoneConnect = (ZoneConnectionType)(zcNode.GetInt() ?? 0);
+            var zcVal = zcNode.GetInt() ?? 0;
+            component.ZoneConnect = Enum.IsDefined(typeof(ZoneConnectionType), zcVal)
+                ? (ZoneConnectionType)zcVal
+                : ZoneConnectionType.Inherited;
         }
 
         var diagnostics = new List<KiCadDiagnostic>();
@@ -147,13 +150,28 @@ public static class FootprintReader
                         arcs.Add(ParseFpArc(child));
                         break;
                     case "fp_circle":
-                        // Treat as an arc for simplicity
+                        arcs.Add(ParseFpCircle(child));
                         break;
                     case "fp_rect":
-                        // Could add as multiple tracks
+                        tracks.AddRange(ParseFpRect(child));
                         break;
                     case "model":
                         component.Model3D = child.GetString();
+                        var offsetNode = child.GetChild("offset")?.GetChild("xyz");
+                        if (offsetNode is not null)
+                            component.Model3DOffset = new CoordPoint(
+                                Coord.FromMm(offsetNode.GetDouble(0) ?? 0),
+                                Coord.FromMm(offsetNode.GetDouble(1) ?? 0));
+                        var scaleNode = child.GetChild("scale")?.GetChild("xyz");
+                        if (scaleNode is not null)
+                            component.Model3DScale = new CoordPoint(
+                                Coord.FromMm(scaleNode.GetDouble(0) ?? 1),
+                                Coord.FromMm(scaleNode.GetDouble(1) ?? 1));
+                        var rotateNode = child.GetChild("rotate")?.GetChild("xyz");
+                        if (rotateNode is not null)
+                            component.Model3DRotation = new CoordPoint(
+                                Coord.FromMm(rotateNode.GetDouble(0) ?? 0),
+                                Coord.FromMm(rotateNode.GetDouble(1) ?? 0));
                         break;
                     case "property":
                         properties.Add(SymLibReader.ParseProperty(child));
@@ -345,6 +363,72 @@ public static class FootprintReader
             LayerName = node.GetChild("layer")?.GetString(),
             Uuid = SExpressionHelper.ParseUuid(node)
         };
+    }
+
+    private static KiCadPcbArc ParseFpCircle(SExpr node)
+    {
+        var centerNode = node.GetChild("center");
+        var endNode = node.GetChild("end");
+        var center = centerNode is not null ? SExpressionHelper.ParseXY(centerNode) : CoordPoint.Zero;
+        var end = endNode is not null ? SExpressionHelper.ParseXY(endNode) : CoordPoint.Zero;
+        var (width, _, _) = SExpressionHelper.ParseStroke(node);
+        if (width == Coord.Zero)
+            width = Coord.FromMm(node.GetChild("width")?.GetDouble() ?? 0);
+
+        var dx = end.X.ToMm() - center.X.ToMm();
+        var dy = end.Y.ToMm() - center.Y.ToMm();
+        var radius = Coord.FromMm(Math.Sqrt(dx * dx + dy * dy));
+
+        // Create a 360-degree arc using the end point as start, a diametrically opposite point as mid
+        var midPoint = new CoordPoint(
+            Coord.FromMm(2 * center.X.ToMm() - end.X.ToMm()),
+            Coord.FromMm(2 * center.Y.ToMm() - end.Y.ToMm()));
+
+        // Use a point 90 degrees around as mid for better three-point representation
+        var midX = center.X.ToMm() - dy;
+        var midY = center.Y.ToMm() + dx;
+        midPoint = new CoordPoint(Coord.FromMm(midX), Coord.FromMm(midY));
+
+        return new KiCadPcbArc
+        {
+            Center = center,
+            Radius = radius,
+            StartAngle = 0,
+            EndAngle = 360,
+            Width = width,
+            LayerName = node.GetChild("layer")?.GetString(),
+            ArcStart = end,
+            ArcMid = midPoint,
+            ArcEnd = end,
+            Uuid = SExpressionHelper.ParseUuid(node)
+        };
+    }
+
+    private static List<KiCadPcbTrack> ParseFpRect(SExpr node)
+    {
+        var startNode = node.GetChild("start");
+        var endNode = node.GetChild("end");
+        var start = startNode is not null ? SExpressionHelper.ParseXY(startNode) : CoordPoint.Zero;
+        var end = endNode is not null ? SExpressionHelper.ParseXY(endNode) : CoordPoint.Zero;
+        var (width, _, _) = SExpressionHelper.ParseStroke(node);
+        if (width == Coord.Zero)
+            width = Coord.FromMm(node.GetChild("width")?.GetDouble() ?? 0);
+
+        var layer = node.GetChild("layer")?.GetString();
+        var uuid = SExpressionHelper.ParseUuid(node);
+
+        var topLeft = start;
+        var topRight = new CoordPoint(end.X, start.Y);
+        var bottomRight = end;
+        var bottomLeft = new CoordPoint(start.X, end.Y);
+
+        return
+        [
+            new KiCadPcbTrack { Start = topLeft, End = topRight, Width = width, LayerName = layer, Uuid = uuid },
+            new KiCadPcbTrack { Start = topRight, End = bottomRight, Width = width, LayerName = layer },
+            new KiCadPcbTrack { Start = bottomRight, End = bottomLeft, Width = width, LayerName = layer },
+            new KiCadPcbTrack { Start = bottomLeft, End = topLeft, Width = width, LayerName = layer },
+        ];
     }
 
     private static KiCadPcbArc ParseFpArc(SExpr node)

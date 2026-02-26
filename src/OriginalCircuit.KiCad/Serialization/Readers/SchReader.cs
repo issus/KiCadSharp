@@ -376,7 +376,24 @@ public static class SchReader
             Name = node.GetChild("lib_id")?.GetString() ?? node.GetString() ?? ""
         };
 
-        var (loc, _) = SExpressionHelper.ParsePosition(node);
+        var (loc, angle) = SExpressionHelper.ParsePosition(node);
+        component.Location = loc;
+        component.Rotation = angle;
+        component.Uuid = SExpressionHelper.ParseUuid(node);
+
+        // Parse mirror
+        var mirror = node.GetChild("mirror");
+        if (mirror is not null)
+        {
+            var mirrorVal = mirror.GetString();
+            component.IsMirroredX = mirrorVal == "x";
+            component.IsMirroredY = mirrorVal == "y";
+        }
+
+        // Parse unit
+        var unitNode = node.GetChild("unit");
+        if (unitNode is not null)
+            component.Unit = unitNode.GetInt() ?? 1;
 
         // Parse properties
         var parameters = new List<KiCadSchParameter>();

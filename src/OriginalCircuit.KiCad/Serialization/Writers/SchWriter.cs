@@ -225,10 +225,23 @@ public static class SchWriter
         var sb = new SExpressionBuilder("symbol")
             .AddChild("lib_id", l => l.AddValue(comp.Name));
 
+        sb.AddChild(WriterHelper.BuildPosition(comp.Location, comp.Rotation));
+
+        if (comp.IsMirroredX)
+            sb.AddChild("mirror", m => m.AddSymbol("x"));
+        else if (comp.IsMirroredY)
+            sb.AddChild("mirror", m => m.AddSymbol("y"));
+
+        if (comp.Unit > 0)
+            sb.AddChild("unit", u => u.AddValue(comp.Unit));
+
         foreach (var param in comp.Parameters.OfType<KiCadSchParameter>())
         {
             sb.AddChild(SymLibWriter.BuildProperty(param));
         }
+
+        if (comp.Uuid is not null)
+            sb.AddChild(WriterHelper.BuildUuid(comp.Uuid));
 
         return sb.Build();
     }

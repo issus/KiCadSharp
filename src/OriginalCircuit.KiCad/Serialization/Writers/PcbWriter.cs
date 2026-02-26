@@ -176,7 +176,7 @@ public static class PcbWriter
         if (text.LayerName is not null)
             tb.AddChild("layer", l => l.AddSymbol(text.LayerName));
 
-        tb.AddChild(WriterHelper.BuildTextEffects(text.Height, text.Height));
+        tb.AddChild(WriterHelper.BuildTextEffects(text.Height, text.Height, isBold: text.FontBold, isItalic: text.FontItalic));
 
         if (text.Uuid is not null)
             tb.AddChild(WriterHelper.BuildUuid(text.Uuid));

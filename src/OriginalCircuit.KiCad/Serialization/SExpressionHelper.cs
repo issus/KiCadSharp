@@ -136,7 +136,7 @@ internal static class SExpressionHelper
     /// </summary>
     public static EdaColor ParseColor(SExpr? node)
     {
-        if (node is null) return EdaColor.Black;
+        if (node is null) return default;
 
         var r = (byte)(node.GetDouble(0) ?? 0);
         var g = (byte)(node.GetDouble(1) ?? 0);

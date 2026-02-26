@@ -116,9 +116,24 @@ public static class FootprintWriter
             b.AddChild("model", m =>
             {
                 m.AddValue(component.Model3D);
-                m.AddChild("offset", o => o.AddChild("xyz", xyz => { xyz.AddValue(0); xyz.AddValue(0); xyz.AddValue(0); }));
-                m.AddChild("scale", s => s.AddChild("xyz", xyz => { xyz.AddValue(1); xyz.AddValue(1); xyz.AddValue(1); }));
-                m.AddChild("rotate", r => r.AddChild("xyz", xyz => { xyz.AddValue(0); xyz.AddValue(0); xyz.AddValue(0); }));
+                m.AddChild("offset", o => o.AddChild("xyz", xyz =>
+                {
+                    xyz.AddValue(component.Model3DOffset.X.ToMm());
+                    xyz.AddValue(component.Model3DOffset.Y.ToMm());
+                    xyz.AddValue(0);
+                }));
+                m.AddChild("scale", s => s.AddChild("xyz", xyz =>
+                {
+                    xyz.AddValue(component.Model3DScale.X.ToMm());
+                    xyz.AddValue(component.Model3DScale.Y.ToMm());
+                    xyz.AddValue(1);
+                }));
+                m.AddChild("rotate", r => r.AddChild("xyz", xyz =>
+                {
+                    xyz.AddValue(component.Model3DRotation.X.ToMm());
+                    xyz.AddValue(component.Model3DRotation.Y.ToMm());
+                    xyz.AddValue(0);
+                }));
             });
         }
 
@@ -139,7 +154,7 @@ public static class FootprintWriter
         if (text.LayerName is not null)
             tb.AddChild("layer", l => l.AddSymbol(text.LayerName));
 
-        tb.AddChild(WriterHelper.BuildTextEffects(text.Height, text.Height));
+        tb.AddChild(WriterHelper.BuildTextEffects(text.Height, text.Height, isBold: text.FontBold, isItalic: text.FontItalic));
 
         if (text.Uuid is not null)
             tb.AddChild(WriterHelper.BuildUuid(text.Uuid));
