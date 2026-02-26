@@ -10,6 +10,19 @@ namespace OriginalCircuit.KiCad.Models.Sch;
 /// </summary>
 public sealed class KiCadSch : ISchDocument
 {
+    private readonly List<KiCadSchComponent> _components = [];
+    private readonly List<KiCadSchWire> _wires = [];
+    private readonly List<KiCadSchNetLabel> _netLabels = [];
+    private readonly List<KiCadSchJunction> _junctions = [];
+    private readonly List<KiCadSchPowerObject> _powerObjects = [];
+    private readonly List<KiCadSchLabel> _labels = [];
+    private readonly List<KiCadSchNoConnect> _noConnects = [];
+    private readonly List<KiCadSchBus> _buses = [];
+    private readonly List<KiCadSchBusEntry> _busEntries = [];
+    private readonly List<KiCadSchSheet> _sheets = [];
+    private readonly List<KiCadSchComponent> _libSymbols = [];
+    private readonly List<KiCadDiagnostic> _diagnostics = [];
+
     /// <summary>
     /// Gets the file format version number.
     /// </summary>
@@ -33,44 +46,56 @@ public sealed class KiCadSch : ISchDocument
     /// <summary>
     /// Gets the diagnostics collected during parsing.
     /// </summary>
-    public IReadOnlyList<KiCadDiagnostic> Diagnostics { get; set; } = [];
+    public IReadOnlyList<KiCadDiagnostic> Diagnostics => _diagnostics;
+    internal List<KiCadDiagnostic> DiagnosticList => _diagnostics;
 
     /// <inheritdoc />
-    public IReadOnlyList<ISchComponent> Components { get; set; } = [];
+    public IReadOnlyList<ISchComponent> Components => _components;
+    internal List<KiCadSchComponent> ComponentList => _components;
 
     /// <inheritdoc />
-    public IReadOnlyList<ISchWire> Wires { get; set; } = [];
+    public IReadOnlyList<ISchWire> Wires => _wires;
+    internal List<KiCadSchWire> WireList => _wires;
 
     /// <inheritdoc />
-    public IReadOnlyList<ISchNetLabel> NetLabels { get; set; } = [];
+    public IReadOnlyList<ISchNetLabel> NetLabels => _netLabels;
+    internal List<KiCadSchNetLabel> NetLabelList => _netLabels;
 
     /// <inheritdoc />
-    public IReadOnlyList<ISchJunction> Junctions { get; set; } = [];
+    public IReadOnlyList<ISchJunction> Junctions => _junctions;
+    internal List<KiCadSchJunction> JunctionList => _junctions;
 
     /// <inheritdoc />
-    public IReadOnlyList<ISchPowerObject> PowerObjects { get; set; } = [];
+    public IReadOnlyList<ISchPowerObject> PowerObjects => _powerObjects;
+    internal List<KiCadSchPowerObject> PowerObjectList => _powerObjects;
 
     /// <inheritdoc />
-    public IReadOnlyList<ISchLabel> Labels { get; set; } = [];
+    public IReadOnlyList<ISchLabel> Labels => _labels;
+    internal List<KiCadSchLabel> LabelList => _labels;
 
     /// <inheritdoc />
-    public IReadOnlyList<ISchNoConnect> NoConnects { get; set; } = [];
+    public IReadOnlyList<ISchNoConnect> NoConnects => _noConnects;
+    internal List<KiCadSchNoConnect> NoConnectList => _noConnects;
 
     /// <inheritdoc />
-    public IReadOnlyList<ISchBus> Buses { get; set; } = [];
+    public IReadOnlyList<ISchBus> Buses => _buses;
+    internal List<KiCadSchBus> BusList => _buses;
 
     /// <inheritdoc />
-    public IReadOnlyList<ISchBusEntry> BusEntries { get; set; } = [];
+    public IReadOnlyList<ISchBusEntry> BusEntries => _busEntries;
+    internal List<KiCadSchBusEntry> BusEntryList => _busEntries;
 
     /// <summary>
     /// Gets the sheets in this document.
     /// </summary>
-    public IReadOnlyList<KiCadSchSheet> Sheets { get; set; } = [];
+    public IReadOnlyList<KiCadSchSheet> Sheets => _sheets;
+    internal List<KiCadSchSheet> SheetList => _sheets;
 
     /// <summary>
     /// Gets the symbol library instances embedded in this document.
     /// </summary>
-    public IReadOnlyList<KiCadSchComponent> LibSymbols { get; set; } = [];
+    public IReadOnlyList<KiCadSchComponent> LibSymbols => _libSymbols;
+    internal List<KiCadSchComponent> LibSymbolList => _libSymbols;
 
     /// <inheritdoc />
     public CoordRect Bounds
@@ -83,6 +108,87 @@ public sealed class KiCadSch : ISchDocument
             return rect;
         }
     }
+
+    public void AddComponent(ISchComponent component)
+    {
+        if (component is not KiCadSchComponent kcomp)
+            throw new ArgumentException($"Expected {nameof(KiCadSchComponent)}", nameof(component));
+        _components.Add(kcomp);
+    }
+
+    public bool RemoveComponent(ISchComponent component) => component is KiCadSchComponent kcomp && _components.Remove(kcomp);
+
+    public void AddWire(ISchWire wire)
+    {
+        if (wire is not KiCadSchWire kwire)
+            throw new ArgumentException($"Expected {nameof(KiCadSchWire)}", nameof(wire));
+        _wires.Add(kwire);
+    }
+
+    public bool RemoveWire(ISchWire wire) => wire is KiCadSchWire kwire && _wires.Remove(kwire);
+
+    public void AddNetLabel(ISchNetLabel netLabel)
+    {
+        if (netLabel is not KiCadSchNetLabel knl)
+            throw new ArgumentException($"Expected {nameof(KiCadSchNetLabel)}", nameof(netLabel));
+        _netLabels.Add(knl);
+    }
+
+    public bool RemoveNetLabel(ISchNetLabel netLabel) => netLabel is KiCadSchNetLabel knl && _netLabels.Remove(knl);
+
+    public void AddJunction(ISchJunction junction)
+    {
+        if (junction is not KiCadSchJunction kj)
+            throw new ArgumentException($"Expected {nameof(KiCadSchJunction)}", nameof(junction));
+        _junctions.Add(kj);
+    }
+
+    public bool RemoveJunction(ISchJunction junction) => junction is KiCadSchJunction kj && _junctions.Remove(kj);
+
+    public void AddPowerObject(ISchPowerObject powerObject)
+    {
+        if (powerObject is not KiCadSchPowerObject kpo)
+            throw new ArgumentException($"Expected {nameof(KiCadSchPowerObject)}", nameof(powerObject));
+        _powerObjects.Add(kpo);
+    }
+
+    public bool RemovePowerObject(ISchPowerObject powerObject) => powerObject is KiCadSchPowerObject kpo && _powerObjects.Remove(kpo);
+
+    public void AddLabel(ISchLabel label)
+    {
+        if (label is not KiCadSchLabel klabel)
+            throw new ArgumentException($"Expected {nameof(KiCadSchLabel)}", nameof(label));
+        _labels.Add(klabel);
+    }
+
+    public bool RemoveLabel(ISchLabel label) => label is KiCadSchLabel klabel && _labels.Remove(klabel);
+
+    public void AddNoConnect(ISchNoConnect noConnect)
+    {
+        if (noConnect is not KiCadSchNoConnect knc)
+            throw new ArgumentException($"Expected {nameof(KiCadSchNoConnect)}", nameof(noConnect));
+        _noConnects.Add(knc);
+    }
+
+    public bool RemoveNoConnect(ISchNoConnect noConnect) => noConnect is KiCadSchNoConnect knc && _noConnects.Remove(knc);
+
+    public void AddBus(ISchBus bus)
+    {
+        if (bus is not KiCadSchBus kbus)
+            throw new ArgumentException($"Expected {nameof(KiCadSchBus)}", nameof(bus));
+        _buses.Add(kbus);
+    }
+
+    public bool RemoveBus(ISchBus bus) => bus is KiCadSchBus kbus && _buses.Remove(kbus);
+
+    public void AddBusEntry(ISchBusEntry busEntry)
+    {
+        if (busEntry is not KiCadSchBusEntry kbe)
+            throw new ArgumentException($"Expected {nameof(KiCadSchBusEntry)}", nameof(busEntry));
+        _busEntries.Add(kbe);
+    }
+
+    public bool RemoveBusEntry(ISchBusEntry busEntry) => busEntry is KiCadSchBusEntry kbe && _busEntries.Remove(kbe);
 
     /// <inheritdoc />
     public async ValueTask SaveAsync(string path, SaveOptions? options = null, CancellationToken ct = default)

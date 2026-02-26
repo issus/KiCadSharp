@@ -65,7 +65,7 @@ public static class SymLibReader
             }
         }
 
-        lib.Diagnostics = diagnostics;
+        lib.DiagnosticList.AddRange(diagnostics);
         return lib;
     }
 
@@ -102,7 +102,7 @@ public static class SymLibReader
         {
             parameters.Add(ParseProperty(propNode));
         }
-        component.Parameters = parameters;
+        component.ParameterList.AddRange(parameters);
 
         // Find description from properties
         var descProp = parameters.FirstOrDefault(p => p.Name == "ki_description");
@@ -162,16 +162,16 @@ public static class SymLibReader
             }
         }
 
-        component.SubSymbols = subSymbols;
-        component.Pins = pins;
-        component.Lines = lines;
-        component.Rectangles = rectangles;
-        component.Arcs = arcs;
-        component.Circles = circles;
-        component.Beziers = beziers;
-        component.Polylines = polylines;
-        component.Polygons = polygons;
-        component.Labels = labels;
+        component.SubSymbolList.AddRange(subSymbols);
+        component.PinList.AddRange(pins);
+        component.LineList.AddRange(lines);
+        component.RectangleList.AddRange(rectangles);
+        component.ArcList.AddRange(arcs);
+        component.CircleList.AddRange(circles);
+        component.BezierList.AddRange(beziers);
+        component.PolylineList.AddRange(polylines);
+        component.PolygonList.AddRange(polygons);
+        component.LabelList.AddRange(labels);
 
         // Compute part count from sub-symbol naming convention
         var maxUnit = 0;

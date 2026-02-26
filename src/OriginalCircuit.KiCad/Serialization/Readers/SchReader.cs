@@ -132,18 +132,18 @@ public static class SchReader
             }
         }
 
-        sch.Wires = wires;
-        sch.Junctions = junctions;
-        sch.NetLabels = netLabels;
-        sch.Labels = labels;
-        sch.NoConnects = noConnects;
-        sch.Buses = buses;
-        sch.BusEntries = busEntries;
-        sch.PowerObjects = powerObjects;
-        sch.Components = components;
-        sch.Sheets = sheets;
-        sch.LibSymbols = libSymbols;
-        sch.Diagnostics = diagnostics;
+        sch.WireList.AddRange(wires);
+        sch.JunctionList.AddRange(junctions);
+        sch.NetLabelList.AddRange(netLabels);
+        sch.LabelList.AddRange(labels);
+        sch.NoConnectList.AddRange(noConnects);
+        sch.BusList.AddRange(buses);
+        sch.BusEntryList.AddRange(busEntries);
+        sch.PowerObjectList.AddRange(powerObjects);
+        sch.ComponentList.AddRange(components);
+        sch.SheetList.AddRange(sheets);
+        sch.LibSymbolList.AddRange(libSymbols);
+        sch.DiagnosticList.AddRange(diagnostics);
 
         return sch;
     }
@@ -353,7 +353,7 @@ public static class SchReader
         {
             parameters.Add(SymLibReader.ParseProperty(propNode));
         }
-        component.Parameters = parameters;
+        component.ParameterList.AddRange(parameters);
 
         // Parse pins from the placed symbol
         var pins = new List<KiCadSchPin>();
@@ -361,7 +361,7 @@ public static class SchReader
         {
             pins.Add(SymLibReader.ParsePin(pinNode));
         }
-        component.Pins = pins;
+        component.PinList.AddRange(pins);
 
         return component;
     }

@@ -27,10 +27,13 @@ public sealed class KiCadSymLib : ISchLibrary
     /// </summary>
     public string? GeneratorVersion { get; set; }
 
+    private readonly List<KiCadDiagnostic> _diagnostics = [];
+
     /// <summary>
     /// Gets the diagnostics collected during parsing.
     /// </summary>
-    public IReadOnlyList<KiCadDiagnostic> Diagnostics { get; set; } = [];
+    public IReadOnlyList<KiCadDiagnostic> Diagnostics => _diagnostics;
+    internal List<KiCadDiagnostic> DiagnosticList => _diagnostics;
 
     /// <inheritdoc />
     public IReadOnlyList<KiCadSchComponent> Components => _components;

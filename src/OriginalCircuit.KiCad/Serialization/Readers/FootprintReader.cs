@@ -151,12 +151,12 @@ public static class FootprintReader
             }
         }
 
-        component.Pads = pads;
-        component.Texts = texts;
-        component.Tracks = tracks;
-        component.Arcs = arcs;
-        component.Properties = properties;
-        component.Diagnostics = diagnostics;
+        component.PadList.AddRange(pads);
+        component.TextList.AddRange(texts);
+        component.TrackList.AddRange(tracks);
+        component.ArcList.AddRange(arcs);
+        component.PropertyList.AddRange(properties);
+        component.DiagnosticList.AddRange(diagnostics);
 
         return component;
     }

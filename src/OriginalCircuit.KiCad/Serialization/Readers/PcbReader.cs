@@ -112,15 +112,15 @@ public static class PcbReader
             allPads.AddRange(fp.Pads);
         }
 
-        pcb.Components = components;
-        pcb.Tracks = tracks;
-        pcb.Vias = vias;
-        pcb.Arcs = arcs;
-        pcb.Texts = texts;
-        pcb.Regions = regions;
-        pcb.Pads = allPads;
-        pcb.Nets = nets;
-        pcb.Diagnostics = diagnostics;
+        pcb.ComponentList.AddRange(components);
+        pcb.TrackList.AddRange(tracks);
+        pcb.ViaList.AddRange(vias);
+        pcb.ArcList.AddRange(arcs);
+        pcb.TextList.AddRange(texts);
+        pcb.RegionList.AddRange(regions);
+        pcb.PadList.AddRange(allPads.OfType<KiCadPcbPad>());
+        pcb.NetList.AddRange(nets);
+        pcb.DiagnosticList.AddRange(diagnostics);
 
         return pcb;
     }

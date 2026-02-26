@@ -10,6 +10,15 @@ namespace OriginalCircuit.KiCad.Models.Pcb;
 /// </summary>
 public sealed class KiCadPcbComponent : IPcbComponent
 {
+    private readonly List<KiCadPcbPad> _pads = [];
+    private readonly List<KiCadPcbTrack> _tracks = [];
+    private readonly List<KiCadPcbVia> _vias = [];
+    private readonly List<KiCadPcbArc> _arcs = [];
+    private readonly List<KiCadPcbText> _texts = [];
+    private readonly List<KiCadPcbRegion> _regions = [];
+    private readonly List<KiCadSchParameter> _properties = [];
+    private readonly List<KiCadDiagnostic> _diagnostics = [];
+
     /// <inheritdoc />
     public string Name { get; set; } = "";
 
@@ -28,22 +37,28 @@ public sealed class KiCadPcbComponent : IPcbComponent
     public string? LayerName { get; set; }
 
     /// <inheritdoc />
-    public IReadOnlyList<IPcbPad> Pads { get; set; } = [];
+    public IReadOnlyList<IPcbPad> Pads => _pads;
+    internal List<KiCadPcbPad> PadList => _pads;
 
     /// <inheritdoc />
-    public IReadOnlyList<IPcbTrack> Tracks { get; set; } = [];
+    public IReadOnlyList<IPcbTrack> Tracks => _tracks;
+    internal List<KiCadPcbTrack> TrackList => _tracks;
 
     /// <inheritdoc />
-    public IReadOnlyList<IPcbVia> Vias { get; set; } = [];
+    public IReadOnlyList<IPcbVia> Vias => _vias;
+    internal List<KiCadPcbVia> ViaList => _vias;
 
     /// <inheritdoc />
-    public IReadOnlyList<IPcbArc> Arcs { get; set; } = [];
+    public IReadOnlyList<IPcbArc> Arcs => _arcs;
+    internal List<KiCadPcbArc> ArcList => _arcs;
 
     /// <inheritdoc />
-    public IReadOnlyList<IPcbText> Texts { get; set; } = [];
+    public IReadOnlyList<IPcbText> Texts => _texts;
+    internal List<KiCadPcbText> TextList => _texts;
 
     /// <inheritdoc />
-    public IReadOnlyList<IPcbRegion> Regions { get; set; } = [];
+    public IReadOnlyList<IPcbRegion> Regions => _regions;
+    internal List<KiCadPcbRegion> RegionList => _regions;
 
     /// <summary>
     /// Gets the footprint location on the board.
@@ -138,12 +153,14 @@ public sealed class KiCadPcbComponent : IPcbComponent
     /// <summary>
     /// Gets the properties of this footprint.
     /// </summary>
-    public IReadOnlyList<KiCadSchParameter> Properties { get; set; } = [];
+    public IReadOnlyList<KiCadSchParameter> Properties => _properties;
+    internal List<KiCadSchParameter> PropertyList => _properties;
 
     /// <summary>
     /// Gets the diagnostics collected during parsing.
     /// </summary>
-    public IReadOnlyList<KiCadDiagnostic> Diagnostics { get; set; } = [];
+    public IReadOnlyList<KiCadDiagnostic> Diagnostics => _diagnostics;
+    internal List<KiCadDiagnostic> DiagnosticList => _diagnostics;
 
     /// <inheritdoc />
     public CoordRect Bounds
@@ -158,4 +175,68 @@ public sealed class KiCadPcbComponent : IPcbComponent
             return rect;
         }
     }
+
+    public void AddPad(IPcbPad pad)
+    {
+        if (pad is not KiCadPcbPad kpad)
+            throw new ArgumentException($"Expected {nameof(KiCadPcbPad)}", nameof(pad));
+        _pads.Add(kpad);
+    }
+
+    public bool RemovePad(IPcbPad pad) => pad is KiCadPcbPad kpad && _pads.Remove(kpad);
+
+    public void AddTrack(IPcbTrack track)
+    {
+        if (track is not KiCadPcbTrack ktrack)
+            throw new ArgumentException($"Expected {nameof(KiCadPcbTrack)}", nameof(track));
+        _tracks.Add(ktrack);
+    }
+
+    public bool RemoveTrack(IPcbTrack track) => track is KiCadPcbTrack ktrack && _tracks.Remove(ktrack);
+
+    public void AddVia(IPcbVia via)
+    {
+        if (via is not KiCadPcbVia kvia)
+            throw new ArgumentException($"Expected {nameof(KiCadPcbVia)}", nameof(via));
+        _vias.Add(kvia);
+    }
+
+    public bool RemoveVia(IPcbVia via) => via is KiCadPcbVia kvia && _vias.Remove(kvia);
+
+    public void AddArc(IPcbArc arc)
+    {
+        if (arc is not KiCadPcbArc karc)
+            throw new ArgumentException($"Expected {nameof(KiCadPcbArc)}", nameof(arc));
+        _arcs.Add(karc);
+    }
+
+    public bool RemoveArc(IPcbArc arc) => arc is KiCadPcbArc karc && _arcs.Remove(karc);
+
+    public void AddText(IPcbText text)
+    {
+        if (text is not KiCadPcbText ktext)
+            throw new ArgumentException($"Expected {nameof(KiCadPcbText)}", nameof(text));
+        _texts.Add(ktext);
+    }
+
+    public bool RemoveText(IPcbText text) => text is KiCadPcbText ktext && _texts.Remove(ktext);
+
+    public void AddRegion(IPcbRegion region)
+    {
+        if (region is not KiCadPcbRegion kregion)
+            throw new ArgumentException($"Expected {nameof(KiCadPcbRegion)}", nameof(region));
+        _regions.Add(kregion);
+    }
+
+    public bool RemoveRegion(IPcbRegion region) => region is KiCadPcbRegion kregion && _regions.Remove(kregion);
+
+    /// <summary>
+    /// Adds a property to this footprint.
+    /// </summary>
+    public void AddProperty(KiCadSchParameter property) => _properties.Add(property);
+
+    /// <summary>
+    /// Removes a property from this footprint.
+    /// </summary>
+    public bool RemoveProperty(KiCadSchParameter property) => _properties.Remove(property);
 }
