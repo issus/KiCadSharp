@@ -185,6 +185,7 @@ public sealed class KiCadSchComponent : ISchComponent
         }
     }
 
+    /// <inheritdoc />
     public void AddPin(ISchPin pin)
     {
         ArgumentNullException.ThrowIfNull(pin);
@@ -193,8 +194,10 @@ public sealed class KiCadSchComponent : ISchComponent
         _pins.Add(kpin);
     }
 
+    /// <inheritdoc />
     public bool RemovePin(ISchPin pin) => pin is KiCadSchPin kpin && _pins.Remove(kpin);
 
+    /// <inheritdoc />
     public void AddLine(ISchLine line)
     {
         ArgumentNullException.ThrowIfNull(line);
@@ -203,8 +206,10 @@ public sealed class KiCadSchComponent : ISchComponent
         _lines.Add(kline);
     }
 
+    /// <inheritdoc />
     public bool RemoveLine(ISchLine line) => line is KiCadSchLine kline && _lines.Remove(kline);
 
+    /// <inheritdoc />
     public void AddRectangle(ISchRectangle rectangle)
     {
         ArgumentNullException.ThrowIfNull(rectangle);
@@ -213,8 +218,10 @@ public sealed class KiCadSchComponent : ISchComponent
         _rectangles.Add(krect);
     }
 
+    /// <inheritdoc />
     public bool RemoveRectangle(ISchRectangle rectangle) => rectangle is KiCadSchRectangle krect && _rectangles.Remove(krect);
 
+    /// <inheritdoc />
     public void AddLabel(ISchLabel label)
     {
         ArgumentNullException.ThrowIfNull(label);
@@ -223,8 +230,10 @@ public sealed class KiCadSchComponent : ISchComponent
         _labels.Add(klabel);
     }
 
+    /// <inheritdoc />
     public bool RemoveLabel(ISchLabel label) => label is KiCadSchLabel klabel && _labels.Remove(klabel);
 
+    /// <inheritdoc />
     public void AddWire(ISchWire wire)
     {
         ArgumentNullException.ThrowIfNull(wire);
@@ -233,8 +242,10 @@ public sealed class KiCadSchComponent : ISchComponent
         _wires.Add(kwire);
     }
 
+    /// <inheritdoc />
     public bool RemoveWire(ISchWire wire) => wire is KiCadSchWire kwire && _wires.Remove(kwire);
 
+    /// <inheritdoc />
     public void AddPolyline(ISchPolyline polyline)
     {
         ArgumentNullException.ThrowIfNull(polyline);
@@ -243,8 +254,10 @@ public sealed class KiCadSchComponent : ISchComponent
         _polylines.Add(kpoly);
     }
 
+    /// <inheritdoc />
     public bool RemovePolyline(ISchPolyline polyline) => polyline is KiCadSchPolyline kpoly && _polylines.Remove(kpoly);
 
+    /// <inheritdoc />
     public void AddPolygon(ISchPolygon polygon)
     {
         ArgumentNullException.ThrowIfNull(polygon);
@@ -253,8 +266,10 @@ public sealed class KiCadSchComponent : ISchComponent
         _polygons.Add(kpoly);
     }
 
+    /// <inheritdoc />
     public bool RemovePolygon(ISchPolygon polygon) => polygon is KiCadSchPolygon kpoly && _polygons.Remove(kpoly);
 
+    /// <inheritdoc />
     public void AddArc(ISchArc arc)
     {
         ArgumentNullException.ThrowIfNull(arc);
@@ -263,8 +278,10 @@ public sealed class KiCadSchComponent : ISchComponent
         _arcs.Add(karc);
     }
 
+    /// <inheritdoc />
     public bool RemoveArc(ISchArc arc) => arc is KiCadSchArc karc && _arcs.Remove(karc);
 
+    /// <inheritdoc />
     public void AddCircle(ISchCircle circle)
     {
         ArgumentNullException.ThrowIfNull(circle);
@@ -273,8 +290,10 @@ public sealed class KiCadSchComponent : ISchComponent
         _circles.Add(kcircle);
     }
 
+    /// <inheritdoc />
     public bool RemoveCircle(ISchCircle circle) => circle is KiCadSchCircle kcircle && _circles.Remove(kcircle);
 
+    /// <inheritdoc />
     public void AddBezier(ISchBezier bezier)
     {
         ArgumentNullException.ThrowIfNull(bezier);
@@ -283,8 +302,10 @@ public sealed class KiCadSchComponent : ISchComponent
         _beziers.Add(kbez);
     }
 
+    /// <inheritdoc />
     public bool RemoveBezier(ISchBezier bezier) => bezier is KiCadSchBezier kbez && _beziers.Remove(kbez);
 
+    /// <inheritdoc />
     public void AddNetLabel(ISchNetLabel netLabel)
     {
         ArgumentNullException.ThrowIfNull(netLabel);
@@ -293,8 +314,10 @@ public sealed class KiCadSchComponent : ISchComponent
         _netLabels.Add(knl);
     }
 
+    /// <inheritdoc />
     public bool RemoveNetLabel(ISchNetLabel netLabel) => netLabel is KiCadSchNetLabel knl && _netLabels.Remove(knl);
 
+    /// <inheritdoc />
     public void AddJunction(ISchJunction junction)
     {
         ArgumentNullException.ThrowIfNull(junction);
@@ -303,8 +326,10 @@ public sealed class KiCadSchComponent : ISchComponent
         _junctions.Add(kj);
     }
 
+    /// <inheritdoc />
     public bool RemoveJunction(ISchJunction junction) => junction is KiCadSchJunction kj && _junctions.Remove(kj);
 
+    /// <inheritdoc />
     public void AddImage(ISchImage image)
     {
         ArgumentNullException.ThrowIfNull(image);
@@ -313,8 +338,10 @@ public sealed class KiCadSchComponent : ISchComponent
         _images.Add(kimg);
     }
 
+    /// <inheritdoc />
     public bool RemoveImage(ISchImage image) => image is KiCadSchImage kimg && _images.Remove(kimg);
 
+    /// <inheritdoc />
     public void AddParameter(ISchParameter parameter)
     {
         ArgumentNullException.ThrowIfNull(parameter);
@@ -323,6 +350,7 @@ public sealed class KiCadSchComponent : ISchComponent
         _parameters.Add(kparam);
     }
 
+    /// <inheritdoc />
     public bool RemoveParameter(ISchParameter parameter) => parameter is KiCadSchParameter kparam && _parameters.Remove(kparam);
 
     /// <summary>

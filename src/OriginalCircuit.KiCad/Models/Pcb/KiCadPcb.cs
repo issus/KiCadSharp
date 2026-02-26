@@ -98,6 +98,7 @@ public sealed class KiCadPcb : IPcbDocument
         }
     }
 
+    /// <inheritdoc />
     public void AddComponent(IPcbComponent component)
     {
         ArgumentNullException.ThrowIfNull(component);
@@ -106,8 +107,10 @@ public sealed class KiCadPcb : IPcbDocument
         _components.Add(kcomp);
     }
 
+    /// <inheritdoc />
     public bool RemoveComponent(IPcbComponent component) => component is KiCadPcbComponent kcomp && _components.Remove(kcomp);
 
+    /// <inheritdoc />
     public void AddPad(IPcbPad pad)
     {
         ArgumentNullException.ThrowIfNull(pad);
@@ -116,8 +119,10 @@ public sealed class KiCadPcb : IPcbDocument
         _pads.Add(kpad);
     }
 
+    /// <inheritdoc />
     public bool RemovePad(IPcbPad pad) => pad is KiCadPcbPad kpad && _pads.Remove(kpad);
 
+    /// <inheritdoc />
     public void AddVia(IPcbVia via)
     {
         ArgumentNullException.ThrowIfNull(via);
@@ -126,8 +131,10 @@ public sealed class KiCadPcb : IPcbDocument
         _vias.Add(kvia);
     }
 
+    /// <inheritdoc />
     public bool RemoveVia(IPcbVia via) => via is KiCadPcbVia kvia && _vias.Remove(kvia);
 
+    /// <inheritdoc />
     public void AddTrack(IPcbTrack track)
     {
         ArgumentNullException.ThrowIfNull(track);
@@ -136,8 +143,10 @@ public sealed class KiCadPcb : IPcbDocument
         _tracks.Add(ktrack);
     }
 
+    /// <inheritdoc />
     public bool RemoveTrack(IPcbTrack track) => track is KiCadPcbTrack ktrack && _tracks.Remove(ktrack);
 
+    /// <inheritdoc />
     public void AddArc(IPcbArc arc)
     {
         ArgumentNullException.ThrowIfNull(arc);
@@ -146,8 +155,10 @@ public sealed class KiCadPcb : IPcbDocument
         _arcs.Add(karc);
     }
 
+    /// <inheritdoc />
     public bool RemoveArc(IPcbArc arc) => arc is KiCadPcbArc karc && _arcs.Remove(karc);
 
+    /// <inheritdoc />
     public void AddText(IPcbText text)
     {
         ArgumentNullException.ThrowIfNull(text);
@@ -156,8 +167,10 @@ public sealed class KiCadPcb : IPcbDocument
         _texts.Add(ktext);
     }
 
+    /// <inheritdoc />
     public bool RemoveText(IPcbText text) => text is KiCadPcbText ktext && _texts.Remove(ktext);
 
+    /// <inheritdoc />
     public void AddRegion(IPcbRegion region)
     {
         ArgumentNullException.ThrowIfNull(region);
@@ -166,6 +179,7 @@ public sealed class KiCadPcb : IPcbDocument
         _regions.Add(kregion);
     }
 
+    /// <inheritdoc />
     public bool RemoveRegion(IPcbRegion region) => region is KiCadPcbRegion kregion && _regions.Remove(kregion);
 
     /// <summary>

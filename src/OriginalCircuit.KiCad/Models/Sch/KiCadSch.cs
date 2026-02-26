@@ -113,6 +113,7 @@ public sealed class KiCadSch : ISchDocument
         }
     }
 
+    /// <inheritdoc />
     public void AddComponent(ISchComponent component)
     {
         ArgumentNullException.ThrowIfNull(component);
@@ -121,8 +122,10 @@ public sealed class KiCadSch : ISchDocument
         _components.Add(kcomp);
     }
 
+    /// <inheritdoc />
     public bool RemoveComponent(ISchComponent component) => component is KiCadSchComponent kcomp && _components.Remove(kcomp);
 
+    /// <inheritdoc />
     public void AddWire(ISchWire wire)
     {
         ArgumentNullException.ThrowIfNull(wire);
@@ -131,8 +134,10 @@ public sealed class KiCadSch : ISchDocument
         _wires.Add(kwire);
     }
 
+    /// <inheritdoc />
     public bool RemoveWire(ISchWire wire) => wire is KiCadSchWire kwire && _wires.Remove(kwire);
 
+    /// <inheritdoc />
     public void AddNetLabel(ISchNetLabel netLabel)
     {
         ArgumentNullException.ThrowIfNull(netLabel);
@@ -141,8 +146,10 @@ public sealed class KiCadSch : ISchDocument
         _netLabels.Add(knl);
     }
 
+    /// <inheritdoc />
     public bool RemoveNetLabel(ISchNetLabel netLabel) => netLabel is KiCadSchNetLabel knl && _netLabels.Remove(knl);
 
+    /// <inheritdoc />
     public void AddJunction(ISchJunction junction)
     {
         ArgumentNullException.ThrowIfNull(junction);
@@ -151,8 +158,10 @@ public sealed class KiCadSch : ISchDocument
         _junctions.Add(kj);
     }
 
+    /// <inheritdoc />
     public bool RemoveJunction(ISchJunction junction) => junction is KiCadSchJunction kj && _junctions.Remove(kj);
 
+    /// <inheritdoc />
     public void AddPowerObject(ISchPowerObject powerObject)
     {
         ArgumentNullException.ThrowIfNull(powerObject);
@@ -161,8 +170,10 @@ public sealed class KiCadSch : ISchDocument
         _powerObjects.Add(kpo);
     }
 
+    /// <inheritdoc />
     public bool RemovePowerObject(ISchPowerObject powerObject) => powerObject is KiCadSchPowerObject kpo && _powerObjects.Remove(kpo);
 
+    /// <inheritdoc />
     public void AddLabel(ISchLabel label)
     {
         ArgumentNullException.ThrowIfNull(label);
@@ -171,8 +182,10 @@ public sealed class KiCadSch : ISchDocument
         _labels.Add(klabel);
     }
 
+    /// <inheritdoc />
     public bool RemoveLabel(ISchLabel label) => label is KiCadSchLabel klabel && _labels.Remove(klabel);
 
+    /// <inheritdoc />
     public void AddNoConnect(ISchNoConnect noConnect)
     {
         ArgumentNullException.ThrowIfNull(noConnect);
@@ -181,8 +194,10 @@ public sealed class KiCadSch : ISchDocument
         _noConnects.Add(knc);
     }
 
+    /// <inheritdoc />
     public bool RemoveNoConnect(ISchNoConnect noConnect) => noConnect is KiCadSchNoConnect knc && _noConnects.Remove(knc);
 
+    /// <inheritdoc />
     public void AddBus(ISchBus bus)
     {
         ArgumentNullException.ThrowIfNull(bus);
@@ -191,8 +206,10 @@ public sealed class KiCadSch : ISchDocument
         _buses.Add(kbus);
     }
 
+    /// <inheritdoc />
     public bool RemoveBus(ISchBus bus) => bus is KiCadSchBus kbus && _buses.Remove(kbus);
 
+    /// <inheritdoc />
     public void AddBusEntry(ISchBusEntry busEntry)
     {
         ArgumentNullException.ThrowIfNull(busEntry);
@@ -201,6 +218,7 @@ public sealed class KiCadSch : ISchDocument
         _busEntries.Add(kbe);
     }
 
+    /// <inheritdoc />
     public bool RemoveBusEntry(ISchBusEntry busEntry) => busEntry is KiCadSchBusEntry kbe && _busEntries.Remove(kbe);
 
     /// <inheritdoc />
