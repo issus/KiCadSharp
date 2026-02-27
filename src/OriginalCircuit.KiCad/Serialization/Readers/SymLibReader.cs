@@ -105,22 +105,38 @@ public static class SymLibReader
         var pinNames = node.GetChild("pin_names");
         if (pinNames is not null)
         {
+            component.PinNamesPresent = true;
             var offset = pinNames.GetChild("offset")?.GetDouble() ?? 0;
             component.PinNamesOffset = Coord.FromMm(offset);
-            component.HidePinNames = pinNames.Values.Any(v => v is SExprSymbol s && s.Value == "hide");
+            // KiCad 6: (pin_names ... hide) — symbol value
+            // KiCad 8: (pin_names ... (hide yes)) — child node
+            component.HidePinNames = pinNames.Values.Any(v => v is SExprSymbol s && s.Value == "hide")
+                                     || pinNames.GetChild("hide")?.GetBool() == true;
         }
 
         // Parse pin_numbers
         var pinNumbers = node.GetChild("pin_numbers");
         if (pinNumbers is not null)
         {
-            component.HidePinNumbers = pinNumbers.Values.Any(v => v is SExprSymbol s && s.Value == "hide");
+            component.PinNumbersPresent = true;
+            // KiCad 6: (pin_numbers hide) — symbol value
+            // KiCad 8: (pin_numbers (hide yes)) — child node
+            component.HidePinNumbers = pinNumbers.Values.Any(v => v is SExprSymbol s && s.Value == "hide")
+                                       || pinNumbers.GetChild("hide")?.GetBool() == true;
         }
 
         component.InBom = node.GetChild("in_bom")?.GetBool() ?? true;
         component.OnBoard = node.GetChild("on_board")?.GetBool() ?? true;
-        component.ExcludeFromSim = node.GetChild("exclude_from_sim")?.GetBool() ?? false;
-        component.EmbeddedFonts = node.GetChild("embedded_fonts")?.GetBool() ?? false;
+
+        var excludeFromSimNode = node.GetChild("exclude_from_sim");
+        if (excludeFromSimNode is not null)
+        {
+            component.ExcludeFromSimPresent = true;
+            component.ExcludeFromSim = excludeFromSimNode.GetBool() ?? false;
+        }
+
+        var embeddedFontsNode = node.GetChild("embedded_fonts");
+        component.EmbeddedFonts = embeddedFontsNode is not null ? embeddedFontsNode.GetBool() : null;
         component.IsPower = node.GetChild("power") is not null;
         component.Extends = node.GetChild("extends")?.GetString();
 

@@ -40,8 +40,10 @@ public static class SymLibWriter
     {
         var b = new SExpressionBuilder("kicad_symbol_lib")
             .AddChild("version", v => v.AddValue(lib.Version == 0 ? 20231120 : lib.Version))
-            .AddChild("generator", g => g.AddValue(lib.Generator ?? "kicadsharp"))
-            .AddChild("generator_version", g => g.AddValue(lib.GeneratorVersion ?? "1.0"));
+            .AddChild("generator", g => g.AddValue(lib.Generator ?? "kicadsharp"));
+
+        if (lib.GeneratorVersion is not null)
+            b.AddChild("generator_version", g => g.AddValue(lib.GeneratorVersion));
 
         foreach (var comp in lib.Components)
         {
@@ -51,60 +53,76 @@ public static class SymLibWriter
         return b.Build();
     }
 
-    internal static SExpr BuildSymbol(KiCadSchComponent component)
+    internal static SExpr BuildSymbol(KiCadSchComponent component, bool isSubSymbol = false)
     {
         var b = new SExpressionBuilder("symbol").AddValue(component.Name);
 
-        if (component.Extends is not null)
+        if (!isSubSymbol)
         {
-            b.AddChild("extends", e => e.AddValue(component.Extends));
-        }
+            if (component.Extends is not null)
+            {
+                b.AddChild("extends", e => e.AddValue(component.Extends));
+            }
 
-        // power (KiCad 8+)
-        if (component.IsPower)
-        {
-            b.AddChild("power", _ => { });
-        }
+            // power (KiCad 8+)
+            if (component.IsPower)
+            {
+                b.AddChild("power", _ => { });
+            }
 
-        // pin_names - always emit for round-trip fidelity
-        b.AddChild("pin_names", pn =>
-        {
-            if (component.PinNamesOffset != Coord.Zero)
-                pn.AddChild("offset", o => o.AddValue(component.PinNamesOffset.ToMm()));
-            if (component.HidePinNames)
-                pn.AddSymbol("hide");
-        });
+            // Determine if this is KiCad 8+ format (embedded_fonts presence is the indicator)
+            bool isKiCad8 = component.EmbeddedFonts.HasValue;
 
-        // pin_numbers - always emit for round-trip fidelity
-        if (component.HidePinNumbers)
-        {
-            b.AddChild("pin_numbers", pn => pn.AddSymbol("hide"));
-        }
-        else
-        {
-            b.AddChild("pin_numbers", _ => { });
-        }
+            // pin_names - emit when present in source file
+            if (component.PinNamesPresent)
+            {
+                b.AddChild("pin_names", pn =>
+                {
+                    // Always emit (offset N) — KiCad always does
+                    pn.AddChild("offset", o => o.AddValue(component.PinNamesOffset.ToMm()));
+                    if (component.HidePinNames)
+                    {
+                        if (isKiCad8)
+                            pn.AddChild("hide", h => h.AddBool(true));
+                        else
+                            pn.AddSymbol("hide");
+                    }
+                });
+            }
 
-        b.AddChild("in_bom", v => v.AddBool(component.InBom));
-        b.AddChild("on_board", v => v.AddBool(component.OnBoard));
-        b.AddChild("exclude_from_sim", v => v.AddBool(component.ExcludeFromSim));
+            // pin_numbers - emit when present in source file
+            if (component.PinNumbersPresent)
+            {
+                b.AddChild("pin_numbers", pn =>
+                {
+                    if (component.HidePinNumbers)
+                    {
+                        if (isKiCad8)
+                            pn.AddChild("hide", h => h.AddBool(true));
+                        else
+                            pn.AddSymbol("hide");
+                    }
+                });
+            }
 
-        // embedded_fonts (KiCad 8+)
-        if (component.EmbeddedFonts)
-        {
-            b.AddChild("embedded_fonts", v => v.AddBool(true));
-        }
+            b.AddChild("in_bom", v => v.AddBool(component.InBom));
+            b.AddChild("on_board", v => v.AddBool(component.OnBoard));
 
-        // Properties
-        foreach (var param in component.Parameters.OfType<KiCadSchParameter>())
-        {
-            b.AddChild(BuildProperty(param));
+            // exclude_from_sim - emit when it was present in the source
+            if (component.ExcludeFromSimPresent)
+                b.AddChild("exclude_from_sim", v => v.AddBool(component.ExcludeFromSim));
+
+            // Properties
+            foreach (var param in component.Parameters.OfType<KiCadSchParameter>())
+            {
+                b.AddChild(BuildProperty(param));
+            }
         }
 
         // Sub-symbols
         foreach (var sub in component.SubSymbols)
         {
-            b.AddChild(BuildSymbol(sub));
+            b.AddChild(BuildSymbol(sub, isSubSymbol: true));
         }
 
         // Direct graphical primitives (from this level, not sub-symbols)
@@ -161,6 +179,12 @@ public static class SymLibWriter
         {
             if (component.SubSymbols.Count == 0)
                 b.AddChild(BuildTextLabel(label));
+        }
+
+        // embedded_fonts (KiCad 8+) — emit at end of top-level symbol, always when present (even if false)
+        if (!isSubSymbol && component.EmbeddedFonts.HasValue)
+        {
+            b.AddChild("embedded_fonts", v => v.AddBool(component.EmbeddedFonts.Value));
         }
 
         return b.Build();

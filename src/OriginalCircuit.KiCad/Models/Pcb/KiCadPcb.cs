@@ -57,8 +57,9 @@ public sealed class KiCadPcb : IPcbDocument
 
     /// <summary>
     /// Gets or sets whether embedded fonts are enabled (KiCad 8+).
+    /// Null means the token was not present in the source file.
     /// </summary>
-    public bool EmbeddedFonts { get; set; }
+    public bool? EmbeddedFonts { get; set; }
 
     /// <summary>
     /// Gets the list of raw S-expression nodes for <c>(generated ...)</c> elements.

@@ -159,8 +159,9 @@ public sealed class KiCadSchComponent : ISchComponent
 
     /// <summary>
     /// Gets or sets whether embedded fonts are used in this symbol (KiCad 8+).
+    /// Null means the token was not present in the source file.
     /// </summary>
-    public bool EmbeddedFonts { get; set; }
+    public bool? EmbeddedFonts { get; set; }
 
     /// <summary>
     /// Gets or sets whether this symbol is a power symbol (KiCad 8+).
@@ -171,6 +172,22 @@ public sealed class KiCadSchComponent : ISchComponent
     /// Gets the name of the symbol this one extends (derived/inherited symbols).
     /// </summary>
     public string? Extends { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the pin_names node was present in the source file.
+    /// Null means not tracked (will always emit for KiCad 8+ files).
+    /// </summary>
+    public bool PinNamesPresent { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the pin_numbers node was present in the source file.
+    /// </summary>
+    public bool PinNumbersPresent { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the exclude_from_sim node was present in the source file.
+    /// </summary>
+    public bool ExcludeFromSimPresent { get; set; }
 
     /// <summary>
     /// Gets the pin names offset from the pin end.

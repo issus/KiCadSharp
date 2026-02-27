@@ -64,7 +64,7 @@ public static class SchReader
             Version = root.GetChild("version")?.GetInt() ?? 0,
             Generator = root.GetChild("generator")?.GetString(),
             GeneratorVersion = root.GetChild("generator_version")?.GetString(),
-            EmbeddedFonts = root.GetChild("embedded_fonts")?.GetBool() ?? false,
+            EmbeddedFonts = root.GetChild("embedded_fonts") is { } ef ? ef.GetBool() : null,
             Uuid = SExpressionHelper.ParseUuid(root),
             Paper = root.GetChild("paper")?.GetString(),
             TitleBlock = root.GetChild("title_block"),

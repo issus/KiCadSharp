@@ -83,7 +83,7 @@ public static class FootprintReader
         component.Uuid = SExpressionHelper.ParseUuid(node);
 
         // KiCad 8+ tokens
-        component.EmbeddedFonts = node.GetChild("embedded_fonts")?.GetBool() ?? false;
+        component.EmbeddedFonts = node.GetChild("embedded_fonts") is { } efNode ? efNode.GetBool() : null;
         component.DuplicatePadNumbersAreJumpers = node.GetChild("duplicate_pad_numbers_are_jumpers") is not null;
 
         // Parse attr

@@ -163,7 +163,7 @@ public static class PcbReader
                         pcb.RawElementList.Add(child);
                         break;
                     case "embedded_fonts":
-                        pcb.EmbeddedFonts = child.GetBool() ?? false;
+                        pcb.EmbeddedFonts = child.GetBool();
                         break;
                     case "generated":
                         pcb.GeneratedElements.Add(child);

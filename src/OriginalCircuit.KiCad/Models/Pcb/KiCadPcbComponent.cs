@@ -128,8 +128,9 @@ public sealed class KiCadPcbComponent : IPcbComponent
 
     /// <summary>
     /// Gets or sets whether embedded fonts are used (KiCad 8+).
+    /// Null means the token was not present in the source file.
     /// </summary>
-    public bool EmbeddedFonts { get; set; }
+    public bool? EmbeddedFonts { get; set; }
 
     /// <summary>
     /// Gets or sets whether duplicate pad numbers are treated as jumpers (net-tie footprint flag).

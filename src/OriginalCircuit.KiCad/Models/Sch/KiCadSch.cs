@@ -61,8 +61,9 @@ public sealed class KiCadSch : ISchDocument
 
     /// <summary>
     /// Gets or sets whether embedded fonts are used in this schematic (KiCad 8+).
+    /// Null means the token was not present in the source file.
     /// </summary>
-    public bool EmbeddedFonts { get; set; }
+    public bool? EmbeddedFonts { get; set; }
 
     /// <summary>
     /// Gets the UUID of the document.

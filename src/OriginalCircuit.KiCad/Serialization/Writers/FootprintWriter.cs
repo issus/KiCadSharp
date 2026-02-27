@@ -75,8 +75,8 @@ public static class FootprintWriter
         if (component.Path is not null)
             b.AddChild("path", p => p.AddValue(component.Path));
 
-        if (component.EmbeddedFonts)
-            b.AddChild("embedded_fonts", e => e.AddBool(true));
+        if (component.EmbeddedFonts.HasValue)
+            b.AddChild("embedded_fonts", e => e.AddBool(component.EmbeddedFonts.Value));
 
         if (component.DuplicatePadNumbersAreJumpers)
             b.AddChild(new SExpressionBuilder("duplicate_pad_numbers_are_jumpers").Build());

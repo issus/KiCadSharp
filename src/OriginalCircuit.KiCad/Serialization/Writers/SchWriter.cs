@@ -40,11 +40,13 @@ public static class SchWriter
     {
         var b = new SExpressionBuilder("kicad_sch")
             .AddChild("version", v => v.AddValue(sch.Version == 0 ? 20231120 : sch.Version))
-            .AddChild("generator", g => g.AddValue(sch.Generator ?? "kicadsharp"))
-            .AddChild("generator_version", g => g.AddValue(sch.GeneratorVersion ?? "1.0"));
+            .AddChild("generator", g => g.AddValue(sch.Generator ?? "kicadsharp"));
 
-        if (sch.EmbeddedFonts)
-            b.AddChild("embedded_fonts", v => v.AddBool(true));
+        if (sch.GeneratorVersion is not null)
+            b.AddChild("generator_version", g => g.AddValue(sch.GeneratorVersion));
+
+        if (sch.EmbeddedFonts.HasValue)
+            b.AddChild("embedded_fonts", v => v.AddBool(sch.EmbeddedFonts.Value));
 
         if (sch.Uuid is not null)
             b.AddChild(WriterHelper.BuildUuid(sch.Uuid));

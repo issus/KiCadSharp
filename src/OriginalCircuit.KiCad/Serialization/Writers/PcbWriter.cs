@@ -40,12 +40,14 @@ public static class PcbWriter
     {
         var b = new SExpressionBuilder("kicad_pcb")
             .AddChild("version", v => v.AddValue(pcb.Version == 0 ? 20231120 : pcb.Version))
-            .AddChild("generator", g => g.AddValue(pcb.Generator ?? "kicadsharp"))
-            .AddChild("generator_version", g => g.AddValue(pcb.GeneratorVersion ?? "1.0"));
+            .AddChild("generator", g => g.AddValue(pcb.Generator ?? "kicadsharp"));
 
-        // Embedded fonts (KiCad 8+)
-        if (pcb.EmbeddedFonts)
-            b.AddChild("embedded_fonts", ef => ef.AddBool(true));
+        if (pcb.GeneratorVersion is not null)
+            b.AddChild("generator_version", g => g.AddValue(pcb.GeneratorVersion));
+
+        // Embedded fonts (KiCad 8+) — emit when present (even if false)
+        if (pcb.EmbeddedFonts.HasValue)
+            b.AddChild("embedded_fonts", ef => ef.AddBool(pcb.EmbeddedFonts.Value));
 
         // General (prefer raw subtree for round-trip, fallback to constructed)
         if (pcb.GeneralRaw is not null)
