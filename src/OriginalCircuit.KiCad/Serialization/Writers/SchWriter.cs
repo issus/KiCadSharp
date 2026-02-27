@@ -20,7 +20,7 @@ public static class SchWriter
     /// <param name="ct">Cancellation token.</param>
     public static async ValueTask WriteAsync(KiCadSch sch, string path, CancellationToken ct = default)
     {
-        var expr = Build(sch);
+        var expr = sch.SourceTree ?? Build(sch);
         await SExpressionWriter.WriteAsync(expr, path, ct).ConfigureAwait(false);
     }
 
@@ -32,7 +32,7 @@ public static class SchWriter
     /// <param name="ct">Cancellation token.</param>
     public static async ValueTask WriteAsync(KiCadSch sch, Stream stream, CancellationToken ct = default)
     {
-        var expr = Build(sch);
+        var expr = sch.SourceTree ?? Build(sch);
         await SExpressionWriter.WriteAsync(expr, stream, ct).ConfigureAwait(false);
     }
 

@@ -21,8 +21,21 @@ public sealed record SExprString(string Value) : ISExpressionValue
 /// <param name="Value">The numeric value as a double.</param>
 public sealed record SExprNumber(double Value) : ISExpressionValue
 {
+    /// <summary>
+    /// The original text representation from the parsed file, if available.
+    /// When set, this is used for serialization instead of <see cref="FormatNumber"/>
+    /// to preserve exact formatting (trailing zeros, scientific notation, etc.).
+    /// </summary>
+    public string? OriginalText { get; init; }
+
     /// <inheritdoc />
-    public override string ToString() => FormatNumber(Value);
+    public override string ToString() => OriginalText ?? FormatNumber(Value);
+
+    /// <summary>
+    /// Returns the S-expression representation of this number.
+    /// Uses <see cref="OriginalText"/> if available, otherwise formats the value.
+    /// </summary>
+    public string ToSExpression() => OriginalText ?? FormatNumber(Value);
 
     /// <summary>
     /// Formats a number without trailing zeros and without exponential notation.
@@ -42,12 +55,6 @@ public sealed record SExprNumber(double Value) : ISExpressionValue
         if (result.Contains('.'))
         {
             result = result.TrimEnd('0').TrimEnd('.');
-        }
-
-        // Handle negative zero
-        if (result == "-0")
-        {
-            result = "0";
         }
 
         return result;

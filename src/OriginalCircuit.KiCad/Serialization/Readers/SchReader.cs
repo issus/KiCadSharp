@@ -183,6 +183,7 @@ public static class SchReader
         sch.SheetList.AddRange(sheets);
         sch.LibSymbolList.AddRange(libSymbols);
         sch.DiagnosticList.AddRange(diagnostics);
+        sch.SourceTree = root;
 
         return sch;
     }

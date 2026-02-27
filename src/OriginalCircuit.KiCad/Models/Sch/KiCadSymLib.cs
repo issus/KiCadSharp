@@ -3,6 +3,7 @@ using OriginalCircuit.Eda.Models;
 using OriginalCircuit.Eda.Models.Sch;
 using OriginalCircuit.Eda.Primitives;
 using OriginalCircuit.KiCad.Serialization;
+using OriginalCircuit.KiCad.SExpression;
 
 namespace OriginalCircuit.KiCad.Models.Sch;
 
@@ -12,6 +13,14 @@ namespace OriginalCircuit.KiCad.Models.Sch;
 public sealed class KiCadSymLib : ISchLibrary
 {
     private readonly List<KiCadSchComponent> _components = [];
+
+    /// <summary>
+    /// The original parsed S-expression tree, if this model was loaded from a file.
+    /// When set and the model has not been modified, the writer will re-emit this tree
+    /// directly for byte-perfect round-trip fidelity.
+    /// Set to <c>null</c> to force the writer to rebuild the tree from the model.
+    /// </summary>
+    public SExpression.SExpression? SourceTree { get; set; }
 
     /// <summary>
     /// Gets the file format version number.

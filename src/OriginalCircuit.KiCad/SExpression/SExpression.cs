@@ -51,6 +51,19 @@ public sealed class SExpression
     public IReadOnlyList<SExpression> Children => _children;
 
     /// <summary>
+    /// Whether this node was on a single line in the source file.
+    /// <c>true</c> means compact (single line), <c>false</c> means multiline.
+    /// <c>null</c> means use the writer's heuristic (e.g., for programmatically constructed nodes).
+    /// </summary>
+    public bool? WasCompact { get; set; }
+
+    /// <summary>
+    /// The detected indentation width (in spaces) from the source file.
+    /// Only meaningful on the root node. <c>null</c> means use the writer's default.
+    /// </summary>
+    public int? OriginalIndent { get; set; }
+
+    /// <summary>
     /// Returns the first child node with the specified token name, or <c>null</c> if not found.
     /// </summary>
     /// <param name="token">The token name to search for.</param>

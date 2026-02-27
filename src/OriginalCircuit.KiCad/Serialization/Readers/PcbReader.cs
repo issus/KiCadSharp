@@ -168,6 +168,7 @@ public static class PcbReader
         pcb.PadList.AddRange(allPads.OfType<KiCadPcbPad>());
         pcb.NetList.AddRange(nets);
         pcb.DiagnosticList.AddRange(diagnostics);
+        pcb.SourceTree = root;
 
         return pcb;
     }
