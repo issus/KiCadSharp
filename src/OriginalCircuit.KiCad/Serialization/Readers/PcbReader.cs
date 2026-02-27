@@ -274,11 +274,33 @@ public static class PcbReader
         text.LayerName = node.GetChild("layer")?.GetString();
         text.Uuid = SExpressionHelper.ParseUuid(node);
 
-        var (fontH, _, _, isHidden, _, isBold, isItalic) = SExpressionHelper.ParseTextEffects(node);
+        var (fontH, fontW, justification, isHidden, isMirrored, isBold, isItalic) = SExpressionHelper.ParseTextEffects(node);
         text.Height = fontH;
+        text.FontWidth = fontW;
         text.FontBold = isBold;
         text.FontItalic = isItalic;
         text.IsHidden = isHidden;
+        text.IsMirrored = isMirrored;
+        text.Justification = justification;
+
+        // Parse font thickness from effects > font > (thickness N)
+        var fontNode = node.GetChild("effects")?.GetChild("font");
+        if (fontNode is not null)
+        {
+            var thickness = fontNode.GetChild("thickness")?.GetDouble();
+            if (thickness.HasValue)
+                text.FontThickness = Coord.FromMm(thickness.Value);
+
+            // Parse font face
+            var face = fontNode.GetChild("face")?.GetString();
+            if (face is not null)
+                text.FontName = face;
+
+            // Parse font color
+            var colorNode = fontNode.GetChild("color");
+            if (colorNode is not null)
+                text.FontColor = SExpressionHelper.ParseColor(colorNode);
+        }
 
         return text;
     }

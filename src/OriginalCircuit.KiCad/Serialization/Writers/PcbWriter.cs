@@ -99,10 +99,14 @@ public static class PcbWriter
 
     private static SExpr BuildSegment(KiCadPcbTrack track)
     {
-        var sb = new SExpressionBuilder("segment")
-            .AddChild("start", s => { s.AddValue(track.Start.X.ToMm()); s.AddValue(track.Start.Y.ToMm()); })
-            .AddChild("end", e => { e.AddValue(track.End.X.ToMm()); e.AddValue(track.End.Y.ToMm()); })
-            .AddChild("width", w => w.AddValue(track.Width.ToMm()));
+        var sb = new SExpressionBuilder("segment");
+
+        if (track.IsLocked)
+            sb.AddSymbol("locked");
+
+        sb.AddChild("start", s => { s.AddValue(track.Start.X.ToMm()); s.AddValue(track.Start.Y.ToMm()); })
+          .AddChild("end", e => { e.AddValue(track.End.X.ToMm()); e.AddValue(track.End.Y.ToMm()); })
+          .AddChild("width", w => w.AddValue(track.Width.ToMm()));
 
         if (track.LayerName is not null)
             sb.AddChild("layer", l => l.AddSymbol(track.LayerName));
@@ -157,11 +161,15 @@ public static class PcbWriter
 
     private static SExpr BuildArc(KiCadPcbArc arc)
     {
-        var ab = new SExpressionBuilder("arc")
-            .AddChild("start", s => { s.AddValue(arc.ArcStart.X.ToMm()); s.AddValue(arc.ArcStart.Y.ToMm()); })
-            .AddChild("mid", m => { m.AddValue(arc.ArcMid.X.ToMm()); m.AddValue(arc.ArcMid.Y.ToMm()); })
-            .AddChild("end", e => { e.AddValue(arc.ArcEnd.X.ToMm()); e.AddValue(arc.ArcEnd.Y.ToMm()); })
-            .AddChild("width", w => w.AddValue(arc.Width.ToMm()));
+        var ab = new SExpressionBuilder("arc");
+
+        if (arc.IsLocked)
+            ab.AddSymbol("locked");
+
+        ab.AddChild("start", s => { s.AddValue(arc.ArcStart.X.ToMm()); s.AddValue(arc.ArcStart.Y.ToMm()); })
+          .AddChild("mid", m => { m.AddValue(arc.ArcMid.X.ToMm()); m.AddValue(arc.ArcMid.Y.ToMm()); })
+          .AddChild("end", e => { e.AddValue(arc.ArcEnd.X.ToMm()); e.AddValue(arc.ArcEnd.Y.ToMm()); })
+          .AddChild("width", w => w.AddValue(arc.Width.ToMm()));
 
         if (arc.LayerName is not null)
             ab.AddChild("layer", l => l.AddSymbol(arc.LayerName));
@@ -180,10 +188,22 @@ public static class PcbWriter
             .AddValue(text.Text)
             .AddChild(WriterHelper.BuildPosition(text.Location, text.Rotation));
 
+        if (text.IsHidden)
+            tb.AddSymbol("hide");
+
         if (text.LayerName is not null)
             tb.AddChild("layer", l => l.AddSymbol(text.LayerName));
 
-        tb.AddChild(WriterHelper.BuildTextEffects(text.Height, text.Height, isBold: text.FontBold, isItalic: text.FontItalic));
+        var fontW = text.FontWidth != Coord.Zero ? text.FontWidth : text.Height;
+        tb.AddChild(WriterHelper.BuildPcbTextEffects(
+            text.Height, fontW,
+            justification: text.Justification,
+            isBold: text.FontBold,
+            isItalic: text.FontItalic,
+            isMirrored: text.IsMirrored,
+            thickness: text.FontThickness,
+            fontFace: text.FontName,
+            fontColor: text.FontColor));
 
         if (text.Uuid is not null)
             tb.AddChild(WriterHelper.BuildUuid(text.Uuid));

@@ -132,6 +132,81 @@ internal static class WriterHelper
     }
 
     /// <summary>
+    /// Builds a <c>(effects (font (size H W) [(face "FACE")] [(thickness T)] [(color R G B A)] [bold] [italic]) [(justify ...)] [hide])</c> node
+    /// with full PCB text details.
+    /// </summary>
+    public static SExpr BuildPcbTextEffects(
+        Coord fontH, Coord fontW,
+        TextJustification justification = TextJustification.MiddleCenter,
+        bool hide = false,
+        bool isMirrored = false,
+        bool isBold = false,
+        bool isItalic = false,
+        Coord thickness = default,
+        string? fontFace = null,
+        EdaColor fontColor = default)
+    {
+        var b = new SExpressionBuilder("effects")
+            .AddChild("font", f =>
+            {
+                if (fontFace is not null)
+                    f.AddChild("face", fc => fc.AddValue(fontFace));
+
+                f.AddChild("size", s =>
+                {
+                    s.AddValue(fontH.ToMm());
+                    s.AddValue(fontW.ToMm());
+                });
+                if (thickness != default && thickness != Coord.Zero)
+                    f.AddChild("thickness", t => t.AddValue(thickness.ToMm()));
+                if (isBold) f.AddChild("bold", _ => { });
+                if (isItalic) f.AddChild("italic", _ => { });
+                if (fontColor != default)
+                    f.AddChild(BuildColor(fontColor));
+            });
+
+        if (justification != TextJustification.MiddleCenter || isMirrored)
+        {
+            b.AddChild("justify", j =>
+            {
+                switch (justification)
+                {
+                    case TextJustification.MiddleLeft:
+                    case TextJustification.TopLeft:
+                    case TextJustification.BottomLeft:
+                        j.AddSymbol("left");
+                        break;
+                    case TextJustification.MiddleRight:
+                    case TextJustification.TopRight:
+                    case TextJustification.BottomRight:
+                        j.AddSymbol("right");
+                        break;
+                }
+                switch (justification)
+                {
+                    case TextJustification.TopLeft:
+                    case TextJustification.TopCenter:
+                    case TextJustification.TopRight:
+                        j.AddSymbol("top");
+                        break;
+                    case TextJustification.BottomLeft:
+                    case TextJustification.BottomCenter:
+                    case TextJustification.BottomRight:
+                        j.AddSymbol("bottom");
+                        break;
+                }
+                if (isMirrored)
+                    j.AddSymbol("mirror");
+            });
+        }
+
+        if (hide)
+            b.AddChild("hide", _ => { });
+
+        return b.Build();
+    }
+
+    /// <summary>
     /// Builds a <c>(uuid ...)</c> node.
     /// </summary>
     public static SExpr BuildUuid(string uuid)

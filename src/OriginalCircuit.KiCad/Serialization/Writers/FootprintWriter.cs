@@ -110,6 +110,10 @@ public static class FootprintWriter
             b.AddChild(BuildPad(pad));
         }
 
+        // UUID
+        if (component.Uuid is not null)
+            b.AddChild(WriterHelper.BuildUuid(component.Uuid));
+
         // 3D model
         if (component.Model3D is not null)
         {
