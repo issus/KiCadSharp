@@ -90,6 +90,7 @@ public static class SymLibReader
         }
 
         lib.DiagnosticList.AddRange(diagnostics);
+        lib.SourceTree = root;
         return lib;
     }
 

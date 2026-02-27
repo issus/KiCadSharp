@@ -3,6 +3,7 @@ using OriginalCircuit.Eda.Models;
 using OriginalCircuit.Eda.Models.Pcb;
 using OriginalCircuit.Eda.Primitives;
 using OriginalCircuit.KiCad.Serialization;
+using OriginalCircuit.KiCad.SExpression;
 using SExpr = OriginalCircuit.KiCad.SExpression.SExpression;
 
 namespace OriginalCircuit.KiCad.Models.Pcb;
@@ -13,6 +14,14 @@ namespace OriginalCircuit.KiCad.Models.Pcb;
 public sealed class KiCadPcb : IPcbDocument
 {
     private readonly List<KiCadPcbComponent> _components = [];
+
+    /// <summary>
+    /// The original parsed S-expression tree, if this model was loaded from a file.
+    /// When set and the model has not been modified, the writer will re-emit this tree
+    /// directly for byte-perfect round-trip fidelity.
+    /// Set to <c>null</c> to force the writer to rebuild the tree from the model.
+    /// </summary>
+    public SExpr? SourceTree { get; set; }
     private readonly List<KiCadPcbPad> _pads = [];
     private readonly List<KiCadPcbVia> _vias = [];
     private readonly List<KiCadPcbTrack> _tracks = [];

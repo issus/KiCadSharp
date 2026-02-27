@@ -20,7 +20,7 @@ public static class PcbWriter
     /// <param name="ct">Cancellation token.</param>
     public static async ValueTask WriteAsync(KiCadPcb pcb, string path, CancellationToken ct = default)
     {
-        var expr = Build(pcb);
+        var expr = pcb.SourceTree ?? Build(pcb);
         await SExpressionWriter.WriteAsync(expr, path, ct).ConfigureAwait(false);
     }
 
@@ -32,7 +32,7 @@ public static class PcbWriter
     /// <param name="ct">Cancellation token.</param>
     public static async ValueTask WriteAsync(KiCadPcb pcb, Stream stream, CancellationToken ct = default)
     {
-        var expr = Build(pcb);
+        var expr = pcb.SourceTree ?? Build(pcb);
         await SExpressionWriter.WriteAsync(expr, stream, ct).ConfigureAwait(false);
     }
 

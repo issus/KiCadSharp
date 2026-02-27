@@ -36,7 +36,7 @@ public static class SExpressionWriter
         await using (writer.ConfigureAwait(false))
         {
             await writer.WriteAsync(text.AsMemory(), ct).ConfigureAwait(false);
-            await writer.WriteLineAsync().ConfigureAwait(false);
+            await writer.WriteAsync("\n".AsMemory(), ct).ConfigureAwait(false);
             await writer.FlushAsync(ct).ConfigureAwait(false);
         }
     }
@@ -53,6 +53,11 @@ public static class SExpressionWriter
         return sb.ToString();
     }
 
+    /// <summary>
+    /// Default indentation width in spaces per nesting level.
+    /// </summary>
+    private const int DefaultIndentWidth = 2;
+
     private struct WriteFrame
     {
         public SExpression Node;
@@ -63,6 +68,9 @@ public static class SExpressionWriter
 
     private static void WriteNodeIterative(StringBuilder sb, SExpression root)
     {
+        // Use OriginalIndent from root if available, otherwise default
+        var indentWidth = root.OriginalIndent ?? DefaultIndentWidth;
+
         var stack = new List<WriteFrame>(32);
         stack.Add(new WriteFrame { Node = root, Indent = 0, IsCompact = false, ChildIndex = 0 });
 
@@ -91,8 +99,8 @@ public static class SExpressionWriter
                     continue;
                 }
 
-                // Determine compactness
-                frame.IsCompact = ShouldUseCompact(node);
+                // Determine compactness: use WasCompact from source if available, else heuristic
+                frame.IsCompact = node.WasCompact ?? ShouldUseCompact(node);
                 stack[idx] = frame;
             }
 
@@ -107,8 +115,8 @@ public static class SExpressionWriter
                 }
                 else
                 {
-                    sb.AppendLine();
-                    sb.Append(' ', (frame.Indent + 1) * 2);
+                    sb.Append('\n');
+                    sb.Append(' ', (frame.Indent + 1) * indentWidth);
                 }
 
                 // Advance child index
@@ -129,8 +137,8 @@ public static class SExpressionWriter
                 // All children processed, write closing
                 if (!frame.IsCompact)
                 {
-                    sb.AppendLine();
-                    sb.Append(' ', frame.Indent * 2);
+                    sb.Append('\n');
+                    sb.Append(' ', frame.Indent * indentWidth);
                 }
                 sb.Append(')');
                 stack.RemoveAt(idx);
@@ -158,7 +166,7 @@ public static class SExpressionWriter
                 totalLen += 1 + v switch
                 {
                     SExprString s => s.Value.Length + 2, // +2 for quotes
-                    SExprNumber n => SExprNumber.FormatNumber(n.Value).Length,
+                    SExprNumber n => n.ToSExpression().Length,
                     SExprSymbol s => s.Value.Length,
                     _ => 0
                 };
@@ -175,7 +183,7 @@ public static class SExpressionWriter
                 WriteQuotedString(sb, s.Value);
                 break;
             case SExprNumber n:
-                sb.Append(SExprNumber.FormatNumber(n.Value));
+                sb.Append(n.ToSExpression());
                 break;
             case SExprSymbol s:
                 sb.Append(s.Value);

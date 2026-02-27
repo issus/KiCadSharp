@@ -209,6 +209,7 @@ public static class PcbReader
         pcb.ZoneList.AddRange(zones);
         pcb.NetClassList.AddRange(netClasses);
         pcb.DiagnosticList.AddRange(diagnostics);
+        pcb.SourceTree = root;
 
         return pcb;
     }

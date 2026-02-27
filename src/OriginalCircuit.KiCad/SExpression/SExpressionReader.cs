@@ -120,24 +120,11 @@ public static class SExpressionReader
         ("hide", _symHide), ("locked", _symLocked), ("smd", _symSmd), ("thru_hole", _symThruHole),
     ];
 
-    // Cached SExprNumber for integers -1..360
-    private static readonly SExprNumber[] _cachedNumbers = BuildCachedNumbers();
-
-    private static SExprNumber[] BuildCachedNumbers()
-    {
-        var arr = new SExprNumber[362]; // Index 0 = -1, Index 361 = 360
-        for (var i = 0; i < arr.Length; i++)
-            arr[i] = new SExprNumber(i - 1);
-        return arr;
-    }
-
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static SExprNumber GetCachedNumber(double value)
+    private static SExprNumber CreateNumber(double value, byte[] data, int start, int length)
     {
-        var intVal = (int)value;
-        if (value == intVal && (uint)(intVal + 1) <= 361)
-            return _cachedNumbers[intVal + 1];
-        return new SExprNumber(value);
+        var originalText = Encoding.UTF8.GetString(data, start, length);
+        return new SExprNumber(value) { OriginalText = originalText };
     }
 
     /// <summary>
@@ -264,6 +251,9 @@ public static class SExpressionReader
 
         var pool = new ParseFramePool(512);
 
+        // Record position of the opening '(' for compact detection
+        var rootStartPos = pos;
+
         // Consume opening '('
         pos++;
         SkipWhitespace(data, ref pos, end);
@@ -275,7 +265,7 @@ public static class SExpressionReader
             throw new FormatException($"Expected token after '(' at line {line}, column {col}.");
         }
 
-        stack[++stackTop] = pool.Rent(token);
+        stack[++stackTop] = pool.Rent(token, rootStartPos);
 
         while (stackTop >= 0)
         {
@@ -296,11 +286,15 @@ public static class SExpressionReader
             {
                 pos++;
                 ref var completed = ref stack[stackTop--];
-                var expr = completed.BuildExpression();
+                // Determine compactness: no newline between '(' and ')' means compact
+                var wasCompact = !ContainsNewline(data, completed.StartPos, pos);
+                var expr = completed.BuildExpression(wasCompact);
                 pool.Return(completed);
 
                 if (stackTop < 0)
                 {
+                    // Root node: detect indent width from source data
+                    expr.OriginalIndent = DetectIndentWidth(data, rootStartPos, end - rootStartPos);
                     pool.ReturnAll();
                     return expr;
                 }
@@ -309,6 +303,7 @@ public static class SExpressionReader
             }
             else if (ch == (byte)'(')
             {
+                var childStartPos = pos; // record '(' position
                 pos++;
                 SkipWhitespace(data, ref pos, end);
 
@@ -334,7 +329,7 @@ public static class SExpressionReader
                 if (stackTop >= stack.Length)
                     Array.Resize(ref stack, stack.Length * 2);
 
-                stack[stackTop] = pool.Rent(childToken);
+                stack[stackTop] = pool.Rent(childToken, childStartPos);
             }
             else
             {
@@ -396,7 +391,7 @@ public static class SExpressionReader
 
         // Try fast double parse first
         if (TryParseFastDouble(data, start, length, out var number))
-            return GetCachedNumber(number);
+            return CreateNumber(number, data, start, length);
 
         // It's a symbol
         var symbolStr = InternToken(data, start, length);
@@ -585,6 +580,57 @@ public static class SExpressionReader
             pos++;
     }
 
+    /// <summary>
+    /// Checks whether the byte range [start, end) contains any newline (0x0A) byte.
+    /// Used to detect whether an S-expression node spans multiple lines (WasCompact).
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool ContainsNewline(byte[] data, int start, int end)
+    {
+        for (var i = start; i < end; i++)
+        {
+            if (data[i] == (byte)'\n')
+                return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Detects the indentation width from the source data by looking at the first indented line.
+    /// Returns null if no indentation pattern is detected.
+    /// </summary>
+    private static int? DetectIndentWidth(byte[] data, int offset, int length)
+    {
+        var end = offset + length;
+        var i = offset;
+
+        // Find the first newline followed by spaces then '('
+        while (i < end)
+        {
+            if (data[i] == (byte)'\n')
+            {
+                i++;
+                var spaceCount = 0;
+                while (i < end && data[i] == (byte)' ')
+                {
+                    spaceCount++;
+                    i++;
+                }
+                // If we found spaces followed by '(', this is our indent
+                if (spaceCount > 0 && i < end && data[i] == (byte)'(')
+                {
+                    return spaceCount;
+                }
+            }
+            else
+            {
+                i++;
+            }
+        }
+
+        return null;
+    }
+
     // ---------------------------------------------------------------
     // Parse frame — struct-based with pooled arrays, no heap per node
     // ---------------------------------------------------------------
@@ -592,6 +638,7 @@ public static class SExpressionReader
     private struct ParseFrame
     {
         public string Token;
+        public int StartPos; // byte position of the opening '(' for WasCompact detection
 
         private ISExpressionValue[] _values;
         private int _valueCount;
@@ -600,9 +647,10 @@ public static class SExpressionReader
         private int _childCount;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Init(string token, ISExpressionValue[] values, SExpression[] children)
+        public void Init(string token, ISExpressionValue[] values, SExpression[] children, int startPos)
         {
             Token = token;
+            StartPos = startPos;
             _values = values;
             _valueCount = 0;
             _children = children;
@@ -643,7 +691,7 @@ public static class SExpressionReader
             _children = newArr;
         }
 
-        public SExpression BuildExpression()
+        public SExpression BuildExpression(bool wasCompact)
         {
             ISExpressionValue[] values;
             SExpression[] children;
@@ -668,7 +716,7 @@ public static class SExpressionReader
                 Array.Copy(_children, children, _childCount);
             }
 
-            return new SExpression(Token, values, children);
+            return new SExpression(Token, values, children) { WasCompact = wasCompact };
         }
 
         /// <summary>
@@ -695,7 +743,7 @@ public static class SExpressionReader
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ParseFrame Rent(string token)
+        public ParseFrame Rent(string token, int startPos)
         {
             ISExpressionValue[] values;
             SExpression[] children;
@@ -712,7 +760,7 @@ public static class SExpressionReader
             }
 
             var frame = new ParseFrame();
-            frame.Init(token, values, children);
+            frame.Init(token, values, children, startPos);
             return frame;
         }
 

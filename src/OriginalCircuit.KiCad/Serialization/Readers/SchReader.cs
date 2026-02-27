@@ -214,6 +214,7 @@ public static class SchReader
         sch.ArcList.AddRange(arcs);
         sch.BezierList.AddRange(beziers);
         sch.DiagnosticList.AddRange(diagnostics);
+        sch.SourceTree = root;
 
         return sch;
     }
