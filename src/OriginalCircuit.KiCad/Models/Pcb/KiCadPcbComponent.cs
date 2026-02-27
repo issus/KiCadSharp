@@ -328,6 +328,62 @@ public sealed class KiCadPcbComponent : IPcbComponent
     public bool RemoveRegion(IPcbRegion region) => region is KiCadPcbRegion kregion && _regions.Remove(kregion);
 
     /// <summary>
+    /// Adds a rectangle to this footprint.
+    /// </summary>
+    public void AddRectangle(KiCadPcbRectangle rectangle)
+    {
+        ArgumentNullException.ThrowIfNull(rectangle);
+        _rectangles.Add(rectangle);
+    }
+
+    /// <summary>
+    /// Removes a rectangle from this footprint.
+    /// </summary>
+    public bool RemoveRectangle(KiCadPcbRectangle rectangle) => _rectangles.Remove(rectangle);
+
+    /// <summary>
+    /// Adds a circle to this footprint.
+    /// </summary>
+    public void AddCircle(KiCadPcbCircle circle)
+    {
+        ArgumentNullException.ThrowIfNull(circle);
+        _circles.Add(circle);
+    }
+
+    /// <summary>
+    /// Removes a circle from this footprint.
+    /// </summary>
+    public bool RemoveCircle(KiCadPcbCircle circle) => _circles.Remove(circle);
+
+    /// <summary>
+    /// Adds a polygon to this footprint.
+    /// </summary>
+    public void AddPolygon(KiCadPcbPolygon polygon)
+    {
+        ArgumentNullException.ThrowIfNull(polygon);
+        _polygons.Add(polygon);
+    }
+
+    /// <summary>
+    /// Removes a polygon from this footprint.
+    /// </summary>
+    public bool RemovePolygon(KiCadPcbPolygon polygon) => _polygons.Remove(polygon);
+
+    /// <summary>
+    /// Adds a bezier curve to this footprint.
+    /// </summary>
+    public void AddCurve(KiCadPcbCurve curve)
+    {
+        ArgumentNullException.ThrowIfNull(curve);
+        _curves.Add(curve);
+    }
+
+    /// <summary>
+    /// Removes a bezier curve from this footprint.
+    /// </summary>
+    public bool RemoveCurve(KiCadPcbCurve curve) => _curves.Remove(curve);
+
+    /// <summary>
     /// Adds a property to this footprint.
     /// </summary>
     public void AddProperty(KiCadSchParameter property)
