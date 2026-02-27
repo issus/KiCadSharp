@@ -244,26 +244,43 @@ public static class SymLibReader
         var numberNode = node.GetChild("number");
         pin.Designator = numberNode?.GetString();
 
-        // Check name/number effects for hide
+        // Check name effects for hide and parse font sizes
         var nameEffects = nameNode?.GetChild("effects");
         if (nameEffects is not null)
         {
             var nameFont = nameEffects.GetChild("font");
             var nameSize = nameFont?.GetChild("size");
-            if (nameSize is not null && nameSize.GetDouble(0) == 0 && nameSize.GetDouble(1) == 0)
-                pin.ShowName = false;
-            if (nameEffects.Values.Any(v => v is SExprSymbol s && s.Value == "hide"))
+            if (nameSize is not null)
+            {
+                var h = nameSize.GetDouble(0) ?? 0;
+                var w = nameSize.GetDouble(1) ?? 0;
+                pin.NameFontSizeHeight = Coord.FromMm(h);
+                pin.NameFontSizeWidth = Coord.FromMm(w);
+                if (h == 0 && w == 0)
+                    pin.ShowName = false;
+            }
+            if (nameEffects.GetChild("hide") is not null ||
+                nameEffects.Values.Any(v => v is SExprSymbol s && s.Value == "hide"))
                 pin.ShowName = false;
         }
 
+        // Check number effects for hide and parse font sizes
         var numEffects = numberNode?.GetChild("effects");
         if (numEffects is not null)
         {
             var numFont = numEffects.GetChild("font");
             var numSize = numFont?.GetChild("size");
-            if (numSize is not null && numSize.GetDouble(0) == 0 && numSize.GetDouble(1) == 0)
-                pin.ShowDesignator = false;
-            if (numEffects.Values.Any(v => v is SExprSymbol s && s.Value == "hide"))
+            if (numSize is not null)
+            {
+                var h = numSize.GetDouble(0) ?? 0;
+                var w = numSize.GetDouble(1) ?? 0;
+                pin.NumberFontSizeHeight = Coord.FromMm(h);
+                pin.NumberFontSizeWidth = Coord.FromMm(w);
+                if (h == 0 && w == 0)
+                    pin.ShowDesignator = false;
+            }
+            if (numEffects.GetChild("hide") is not null ||
+                numEffects.Values.Any(v => v is SExprSymbol s && s.Value == "hide"))
                 pin.ShowDesignator = false;
         }
 
@@ -275,6 +292,17 @@ public static class SymLibReader
                 pin.IsHidden = true;
                 break;
             }
+        }
+
+        // Parse alternates
+        foreach (var altNode in node.GetChildren("alternate"))
+        {
+            pin.Alternates.Add(new KiCadSchPinAlternate
+            {
+                Name = altNode.GetString(0) ?? "",
+                ElectricalType = SExpressionHelper.ParsePinElectricalType(altNode.GetString(1)),
+                GraphicStyle = SExpressionHelper.ParsePinGraphicStyle(altNode.GetString(2))
+            });
         }
 
         return pin;
@@ -292,12 +320,47 @@ public static class SymLibReader
         param.Location = loc;
         param.Orientation = (int)angle;
 
-        var (fontH, fontW, justification, isHidden, isMirrored, _, _) = SExpressionHelper.ParseTextEffects(node);
+        // Parse id
+        var idNode = node.GetChild("id");
+        if (idNode is not null)
+        {
+            var idVal = idNode.GetInt();
+            if (idVal.HasValue)
+                param.Id = idVal.Value;
+        }
+
+        var (fontH, fontW, justification, isHidden, isMirrored, isBold, isItalic) = SExpressionHelper.ParseTextEffects(node);
         param.FontSizeHeight = fontH;
         param.FontSizeWidth = fontW;
         param.Justification = justification;
         param.IsVisible = !isHidden;
         param.IsMirrored = isMirrored;
+        param.IsBold = isBold;
+        param.IsItalic = isItalic;
+
+        // Parse font face and color from effects -> font
+        var effects = node.GetChild("effects");
+        if (effects is not null)
+        {
+            var font = effects.GetChild("font");
+            if (font is not null)
+            {
+                var faceNode = font.GetChild("face");
+                if (faceNode is not null)
+                    param.FontFace = faceNode.GetString();
+
+                var colorNode = font.GetChild("color");
+                if (colorNode is not null)
+                    param.FontColor = SExpressionHelper.ParseColor(colorNode);
+            }
+
+            // Parse line_spacing (sibling of font in effects)
+            var lineSpacingNode = effects.GetChild("line_spacing");
+            if (lineSpacingNode is not null)
+            {
+                param.LineSpacing = lineSpacingNode.GetDouble();
+            }
+        }
 
         return param;
     }
@@ -317,11 +380,12 @@ public static class SymLibReader
                 Color = color,
                 FillColor = fillColor,
                 LineWidth = width,
+                LineStyle = lineStyle,
                 IsFilled = true,
                 FillType = fillType
             });
         }
-        else if (pts.Count == 2)
+        else if (pts.Count == 2 && !isFilled)
         {
             lines.Add(new KiCadSchLine
             {
@@ -339,7 +403,9 @@ public static class SymLibReader
                 Vertices = pts,
                 Color = color,
                 LineWidth = width,
-                LineStyle = lineStyle
+                LineStyle = lineStyle,
+                FillType = fillType,
+                FillColor = fillColor
             });
         }
     }
@@ -350,7 +416,7 @@ public static class SymLibReader
         var endNode = node.GetChild("end");
         var start = startNode is not null ? SExpressionHelper.ParseXY(startNode) : CoordPoint.Zero;
         var end = endNode is not null ? SExpressionHelper.ParseXY(endNode) : CoordPoint.Zero;
-        var (width, _, color) = SExpressionHelper.ParseStroke(node);
+        var (width, lineStyle, color) = SExpressionHelper.ParseStroke(node);
         var (fillType, isFilled, fillColor) = SExpressionHelper.ParseFill(node);
 
         return new KiCadSchRectangle
@@ -360,6 +426,7 @@ public static class SymLibReader
             Color = color,
             FillColor = fillColor,
             LineWidth = width,
+            LineStyle = lineStyle,
             IsFilled = isFilled,
             FillType = fillType
         };
@@ -373,7 +440,8 @@ public static class SymLibReader
         var start = startNode is not null ? SExpressionHelper.ParseXY(startNode) : CoordPoint.Zero;
         var mid = midNode is not null ? SExpressionHelper.ParseXY(midNode) : CoordPoint.Zero;
         var end = endNode is not null ? SExpressionHelper.ParseXY(endNode) : CoordPoint.Zero;
-        var (width, _, color) = SExpressionHelper.ParseStroke(node);
+        var (width, lineStyle, color) = SExpressionHelper.ParseStroke(node);
+        var (fillType, _, fillColor) = SExpressionHelper.ParseFill(node);
 
         var (center, radius, startAngle, endAngle) = SExpressionHelper.ComputeArcFromThreePoints(start, mid, end);
 
@@ -385,6 +453,9 @@ public static class SymLibReader
             EndAngle = endAngle,
             Color = color,
             LineWidth = width,
+            LineStyle = lineStyle,
+            FillType = fillType,
+            FillColor = fillColor,
             ArcStart = start,
             ArcMid = mid,
             ArcEnd = end
@@ -396,7 +467,7 @@ public static class SymLibReader
         var centerNode = node.GetChild("center");
         var center = centerNode is not null ? SExpressionHelper.ParseXY(centerNode) : CoordPoint.Zero;
         var radius = Coord.FromMm(node.GetChild("radius")?.GetDouble() ?? 0);
-        var (width, _, color) = SExpressionHelper.ParseStroke(node);
+        var (width, lineStyle, color) = SExpressionHelper.ParseStroke(node);
         var (fillType, isFilled, fillColor) = SExpressionHelper.ParseFill(node);
 
         return new KiCadSchCircle
@@ -406,6 +477,7 @@ public static class SymLibReader
             Color = color,
             FillColor = fillColor,
             LineWidth = width,
+            LineStyle = lineStyle,
             IsFilled = isFilled,
             FillType = fillType
         };
@@ -414,29 +486,41 @@ public static class SymLibReader
     private static KiCadSchBezier ParseBezier(SExpr node)
     {
         var pts = SExpressionHelper.ParsePoints(node);
-        var (width, _, color) = SExpressionHelper.ParseStroke(node);
+        var (width, lineStyle, color) = SExpressionHelper.ParseStroke(node);
+        var (fillType, _, fillColor) = SExpressionHelper.ParseFill(node);
 
         return new KiCadSchBezier
         {
             ControlPoints = pts,
             Color = color,
-            LineWidth = width
+            LineWidth = width,
+            LineStyle = lineStyle,
+            FillType = fillType,
+            FillColor = fillColor
         };
     }
 
     private static KiCadSchLabel ParseTextLabel(SExpr node)
     {
         var (loc, angle) = SExpressionHelper.ParsePosition(node);
-        var (_, _, justification, isHidden, isMirrored, _, _) = SExpressionHelper.ParseTextEffects(node);
+        var (fontH, fontW, justification, isHidden, isMirrored, isBold, isItalic) = SExpressionHelper.ParseTextEffects(node);
+        var (strokeWidth, strokeStyle, strokeColor) = SExpressionHelper.ParseStroke(node);
 
         return new KiCadSchLabel
         {
             Text = node.GetString() ?? "",
             Location = loc,
             Rotation = angle,
+            FontSizeHeight = fontH,
+            FontSizeWidth = fontW,
             Justification = justification,
             IsHidden = isHidden,
-            IsMirrored = isMirrored
+            IsMirrored = isMirrored,
+            IsBold = isBold,
+            IsItalic = isItalic,
+            StrokeWidth = strokeWidth,
+            StrokeLineStyle = strokeStyle,
+            StrokeColor = strokeColor
         };
     }
 }

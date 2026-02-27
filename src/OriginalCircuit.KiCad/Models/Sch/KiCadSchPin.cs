@@ -42,6 +42,31 @@ public sealed class KiCadSchPin : ISchPin
     /// </summary>
     public PinGraphicStyle GraphicStyle { get; set; }
 
+    /// <summary>
+    /// Gets the pin name font size height.
+    /// </summary>
+    public Coord NameFontSizeHeight { get; set; }
+
+    /// <summary>
+    /// Gets the pin name font size width.
+    /// </summary>
+    public Coord NameFontSizeWidth { get; set; }
+
+    /// <summary>
+    /// Gets the pin number font size height.
+    /// </summary>
+    public Coord NumberFontSizeHeight { get; set; }
+
+    /// <summary>
+    /// Gets the pin number font size width.
+    /// </summary>
+    public Coord NumberFontSizeWidth { get; set; }
+
+    /// <summary>
+    /// Gets the list of pin alternates.
+    /// </summary>
+    public List<KiCadSchPinAlternate> Alternates { get; set; } = [];
+
     /// <inheritdoc />
     public CoordRect Bounds
     {
@@ -58,4 +83,25 @@ public sealed class KiCadSchPin : ISchPin
             return new CoordRect(Location, end);
         }
     }
+}
+
+/// <summary>
+/// Represents an alternate definition for a KiCad pin.
+/// </summary>
+public sealed class KiCadSchPinAlternate
+{
+    /// <summary>
+    /// Gets the alternate name.
+    /// </summary>
+    public string Name { get; set; } = "";
+
+    /// <summary>
+    /// Gets the alternate electrical type.
+    /// </summary>
+    public PinElectricalType ElectricalType { get; set; }
+
+    /// <summary>
+    /// Gets the alternate graphic style.
+    /// </summary>
+    public PinGraphicStyle GraphicStyle { get; set; }
 }

@@ -31,14 +31,50 @@ public sealed class KiCadSchLabel : ISchLabel
     /// <inheritdoc />
     public bool IsHidden { get; set; }
 
+    /// <summary>
+    /// Gets the font size height.
+    /// </summary>
+    public Coord FontSizeHeight { get; set; }
+
+    /// <summary>
+    /// Gets the font size width.
+    /// </summary>
+    public Coord FontSizeWidth { get; set; }
+
+    /// <summary>
+    /// Gets whether the text is bold.
+    /// </summary>
+    public bool IsBold { get; set; }
+
+    /// <summary>
+    /// Gets whether the text is italic.
+    /// </summary>
+    public bool IsItalic { get; set; }
+
+    /// <summary>
+    /// Gets the stroke width for the text label.
+    /// </summary>
+    public Coord StrokeWidth { get; set; }
+
+    /// <summary>
+    /// Gets the stroke line style for the text label.
+    /// </summary>
+    public LineStyle StrokeLineStyle { get; set; }
+
+    /// <summary>
+    /// Gets the stroke color for the text label.
+    /// </summary>
+    public EdaColor StrokeColor { get; set; }
+
     /// <inheritdoc />
     public CoordRect Bounds
     {
         get
         {
-            var fontSize = Coord.FromMm(1.27);
-            var textWidth = Coord.FromMm(Text.Length * fontSize.ToMm() * 0.6);
-            return CoordRect.FromCenterAndSize(Location, textWidth, fontSize);
+            var fontH = FontSizeHeight != Coord.Zero ? FontSizeHeight : Coord.FromMm(1.27);
+            var fontW = FontSizeWidth != Coord.Zero ? FontSizeWidth : Coord.FromMm(1.27);
+            var textWidth = Coord.FromMm(Text.Length * fontW.ToMm() * 0.6);
+            return CoordRect.FromCenterAndSize(Location, textWidth, fontH);
         }
     }
 }

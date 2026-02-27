@@ -22,6 +22,11 @@ public sealed class KiCadSchPolygon : ISchPolygon
     /// <inheritdoc />
     public Coord LineWidth { get; set; }
 
+    /// <summary>
+    /// Gets the stroke line style.
+    /// </summary>
+    public LineStyle LineStyle { get; set; }
+
     /// <inheritdoc />
     public bool IsFilled { get; set; }
 

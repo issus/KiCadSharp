@@ -1,3 +1,4 @@
+using OriginalCircuit.Eda.Enums;
 using OriginalCircuit.Eda.Models;
 using OriginalCircuit.Eda.Models.Sch;
 using OriginalCircuit.Eda.Primitives;
@@ -17,6 +18,21 @@ public sealed class KiCadSchBezier : ISchBezier
 
     /// <inheritdoc />
     public Coord LineWidth { get; set; }
+
+    /// <summary>
+    /// Gets the stroke line style.
+    /// </summary>
+    public LineStyle LineStyle { get; set; }
+
+    /// <summary>
+    /// Gets the KiCad fill type.
+    /// </summary>
+    public SchFillType FillType { get; set; }
+
+    /// <summary>
+    /// Gets the fill color.
+    /// </summary>
+    public EdaColor FillColor { get; set; }
 
     /// <inheritdoc />
     public CoordRect Bounds => PointsBounds.Compute(ControlPoints);

@@ -1,5 +1,6 @@
 using OriginalCircuit.Eda.Enums;
 using OriginalCircuit.Eda.Primitives;
+using OriginalCircuit.KiCad.Models.Sch;
 using OriginalCircuit.KiCad.SExpression;
 using SExpr = OriginalCircuit.KiCad.SExpression.SExpression;
 
@@ -125,6 +126,72 @@ internal static class WriterHelper
         }
 
         if (hide)
+            b.AddChild("hide", _ => { });
+
+        return b.Build();
+    }
+
+    /// <summary>
+    /// Builds a text effects node for a <see cref="KiCadSchParameter"/>, including
+    /// font face, font color, line spacing, bold, and italic properties.
+    /// </summary>
+    public static SExpr BuildPropertyTextEffects(KiCadSchParameter param)
+    {
+        var b = new SExpressionBuilder("effects")
+            .AddChild("font", f =>
+            {
+                if (param.FontFace is not null)
+                    f.AddChild("face", face => face.AddValue(param.FontFace));
+                f.AddChild("size", s =>
+                {
+                    s.AddValue(param.FontSizeHeight.ToMm());
+                    s.AddValue(param.FontSizeWidth.ToMm());
+                });
+                if (param.IsBold) f.AddChild("bold", _ => { });
+                if (param.IsItalic) f.AddChild("italic", _ => { });
+                if (param.FontColor != default)
+                    f.AddChild(BuildColor(param.FontColor));
+            });
+
+        if (param.LineSpacing.HasValue)
+            b.AddChild("line_spacing", ls => ls.AddValue(param.LineSpacing.Value));
+
+        if (param.Justification != TextJustification.MiddleCenter || param.IsMirrored)
+        {
+            b.AddChild("justify", j =>
+            {
+                switch (param.Justification)
+                {
+                    case TextJustification.MiddleLeft:
+                    case TextJustification.TopLeft:
+                    case TextJustification.BottomLeft:
+                        j.AddSymbol("left");
+                        break;
+                    case TextJustification.MiddleRight:
+                    case TextJustification.TopRight:
+                    case TextJustification.BottomRight:
+                        j.AddSymbol("right");
+                        break;
+                }
+                switch (param.Justification)
+                {
+                    case TextJustification.TopLeft:
+                    case TextJustification.TopCenter:
+                    case TextJustification.TopRight:
+                        j.AddSymbol("top");
+                        break;
+                    case TextJustification.BottomLeft:
+                    case TextJustification.BottomCenter:
+                    case TextJustification.BottomRight:
+                        j.AddSymbol("bottom");
+                        break;
+                }
+                if (param.IsMirrored)
+                    j.AddSymbol("mirror");
+            });
+        }
+
+        if (!param.IsVisible)
             b.AddChild("hide", _ => { });
 
         return b.Build();
