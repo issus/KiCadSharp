@@ -1,3 +1,4 @@
+using OriginalCircuit.Eda.Enums;
 using OriginalCircuit.Eda.Models;
 using OriginalCircuit.Eda.Models.Pcb;
 using OriginalCircuit.Eda.Primitives;
@@ -40,6 +41,26 @@ public sealed class KiCadPcbTrack : IPcbTrack
     /// Gets whether this track is locked.
     /// </summary>
     public bool IsLocked { get; set; }
+
+    /// <summary>
+    /// Gets the stroke line style.
+    /// </summary>
+    public LineStyle StrokeStyle { get; set; } = LineStyle.Solid;
+
+    /// <summary>
+    /// Gets the stroke color.
+    /// </summary>
+    public EdaColor StrokeColor { get; set; }
+
+    /// <summary>
+    /// Gets the fill type for this line (used in fp_line).
+    /// </summary>
+    public SchFillType FillType { get; set; }
+
+    /// <summary>
+    /// Gets the fill color for this line.
+    /// </summary>
+    public EdaColor FillColor { get; set; }
 
     /// <inheritdoc />
     public CoordRect Bounds => new CoordRect(Start, End).Inflate(Width / 2);

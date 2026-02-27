@@ -1,3 +1,4 @@
+using OriginalCircuit.Eda.Enums;
 using OriginalCircuit.Eda.Models;
 using OriginalCircuit.Eda.Models.Pcb;
 using OriginalCircuit.Eda.Primitives;
@@ -62,6 +63,16 @@ public sealed class KiCadPcbArc : IPcbArc
     /// Gets whether this arc is locked.
     /// </summary>
     public bool IsLocked { get; set; }
+
+    /// <summary>
+    /// Gets the stroke line style.
+    /// </summary>
+    public LineStyle StrokeStyle { get; set; } = LineStyle.Solid;
+
+    /// <summary>
+    /// Gets the stroke color.
+    /// </summary>
+    public EdaColor StrokeColor { get; set; }
 
     /// <inheritdoc />
     public CoordRect Bounds => PointsBounds.Compute([ArcStart, ArcMid, ArcEnd]);

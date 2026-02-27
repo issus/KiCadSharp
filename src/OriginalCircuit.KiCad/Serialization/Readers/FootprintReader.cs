@@ -371,7 +371,7 @@ public static class FootprintReader
         var endNode = node.GetChild("end");
         var start = startNode is not null ? SExpressionHelper.ParseXY(startNode) : CoordPoint.Zero;
         var end = endNode is not null ? SExpressionHelper.ParseXY(endNode) : CoordPoint.Zero;
-        var (width, _, _) = SExpressionHelper.ParseStroke(node);
+        var (width, style, color) = SExpressionHelper.ParseStroke(node);
 
         // If no stroke, try legacy width
         if (width == Coord.Zero)
@@ -379,11 +379,17 @@ public static class FootprintReader
             width = Coord.FromMm(node.GetChild("width")?.GetDouble() ?? 0);
         }
 
+        var (fillType, _, fillColor) = SExpressionHelper.ParseFill(node);
+
         return new KiCadPcbTrack
         {
             Start = start,
             End = end,
             Width = width,
+            StrokeStyle = style,
+            StrokeColor = color,
+            FillType = fillType,
+            FillColor = fillColor,
             LayerName = node.GetChild("layer")?.GetString(),
             Uuid = SExpressionHelper.ParseUuid(node)
         };
@@ -463,7 +469,7 @@ public static class FootprintReader
         var start = startNode is not null ? SExpressionHelper.ParseXY(startNode) : CoordPoint.Zero;
         var mid = midNode is not null ? SExpressionHelper.ParseXY(midNode) : CoordPoint.Zero;
         var end = endNode is not null ? SExpressionHelper.ParseXY(endNode) : CoordPoint.Zero;
-        var (width, _, _) = SExpressionHelper.ParseStroke(node);
+        var (width, style, color) = SExpressionHelper.ParseStroke(node);
         if (width == Coord.Zero)
         {
             width = Coord.FromMm(node.GetChild("width")?.GetDouble() ?? 0);
@@ -478,6 +484,8 @@ public static class FootprintReader
             StartAngle = startAngle,
             EndAngle = endAngle,
             Width = width,
+            StrokeStyle = style,
+            StrokeColor = color,
             LayerName = node.GetChild("layer")?.GetString(),
             ArcStart = start,
             ArcMid = mid,

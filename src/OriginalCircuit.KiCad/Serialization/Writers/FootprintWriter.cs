@@ -191,7 +191,10 @@ public static class FootprintWriter
         var lb = new SExpressionBuilder("fp_line")
             .AddChild("start", s => { s.AddValue(track.Start.X.ToMm()); s.AddValue(track.Start.Y.ToMm()); })
             .AddChild("end", e => { e.AddValue(track.End.X.ToMm()); e.AddValue(track.End.Y.ToMm()); })
-            .AddChild(WriterHelper.BuildStroke(track.Width));
+            .AddChild(WriterHelper.BuildStroke(track.Width, track.StrokeStyle, track.StrokeColor));
+
+        if (track.FillType != SchFillType.None)
+            lb.AddChild(WriterHelper.BuildFill(track.FillType, track.FillColor));
 
         if (track.LayerName is not null)
             lb.AddChild("layer", l => l.AddSymbol(track.LayerName));
@@ -208,7 +211,7 @@ public static class FootprintWriter
             .AddChild("start", s => { s.AddValue(arc.ArcStart.X.ToMm()); s.AddValue(arc.ArcStart.Y.ToMm()); })
             .AddChild("mid", m => { m.AddValue(arc.ArcMid.X.ToMm()); m.AddValue(arc.ArcMid.Y.ToMm()); })
             .AddChild("end", e => { e.AddValue(arc.ArcEnd.X.ToMm()); e.AddValue(arc.ArcEnd.Y.ToMm()); })
-            .AddChild(WriterHelper.BuildStroke(arc.Width));
+            .AddChild(WriterHelper.BuildStroke(arc.Width, arc.StrokeStyle, arc.StrokeColor));
 
         if (arc.LayerName is not null)
             ab.AddChild("layer", l => l.AddSymbol(arc.LayerName));
