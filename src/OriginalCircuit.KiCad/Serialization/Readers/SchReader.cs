@@ -64,7 +64,11 @@ public static class SchReader
             Version = root.GetChild("version")?.GetInt() ?? 0,
             Generator = root.GetChild("generator")?.GetString(),
             GeneratorVersion = root.GetChild("generator_version")?.GetString(),
-            Uuid = SExpressionHelper.ParseUuid(root)
+            Uuid = SExpressionHelper.ParseUuid(root),
+            Paper = root.GetChild("paper")?.GetString(),
+            TitleBlock = root.GetChild("title_block"),
+            SheetInstances = root.GetChild("sheet_instances"),
+            SymbolInstances = root.GetChild("symbol_instances")
         };
 
         var diagnostics = new List<KiCadDiagnostic>();

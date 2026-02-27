@@ -46,6 +46,14 @@ public static class SchWriter
         if (sch.Uuid is not null)
             b.AddChild(WriterHelper.BuildUuid(sch.Uuid));
 
+        // Paper size
+        if (sch.Paper is not null)
+            b.AddChild("paper", p => p.AddValue(sch.Paper));
+
+        // Title block
+        if (sch.TitleBlock is not null)
+            b.AddChild(sch.TitleBlock);
+
         // Lib symbols
         if (sch.LibSymbols.Count > 0)
         {
@@ -138,6 +146,14 @@ public static class SchWriter
         {
             b.AddChild(BuildPlacedSymbol(comp));
         }
+
+        // Sheet instances
+        if (sch.SheetInstances is not null)
+            b.AddChild(sch.SheetInstances);
+
+        // Symbol instances
+        if (sch.SymbolInstances is not null)
+            b.AddChild(sch.SymbolInstances);
 
         return b.Build();
     }

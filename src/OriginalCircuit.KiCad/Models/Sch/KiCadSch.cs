@@ -3,6 +3,7 @@ using OriginalCircuit.Eda.Models;
 using OriginalCircuit.Eda.Models.Sch;
 using OriginalCircuit.Eda.Primitives;
 using OriginalCircuit.KiCad.Serialization;
+using SExpr = OriginalCircuit.KiCad.SExpression.SExpression;
 
 namespace OriginalCircuit.KiCad.Models.Sch;
 
@@ -43,6 +44,26 @@ public sealed class KiCadSch : ISchDocument
     /// Gets the UUID of the document.
     /// </summary>
     public string? Uuid { get; set; }
+
+    /// <summary>
+    /// Gets or sets the paper size (e.g., "A4", "A3", "USLetter").
+    /// </summary>
+    public string? Paper { get; set; }
+
+    /// <summary>
+    /// Gets or sets the raw title_block S-expression subtree for round-trip fidelity.
+    /// </summary>
+    public SExpr? TitleBlock { get; set; }
+
+    /// <summary>
+    /// Gets or sets the raw sheet_instances S-expression subtree for round-trip fidelity.
+    /// </summary>
+    public SExpr? SheetInstances { get; set; }
+
+    /// <summary>
+    /// Gets or sets the raw symbol_instances S-expression subtree for round-trip fidelity.
+    /// </summary>
+    public SExpr? SymbolInstances { get; set; }
 
     /// <summary>
     /// Gets the diagnostics collected during parsing.
