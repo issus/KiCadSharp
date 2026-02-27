@@ -110,13 +110,13 @@ public static class SymLibWriter
         foreach (var line in component.Lines.OfType<KiCadSchLine>())
         {
             if (component.SubSymbols.Count == 0)
-                b.AddChild(BuildPolyline([line.Start, line.End], line.Width, line.LineStyle));
+                b.AddChild(BuildPolyline([line.Start, line.End], line.Width, line.LineStyle, line.Color));
         }
 
         foreach (var poly in component.Polylines.OfType<KiCadSchPolyline>())
         {
             if (component.SubSymbols.Count == 0)
-                b.AddChild(BuildPolyline(poly.Vertices, poly.LineWidth, poly.LineStyle));
+                b.AddChild(BuildPolyline(poly.Vertices, poly.LineWidth, poly.LineStyle, poly.Color, poly.FillType, poly.FillColor));
         }
 
         foreach (var poly in component.Polygons.OfType<KiCadSchPolygon>())
@@ -191,17 +191,17 @@ public static class SymLibWriter
         return new SExpressionBuilder("rectangle")
             .AddChild("start", s => { s.AddValue(rect.Corner1.X.ToMm()); s.AddValue(rect.Corner1.Y.ToMm()); })
             .AddChild("end", e => { e.AddValue(rect.Corner2.X.ToMm()); e.AddValue(rect.Corner2.Y.ToMm()); })
-            .AddChild(WriterHelper.BuildStroke(rect.LineWidth))
-            .AddChild(WriterHelper.BuildFill(rect.FillType))
+            .AddChild(WriterHelper.BuildStroke(rect.LineWidth, rect.LineStyle, rect.Color))
+            .AddChild(WriterHelper.BuildFill(rect.FillType, rect.FillColor))
             .Build();
     }
 
-    private static SExpr BuildPolyline(IReadOnlyList<CoordPoint> vertices, Coord width, LineStyle style)
+    private static SExpr BuildPolyline(IReadOnlyList<CoordPoint> vertices, Coord width, LineStyle style, EdaColor color = default, SchFillType fillType = SchFillType.None, EdaColor fillColor = default)
     {
         return new SExpressionBuilder("polyline")
             .AddChild(WriterHelper.BuildPoints(vertices))
-            .AddChild(WriterHelper.BuildStroke(width, style))
-            .AddChild(WriterHelper.BuildFill(SchFillType.None))
+            .AddChild(WriterHelper.BuildStroke(width, style, color))
+            .AddChild(WriterHelper.BuildFill(fillType, fillColor))
             .Build();
     }
 
@@ -209,8 +209,8 @@ public static class SymLibWriter
     {
         return new SExpressionBuilder("polyline")
             .AddChild(WriterHelper.BuildPoints(poly.Vertices))
-            .AddChild(WriterHelper.BuildStroke(poly.LineWidth))
-            .AddChild(WriterHelper.BuildFill(poly.FillType))
+            .AddChild(WriterHelper.BuildStroke(poly.LineWidth, poly.LineStyle, poly.Color))
+            .AddChild(WriterHelper.BuildFill(poly.FillType, poly.FillColor))
             .Build();
     }
 
@@ -220,8 +220,8 @@ public static class SymLibWriter
             .AddChild("start", s => { s.AddValue(arc.ArcStart.X.ToMm()); s.AddValue(arc.ArcStart.Y.ToMm()); })
             .AddChild("mid", m => { m.AddValue(arc.ArcMid.X.ToMm()); m.AddValue(arc.ArcMid.Y.ToMm()); })
             .AddChild("end", e => { e.AddValue(arc.ArcEnd.X.ToMm()); e.AddValue(arc.ArcEnd.Y.ToMm()); })
-            .AddChild(WriterHelper.BuildStroke(arc.LineWidth))
-            .AddChild(WriterHelper.BuildFill(SchFillType.None))
+            .AddChild(WriterHelper.BuildStroke(arc.LineWidth, arc.LineStyle, arc.Color))
+            .AddChild(WriterHelper.BuildFill(arc.FillType, arc.FillColor))
             .Build();
     }
 
@@ -230,8 +230,8 @@ public static class SymLibWriter
         return new SExpressionBuilder("circle")
             .AddChild("center", c => { c.AddValue(circle.Center.X.ToMm()); c.AddValue(circle.Center.Y.ToMm()); })
             .AddChild("radius", r => r.AddValue(circle.Radius.ToMm()))
-            .AddChild(WriterHelper.BuildStroke(circle.LineWidth))
-            .AddChild(WriterHelper.BuildFill(circle.FillType))
+            .AddChild(WriterHelper.BuildStroke(circle.LineWidth, circle.LineStyle, circle.Color))
+            .AddChild(WriterHelper.BuildFill(circle.FillType, circle.FillColor))
             .Build();
     }
 
@@ -239,8 +239,8 @@ public static class SymLibWriter
     {
         return new SExpressionBuilder("bezier")
             .AddChild(WriterHelper.BuildPoints(bezier.ControlPoints))
-            .AddChild(WriterHelper.BuildStroke(bezier.LineWidth))
-            .AddChild(WriterHelper.BuildFill(SchFillType.None))
+            .AddChild(WriterHelper.BuildStroke(bezier.LineWidth, bezier.LineStyle, bezier.Color))
+            .AddChild(WriterHelper.BuildFill(bezier.FillType, bezier.FillColor))
             .Build();
     }
 

@@ -317,6 +317,7 @@ public static class SymLibReader
                 Color = color,
                 FillColor = fillColor,
                 LineWidth = width,
+                LineStyle = lineStyle,
                 IsFilled = true,
                 FillType = fillType
             });
@@ -339,7 +340,9 @@ public static class SymLibReader
                 Vertices = pts,
                 Color = color,
                 LineWidth = width,
-                LineStyle = lineStyle
+                LineStyle = lineStyle,
+                FillType = fillType,
+                FillColor = fillColor
             });
         }
     }
@@ -350,7 +353,7 @@ public static class SymLibReader
         var endNode = node.GetChild("end");
         var start = startNode is not null ? SExpressionHelper.ParseXY(startNode) : CoordPoint.Zero;
         var end = endNode is not null ? SExpressionHelper.ParseXY(endNode) : CoordPoint.Zero;
-        var (width, _, color) = SExpressionHelper.ParseStroke(node);
+        var (width, lineStyle, color) = SExpressionHelper.ParseStroke(node);
         var (fillType, isFilled, fillColor) = SExpressionHelper.ParseFill(node);
 
         return new KiCadSchRectangle
@@ -360,6 +363,7 @@ public static class SymLibReader
             Color = color,
             FillColor = fillColor,
             LineWidth = width,
+            LineStyle = lineStyle,
             IsFilled = isFilled,
             FillType = fillType
         };
@@ -373,7 +377,8 @@ public static class SymLibReader
         var start = startNode is not null ? SExpressionHelper.ParseXY(startNode) : CoordPoint.Zero;
         var mid = midNode is not null ? SExpressionHelper.ParseXY(midNode) : CoordPoint.Zero;
         var end = endNode is not null ? SExpressionHelper.ParseXY(endNode) : CoordPoint.Zero;
-        var (width, _, color) = SExpressionHelper.ParseStroke(node);
+        var (width, lineStyle, color) = SExpressionHelper.ParseStroke(node);
+        var (fillType, _, fillColor) = SExpressionHelper.ParseFill(node);
 
         var (center, radius, startAngle, endAngle) = SExpressionHelper.ComputeArcFromThreePoints(start, mid, end);
 
@@ -385,6 +390,9 @@ public static class SymLibReader
             EndAngle = endAngle,
             Color = color,
             LineWidth = width,
+            LineStyle = lineStyle,
+            FillType = fillType,
+            FillColor = fillColor,
             ArcStart = start,
             ArcMid = mid,
             ArcEnd = end
@@ -396,7 +404,7 @@ public static class SymLibReader
         var centerNode = node.GetChild("center");
         var center = centerNode is not null ? SExpressionHelper.ParseXY(centerNode) : CoordPoint.Zero;
         var radius = Coord.FromMm(node.GetChild("radius")?.GetDouble() ?? 0);
-        var (width, _, color) = SExpressionHelper.ParseStroke(node);
+        var (width, lineStyle, color) = SExpressionHelper.ParseStroke(node);
         var (fillType, isFilled, fillColor) = SExpressionHelper.ParseFill(node);
 
         return new KiCadSchCircle
@@ -406,6 +414,7 @@ public static class SymLibReader
             Color = color,
             FillColor = fillColor,
             LineWidth = width,
+            LineStyle = lineStyle,
             IsFilled = isFilled,
             FillType = fillType
         };
@@ -414,13 +423,17 @@ public static class SymLibReader
     private static KiCadSchBezier ParseBezier(SExpr node)
     {
         var pts = SExpressionHelper.ParsePoints(node);
-        var (width, _, color) = SExpressionHelper.ParseStroke(node);
+        var (width, lineStyle, color) = SExpressionHelper.ParseStroke(node);
+        var (fillType, _, fillColor) = SExpressionHelper.ParseFill(node);
 
         return new KiCadSchBezier
         {
             ControlPoints = pts,
             Color = color,
-            LineWidth = width
+            LineWidth = width,
+            LineStyle = lineStyle,
+            FillType = fillType,
+            FillColor = fillColor
         };
     }
 

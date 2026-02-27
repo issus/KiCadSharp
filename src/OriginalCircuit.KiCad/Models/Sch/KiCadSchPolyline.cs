@@ -22,6 +22,16 @@ public sealed class KiCadSchPolyline : ISchPolyline
     /// <inheritdoc />
     public LineStyle LineStyle { get; set; }
 
+    /// <summary>
+    /// Gets the KiCad fill type.
+    /// </summary>
+    public SchFillType FillType { get; set; }
+
+    /// <summary>
+    /// Gets the fill color.
+    /// </summary>
+    public EdaColor FillColor { get; set; }
+
     /// <inheritdoc />
     public CoordRect Bounds => PointsBounds.Compute(Vertices);
 }
