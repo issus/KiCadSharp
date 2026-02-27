@@ -249,9 +249,11 @@ public class ModelRoundTripVerification
     {
         if (a is SExprNumber numA && b is SExprNumber numB)
         {
-            // Compare numerically with small tolerance for float precision
-            return Math.Abs(numA.Value - numB.Value) < 1e-6 ||
-                   (numA.Value != 0 && Math.Abs((numA.Value - numB.Value) / numA.Value) < 1e-6);
+            // Compare numerically with tolerance for Coord fixed-point precision loss.
+            // The Coord system uses ~393701 units/mm, giving ~2.5e-6 mm error per unit.
+            // A tolerance of 5e-6 accommodates this inherent limitation.
+            return Math.Abs(numA.Value - numB.Value) < 5e-6 ||
+                   (numA.Value != 0 && Math.Abs((numA.Value - numB.Value) / numA.Value) < 5e-6);
         }
 
         // For strings and symbols, compare text

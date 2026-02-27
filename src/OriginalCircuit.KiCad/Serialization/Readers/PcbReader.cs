@@ -120,38 +120,60 @@ public static class PcbReader
                         components.Add(FootprintReader.ParseFootprint(child));
                         break;
                     case "segment":
-                        tracks.Add(ParseSegment(child));
+                        var seg = ParseSegment(child);
+                        tracks.Add(seg);
+                        pcb.BoardElementOrderList.Add(seg);
                         break;
                     case "via":
-                        vias.Add(ParseVia(child));
+                        var via = ParseVia(child);
+                        vias.Add(via);
+                        pcb.BoardElementOrderList.Add(via);
                         break;
                     case "arc":
-                        arcs.Add(ParseArc(child));
+                        var pcbArc = ParseArc(child);
+                        arcs.Add(pcbArc);
+                        pcb.BoardElementOrderList.Add(pcbArc);
                         break;
                     case "gr_text":
-                        texts.Add(ParseGrText(child));
+                        var grText = ParseGrText(child);
+                        texts.Add(grText);
+                        pcb.BoardElementOrderList.Add(grText);
                         break;
                     case "zone":
-                        zones.Add(ParseZoneStructured(child));
+                        var zone = ParseZoneStructured(child);
+                        zones.Add(zone);
+                        pcb.BoardElementOrderList.Add(zone);
                         break;
                     case "gr_line":
-                        graphicLines.Add(ParseGrLine(child));
+                        var grLine = ParseGrLine(child);
+                        graphicLines.Add(grLine);
+                        pcb.BoardElementOrderList.Add(grLine);
                         break;
                     case "gr_arc":
-                        graphicArcs.Add(ParseGrArc(child));
+                        var grArc = ParseGrArc(child);
+                        graphicArcs.Add(grArc);
+                        pcb.BoardElementOrderList.Add(grArc);
                         break;
                     case "gr_circle":
-                        graphicCircles.Add(ParseGrCircle(child));
+                        var grCircle = ParseGrCircle(child);
+                        graphicCircles.Add(grCircle);
+                        pcb.BoardElementOrderList.Add(grCircle);
                         break;
                     case "gr_rect":
-                        graphicRects.Add(ParseGrRect(child));
+                        var grRect = ParseGrRect(child);
+                        graphicRects.Add(grRect);
+                        pcb.BoardElementOrderList.Add(grRect);
                         break;
                     case "gr_poly":
-                        graphicPolys.Add(ParseGrPoly(child));
+                        var grPoly = ParseGrPoly(child);
+                        graphicPolys.Add(grPoly);
+                        pcb.BoardElementOrderList.Add(grPoly);
                         break;
                     case "gr_curve":
                     case "bezier":
-                        graphicBeziers.Add(ParseGrBezier(child));
+                        var grBezier = ParseGrBezier(child);
+                        graphicBeziers.Add(grBezier);
+                        pcb.BoardElementOrderList.Add(grBezier);
                         break;
                     case "net_class":
                         netClasses.Add(ParseNetClass(child));
@@ -161,12 +183,14 @@ public static class PcbReader
                     case "group":
                         // Store raw for round-trip
                         pcb.RawElementList.Add(child);
+                        pcb.BoardElementOrderList.Add(child);
                         break;
                     case "embedded_fonts":
                         pcb.EmbeddedFonts = child.GetBool();
                         break;
                     case "generated":
                         pcb.GeneratedElements.Add(child);
+                        pcb.BoardElementOrderList.Add(child);
                         break;
                     case "embedded_files":
                         pcb.EmbeddedFilesRaw = child;
@@ -375,7 +399,16 @@ public static class PcbReader
     {
         graphic.LayerName = node.GetChild("layer")?.GetString();
         graphic.Uuid = SExpressionHelper.ParseUuid(node);
+
+        // Check for locked as bare symbol
         graphic.IsLocked = node.Values.Any(v => v is SExprSymbol s && s.Value == "locked");
+        // Also check for (locked yes) child node format (KiCad 9+)
+        var lockedChild = node.GetChild("locked");
+        if (lockedChild is not null)
+        {
+            graphic.IsLocked = lockedChild.GetBool() ?? true;
+            graphic.LockedIsChildNode = true;
+        }
 
         var (strokeWidth, strokeStyle, strokeColor) = SExpressionHelper.ParseStroke(node);
         graphic.StrokeWidth = strokeWidth;
@@ -386,9 +419,10 @@ public static class PcbReader
         if (graphic.StrokeWidth == Coord.Zero)
             graphic.StrokeWidth = Coord.FromMm(node.GetChild("width")?.GetDouble() ?? 0);
 
-        var (fillType, _, fillColor) = SExpressionHelper.ParseFill(node);
+        var (fillType, _, fillColor, usePcbFillFormat) = SExpressionHelper.ParseFillWithFormat(node);
         graphic.FillType = fillType;
         graphic.FillColor = fillColor;
+        graphic.UsePcbFillFormat = usePcbFillFormat;
     }
 
     private static KiCadPcbGraphicLine ParseGrLine(SExpr node)
@@ -511,6 +545,12 @@ public static class PcbReader
             zone.KeepoutCopperpour = keepoutNode.GetChild("copperpour")?.GetString();
             zone.KeepoutFootprints = keepoutNode.GetChild("footprints")?.GetString();
         }
+
+        // filled_areas_thickness (store raw for round-trip)
+        zone.FilledAreasThicknessRaw = node.GetChild("filled_areas_thickness");
+
+        // attr (store raw for round-trip)
+        zone.AttrRaw = node.GetChild("attr");
 
         // Fill settings (store raw for round-trip)
         var fillNode = node.GetChild("fill");

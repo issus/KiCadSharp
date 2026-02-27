@@ -83,6 +83,11 @@ public sealed class KiCadPcbText : IPcbText
     public bool IsHidden { get; set; }
 
     /// <summary>
+    /// Gets whether the hide flag uses child node format <c>(hide yes)</c> instead of bare symbol.
+    /// </summary>
+    public bool HideIsChildNode { get; set; }
+
+    /// <summary>
     /// Gets the raw render_cache node for round-trip fidelity.
     /// </summary>
     public SExpr? RenderCache { get; set; }
@@ -91,6 +96,11 @@ public sealed class KiCadPcbText : IPcbText
     /// Gets whether this fp_text is unlocked (placement can differ from footprint).
     /// </summary>
     public bool IsUnlocked { get; set; }
+
+    /// <summary>
+    /// Gets whether the unlocked flag uses child node format <c>(unlocked yes)</c> instead of bare symbol.
+    /// </summary>
+    public bool UnlockedIsChildNode { get; set; }
 
     /// <summary>
     /// Gets whether this text uses knockout rendering.

@@ -106,13 +106,14 @@ public static class FootprintReader
                         case "exclude_from_bom": attrs |= FootprintAttribute.ExcludeFromBom; break;
                         case "allow_missing_courtyard": attrs |= FootprintAttribute.AllowMissingCourtyard; break;
                         case "dnp": attrs |= FootprintAttribute.Dnp; break;
+                        case "allow_soldermask_bridges": attrs |= FootprintAttribute.AllowSoldermaskBridges; break;
                     }
                 }
             }
             component.Attributes = attrs;
         }
 
-        // Parse locked and placed flags
+        // Parse locked and placed flags (bare symbol or child node format)
         foreach (var v in node.Values)
         {
             if (v is SExprSymbol s)
@@ -122,6 +123,19 @@ public static class FootprintReader
                 else if (s.Value == "placed")
                     component.IsPlaced = true;
             }
+        }
+        // Also check for (locked yes) child node format (KiCad 9+)
+        var lockedChild = node.GetChild("locked");
+        if (lockedChild is not null)
+        {
+            component.IsLocked = lockedChild.GetBool() ?? true;
+            component.UsesChildNodeFlags = true;
+        }
+        var placedChild = node.GetChild("placed");
+        if (placedChild is not null)
+        {
+            component.IsPlaced = placedChild.GetBool() ?? true;
+            component.UsesChildNodeFlags = true;
         }
 
         // Parse clearance, solder mask margin, etc.
@@ -182,22 +196,34 @@ public static class FootprintReader
                         component.TextBoxesRaw.Add(child);
                         break;
                     case "fp_line":
-                        tracks.Add(ParseFpLine(child));
+                        var line = ParseFpLine(child);
+                        tracks.Add(line);
+                        component.GraphicalItemOrderList.Add(line);
                         break;
                     case "fp_arc":
-                        arcs.Add(ParseFpArc(child));
+                        var arc = ParseFpArc(child);
+                        arcs.Add(arc);
+                        component.GraphicalItemOrderList.Add(arc);
                         break;
                     case "fp_circle":
-                        circles.Add(ParseFpCircle(child));
+                        var circle = ParseFpCircle(child);
+                        circles.Add(circle);
+                        component.GraphicalItemOrderList.Add(circle);
                         break;
                     case "fp_rect":
-                        rectangles.Add(ParseFpRect(child));
+                        var rect = ParseFpRect(child);
+                        rectangles.Add(rect);
+                        component.GraphicalItemOrderList.Add(rect);
                         break;
                     case "fp_poly":
-                        polygons.Add(ParseFpPoly(child));
+                        var poly = ParseFpPoly(child);
+                        polygons.Add(poly);
+                        component.GraphicalItemOrderList.Add(poly);
                         break;
                     case "fp_curve":
-                        curves.Add(ParseFpCurve(child));
+                        var curve = ParseFpCurve(child);
+                        curves.Add(curve);
+                        component.GraphicalItemOrderList.Add(curve);
                         break;
                     case "model":
                         component.Model3DList.Add(Parse3DModel(child));
@@ -245,6 +271,15 @@ public static class FootprintReader
                         break;
                     case "group":
                         component.GroupsRaw.Add(child);
+                        break;
+                    case "dimension":
+                        component.DimensionsRaw.Add(child);
+                        break;
+                    case "component_classes":
+                        component.ComponentClassesRaw = child;
+                        break;
+                    case "embedded_files":
+                        component.EmbeddedFilesRaw = child;
                         break;
                     case "sheetname":
                         component.SheetName = child.GetString();
@@ -376,7 +411,14 @@ public static class FootprintReader
         }
 
         // Corner radius
-        pad.CornerRadiusPercentage = (int)((node.GetChild("roundrect_rratio")?.GetDouble() ?? 0) * 100);
+        var rrNode = node.GetChild("roundrect_rratio");
+        if (rrNode is not null)
+        {
+            var rrRatio = rrNode.GetDouble() ?? 0;
+            pad.HasRoundRectRatio = true;
+            pad.RoundRectRatio = rrRatio;
+            pad.CornerRadiusPercentage = (int)(rrRatio * 100);
+        }
 
         // Clearances
         pad.SolderMaskExpansion = Coord.FromMm(node.GetChild("solder_mask_margin")?.GetDouble() ?? 0);
@@ -418,7 +460,8 @@ public static class FootprintReader
         // Pad property
         pad.PadProperty = node.GetChild("property")?.GetString();
 
-        // Thermal bridge angle
+        // Thermal bridge width and angle
+        pad.ThermalBridgeWidth = Coord.FromMm(node.GetChild("thermal_bridge_width")?.GetDouble() ?? 0);
         var tbAngleNode = node.GetChild("thermal_bridge_angle");
         if (tbAngleNode is not null)
         {
@@ -505,6 +548,21 @@ public static class FootprintReader
                     case "unlocked": text.IsUnlocked = true; break;
                 }
             }
+        }
+
+        // Also check for (hide yes) and (unlocked yes) child node format (KiCad 9+)
+        var hideChild = node.GetChild("hide");
+        if (hideChild is not null)
+        {
+            text.IsHidden = hideChild.GetBool() ?? true;
+            text.HideIsChildNode = true;
+        }
+
+        var unlockedChild = node.GetChild("unlocked");
+        if (unlockedChild is not null)
+        {
+            text.IsUnlocked = unlockedChild.GetBool() ?? true;
+            text.UnlockedIsChildNode = true;
         }
 
         var (fontH, fontW, justification, _, isMirrored, isBold, isItalic, fontFace, fontThickness, fontColor) = SExpressionHelper.ParseTextEffects(node);

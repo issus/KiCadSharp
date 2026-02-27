@@ -143,4 +143,14 @@ public sealed class KiCadPcbZone
     /// Gets or sets the raw <c>(connect_pads ...)</c> S-expression subtree.
     /// </summary>
     public SExpr? ConnectPadsRaw { get; set; }
+
+    /// <summary>
+    /// Gets or sets the raw <c>(filled_areas_thickness ...)</c> S-expression value.
+    /// </summary>
+    public SExpr? FilledAreasThicknessRaw { get; set; }
+
+    /// <summary>
+    /// Gets or sets the raw <c>(attr ...)</c> S-expression value for the zone.
+    /// </summary>
+    public SExpr? AttrRaw { get; set; }
 }

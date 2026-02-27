@@ -49,13 +49,23 @@ public static class FootprintWriter
         if (component.GeneratorVersion is not null)
             b.AddChild("generator_version", g => g.AddValue(component.GeneratorVersion));
 
-        if (component.IsLocked)
-            b.AddSymbol("locked");
-        if (component.IsPlaced)
-            b.AddSymbol("placed");
+        if (component.UsesChildNodeFlags)
+        {
+            if (component.IsLocked)
+                b.AddChild("locked", l => l.AddBool(true));
+            if (component.IsPlaced)
+                b.AddChild("placed", p => p.AddBool(true));
+        }
+        else
+        {
+            if (component.IsLocked)
+                b.AddSymbol("locked");
+            if (component.IsPlaced)
+                b.AddSymbol("placed");
+        }
 
         if (component.LayerName is not null)
-            b.AddChild("layer", l => l.AddSymbol(component.LayerName));
+            b.AddChild("layer", l => l.AddValue(component.LayerName));
 
         if (component.Tedit is not null)
             b.AddChild("tedit", t => t.AddValue(component.Tedit));
@@ -64,7 +74,7 @@ public static class FootprintWriter
             b.AddChild(WriterHelper.BuildUuid(component.Uuid));
 
         if (component.Location != CoordPoint.Zero || component.Rotation != 0)
-            b.AddChild(WriterHelper.BuildPosition(component.Location, component.Rotation));
+            b.AddChild(WriterHelper.BuildPositionCompact(component.Location, component.Rotation));
 
         if (component.Description is not null)
             b.AddChild("descr", d => d.AddValue(component.Description));
@@ -78,6 +88,10 @@ public static class FootprintWriter
             b.AddChild(SymLibWriter.BuildProperty(prop));
         }
 
+        // Component classes (raw)
+        if (component.ComponentClassesRaw is not null)
+            b.AddChild(component.ComponentClassesRaw);
+
         if (component.Path is not null)
             b.AddChild("path", p => p.AddValue(component.Path));
 
@@ -89,19 +103,19 @@ public static class FootprintWriter
 
         // Clearances
         if (component.Clearance != Coord.Zero)
-            b.AddChild("clearance", c => c.AddValue(component.Clearance.ToMm()));
+            b.AddChild("clearance", c => c.AddMm(component.Clearance));
         if (component.SolderMaskMargin != Coord.Zero)
-            b.AddChild("solder_mask_margin", c => c.AddValue(component.SolderMaskMargin.ToMm()));
+            b.AddChild("solder_mask_margin", c => c.AddMm(component.SolderMaskMargin));
         if (component.SolderPasteMargin != Coord.Zero)
-            b.AddChild("solder_paste_margin", c => c.AddValue(component.SolderPasteMargin.ToMm()));
+            b.AddChild("solder_paste_margin", c => c.AddMm(component.SolderPasteMargin));
         if (component.SolderPasteRatio != 0)
             b.AddChild("solder_paste_ratio", c => c.AddValue(component.SolderPasteRatio));
         if (component.SolderPasteMarginRatio.HasValue)
             b.AddChild("solder_paste_margin_ratio", c => c.AddValue(component.SolderPasteMarginRatio.Value));
         if (component.ThermalWidth != Coord.Zero)
-            b.AddChild("thermal_width", c => c.AddValue(component.ThermalWidth.ToMm()));
+            b.AddChild("thermal_width", c => c.AddMm(component.ThermalWidth));
         if (component.ThermalGap != Coord.Zero)
-            b.AddChild("thermal_gap", c => c.AddValue(component.ThermalGap.ToMm()));
+            b.AddChild("thermal_gap", c => c.AddMm(component.ThermalGap));
         if (component.ZoneConnect != ZoneConnectionType.Inherited)
             b.AddChild("zone_connect", c => c.AddValue((int)component.ZoneConnect));
         if (component.AutoplaceCost90 != 0)
@@ -121,6 +135,7 @@ public static class FootprintWriter
                 if (component.Attributes.HasFlag(FootprintAttribute.ExcludeFromBom)) a.AddSymbol("exclude_from_bom");
                 if (component.Attributes.HasFlag(FootprintAttribute.AllowMissingCourtyard)) a.AddSymbol("allow_missing_courtyard");
                 if (component.Attributes.HasFlag(FootprintAttribute.Dnp)) a.AddSymbol("dnp");
+                if (component.Attributes.HasFlag(FootprintAttribute.AllowSoldermaskBridges)) a.AddSymbol("allow_soldermask_bridges");
             });
         }
 
@@ -135,40 +150,36 @@ public static class FootprintWriter
         if (component.NetTiePadGroupsRaw is not null)
             b.AddChild(component.NetTiePadGroupsRaw);
 
-        // Lines (stored as tracks in the model)
-        foreach (var track in component.Tracks.OfType<KiCadPcbTrack>())
+        // Graphical items — use original order if available, otherwise group by type
+        if (component.GraphicalItemOrder.Count > 0)
         {
-            b.AddChild(BuildFpLine(track));
+            foreach (var item in component.GraphicalItemOrder)
+            {
+                switch (item)
+                {
+                    case KiCadPcbTrack track: b.AddChild(BuildFpLine(track)); break;
+                    case KiCadPcbRectangle rect: b.AddChild(BuildFpRect(rect)); break;
+                    case KiCadPcbCircle circle: b.AddChild(BuildFpCircle(circle)); break;
+                    case KiCadPcbArc arc: b.AddChild(BuildFpArc(arc)); break;
+                    case KiCadPcbPolygon poly: b.AddChild(BuildFpPoly(poly)); break;
+                    case KiCadPcbCurve curve: b.AddChild(BuildFpCurve(curve)); break;
+                }
+            }
         }
-
-        // Rectangles
-        foreach (var rect in component.Rectangles)
+        else
         {
-            b.AddChild(BuildFpRect(rect));
-        }
-
-        // Circles
-        foreach (var circle in component.Circles)
-        {
-            b.AddChild(BuildFpCircle(circle));
-        }
-
-        // Arcs
-        foreach (var arc in component.Arcs.OfType<KiCadPcbArc>())
-        {
-            b.AddChild(BuildFpArc(arc));
-        }
-
-        // Polygons
-        foreach (var poly in component.Polygons)
-        {
-            b.AddChild(BuildFpPoly(poly));
-        }
-
-        // Bezier curves
-        foreach (var curve in component.Curves)
-        {
-            b.AddChild(BuildFpCurve(curve));
+            foreach (var track in component.Tracks.OfType<KiCadPcbTrack>())
+                b.AddChild(BuildFpLine(track));
+            foreach (var rect in component.Rectangles)
+                b.AddChild(BuildFpRect(rect));
+            foreach (var circle in component.Circles)
+                b.AddChild(BuildFpCircle(circle));
+            foreach (var arc in component.Arcs.OfType<KiCadPcbArc>())
+                b.AddChild(BuildFpArc(arc));
+            foreach (var poly in component.Polygons)
+                b.AddChild(BuildFpPoly(poly));
+            foreach (var curve in component.Curves)
+                b.AddChild(BuildFpCurve(curve));
         }
 
         // Texts
@@ -195,13 +206,15 @@ public static class FootprintWriter
             b.AddChild(BuildPad(pad));
         }
 
-        // Embedded fonts (KiCad 8+) — emit after pads, before models
-        if (component.EmbeddedFonts.HasValue)
-            b.AddChild("embedded_fonts", e => e.AddBool(component.EmbeddedFonts.Value));
-
         // Teardrop (raw)
         if (component.TeardropRaw is not null)
             b.AddChild(component.TeardropRaw);
+
+        // Dimensions within footprint (raw)
+        foreach (var dim in component.DimensionsRaw)
+        {
+            b.AddChild(dim);
+        }
 
         // Zones within footprint (raw)
         foreach (var zone in component.ZonesRaw)
@@ -214,6 +227,14 @@ public static class FootprintWriter
         {
             b.AddChild(group);
         }
+
+        // Embedded fonts (KiCad 8+) — emit after groups, before embedded_files
+        if (component.EmbeddedFonts.HasValue)
+            b.AddChild("embedded_fonts", e => e.AddBool(component.EmbeddedFonts.Value));
+
+        // Embedded files (raw)
+        if (component.EmbeddedFilesRaw is not null)
+            b.AddChild(component.EmbeddedFilesRaw);
 
         // 3D models (prefer the list, fall back to single model)
         if (component.Models3D.Count > 0)
@@ -230,20 +251,20 @@ public static class FootprintWriter
                 m.AddValue(component.Model3D);
                 m.AddChild("offset", o => o.AddChild("xyz", xyz =>
                 {
-                    xyz.AddValue(component.Model3DOffset.X.ToMm());
-                    xyz.AddValue(component.Model3DOffset.Y.ToMm());
+                    xyz.AddMm(component.Model3DOffset.X);
+                    xyz.AddMm(component.Model3DOffset.Y);
                     xyz.AddValue(component.Model3DOffsetZ);
                 }));
                 m.AddChild("scale", s => s.AddChild("xyz", xyz =>
                 {
-                    xyz.AddValue(component.Model3DScale.X.ToMm());
-                    xyz.AddValue(component.Model3DScale.Y.ToMm());
+                    xyz.AddMm(component.Model3DScale.X);
+                    xyz.AddMm(component.Model3DScale.Y);
                     xyz.AddValue(component.Model3DScaleZ);
                 }));
                 m.AddChild("rotate", r => r.AddChild("xyz", xyz =>
                 {
-                    xyz.AddValue(component.Model3DRotation.X.ToMm());
-                    xyz.AddValue(component.Model3DRotation.Y.ToMm());
+                    xyz.AddMm(component.Model3DRotation.X);
+                    xyz.AddMm(component.Model3DRotation.Y);
                     xyz.AddValue(component.Model3DRotationZ);
                 }));
             });
@@ -258,16 +279,22 @@ public static class FootprintWriter
             .AddSymbol(text.TextType ?? "user")
             .AddValue(text.Text);
 
-        if (text.IsHidden)
+        if (text.IsHidden && !text.HideIsChildNode)
             tb.AddSymbol("hide");
 
-        if (text.IsUnlocked)
+        if (text.IsUnlocked && !text.UnlockedIsChildNode)
             tb.AddSymbol("unlocked");
 
         tb.AddChild(WriterHelper.BuildPosition(text.Location, text.Rotation));
 
+        if (text.IsUnlocked && text.UnlockedIsChildNode)
+            tb.AddChild("unlocked", u => u.AddBool(true));
+
         if (text.LayerName is not null)
-            tb.AddChild("layer", l => l.AddSymbol(text.LayerName));
+            tb.AddChild("layer", l => l.AddValue(text.LayerName));
+
+        if (text.IsHidden && text.HideIsChildNode)
+            tb.AddChild("hide", h => h.AddBool(true));
 
         if (text.IsKnockout)
             tb.AddSymbol("knockout");
@@ -298,8 +325,8 @@ public static class FootprintWriter
         var lb = new SExpressionBuilder("fp_line");
         if (track.IsLocked)
             lb.AddSymbol("locked");
-        lb.AddChild("start", s => { s.AddValue(track.Start.X.ToMm()); s.AddValue(track.Start.Y.ToMm()); })
-            .AddChild("end", e => { e.AddValue(track.End.X.ToMm()); e.AddValue(track.End.Y.ToMm()); })
+        lb.AddChild("start", s => { s.AddMm(track.Start.X); s.AddMm(track.Start.Y); })
+            .AddChild("end", e => { e.AddMm(track.End.X); e.AddMm(track.End.Y); })
             .AddChild(WriterHelper.BuildStroke(track.Width, track.StrokeStyle, track.StrokeColor));
 
         if (track.UsePcbFillFormat)
@@ -308,7 +335,7 @@ public static class FootprintWriter
             lb.AddChild(WriterHelper.BuildFill(track.FillType, track.FillColor));
 
         if (track.LayerName is not null)
-            lb.AddChild("layer", l => l.AddSymbol(track.LayerName));
+            lb.AddChild("layer", l => l.AddValue(track.LayerName));
 
         if (track.Uuid is not null)
             lb.AddChild(WriterHelper.BuildUuid(track.Uuid));
@@ -321,8 +348,8 @@ public static class FootprintWriter
         var rb = new SExpressionBuilder("fp_rect");
         if (rect.IsLocked)
             rb.AddSymbol("locked");
-        rb.AddChild("start", s => { s.AddValue(rect.Start.X.ToMm()); s.AddValue(rect.Start.Y.ToMm()); })
-            .AddChild("end", e => { e.AddValue(rect.End.X.ToMm()); e.AddValue(rect.End.Y.ToMm()); })
+        rb.AddChild("start", s => { s.AddMm(rect.Start.X); s.AddMm(rect.Start.Y); })
+            .AddChild("end", e => { e.AddMm(rect.End.X); e.AddMm(rect.End.Y); })
             .AddChild(WriterHelper.BuildStroke(rect.Width, rect.StrokeStyle, rect.StrokeColor));
 
         if (rect.UsePcbFillFormat)
@@ -331,7 +358,7 @@ public static class FootprintWriter
             rb.AddChild(WriterHelper.BuildFill(rect.FillType, rect.FillColor));
 
         if (rect.LayerName is not null)
-            rb.AddChild("layer", l => l.AddSymbol(rect.LayerName));
+            rb.AddChild("layer", l => l.AddValue(rect.LayerName));
 
         if (rect.Uuid is not null)
             rb.AddChild(WriterHelper.BuildUuid(rect.Uuid));
@@ -344,8 +371,8 @@ public static class FootprintWriter
         var cb = new SExpressionBuilder("fp_circle");
         if (circle.IsLocked)
             cb.AddSymbol("locked");
-        cb.AddChild("center", c => { c.AddValue(circle.Center.X.ToMm()); c.AddValue(circle.Center.Y.ToMm()); })
-            .AddChild("end", e => { e.AddValue(circle.End.X.ToMm()); e.AddValue(circle.End.Y.ToMm()); })
+        cb.AddChild("center", c => { c.AddMm(circle.Center.X); c.AddMm(circle.Center.Y); })
+            .AddChild("end", e => { e.AddMm(circle.End.X); e.AddMm(circle.End.Y); })
             .AddChild(WriterHelper.BuildStroke(circle.Width, circle.StrokeStyle, circle.StrokeColor));
 
         if (circle.UsePcbFillFormat)
@@ -354,7 +381,7 @@ public static class FootprintWriter
             cb.AddChild(WriterHelper.BuildFill(circle.FillType, circle.FillColor));
 
         if (circle.LayerName is not null)
-            cb.AddChild("layer", l => l.AddSymbol(circle.LayerName));
+            cb.AddChild("layer", l => l.AddValue(circle.LayerName));
 
         if (circle.Uuid is not null)
             cb.AddChild(WriterHelper.BuildUuid(circle.Uuid));
@@ -367,13 +394,13 @@ public static class FootprintWriter
         var ab = new SExpressionBuilder("fp_arc");
         if (arc.IsLocked)
             ab.AddSymbol("locked");
-        ab.AddChild("start", s => { s.AddValue(arc.ArcStart.X.ToMm()); s.AddValue(arc.ArcStart.Y.ToMm()); })
-            .AddChild("mid", m => { m.AddValue(arc.ArcMid.X.ToMm()); m.AddValue(arc.ArcMid.Y.ToMm()); })
-            .AddChild("end", e => { e.AddValue(arc.ArcEnd.X.ToMm()); e.AddValue(arc.ArcEnd.Y.ToMm()); })
+        ab.AddChild("start", s => { s.AddMm(arc.ArcStart.X); s.AddMm(arc.ArcStart.Y); })
+            .AddChild("mid", m => { m.AddMm(arc.ArcMid.X); m.AddMm(arc.ArcMid.Y); })
+            .AddChild("end", e => { e.AddMm(arc.ArcEnd.X); e.AddMm(arc.ArcEnd.Y); })
             .AddChild(WriterHelper.BuildStroke(arc.Width, arc.StrokeStyle, arc.StrokeColor));
 
         if (arc.LayerName is not null)
-            ab.AddChild("layer", l => l.AddSymbol(arc.LayerName));
+            ab.AddChild("layer", l => l.AddValue(arc.LayerName));
 
         if (arc.Uuid is not null)
             ab.AddChild(WriterHelper.BuildUuid(arc.Uuid));
@@ -391,12 +418,16 @@ public static class FootprintWriter
         if (pad.IsLocked)
             pb.AddSymbol("locked");
 
-        pb.AddChild(WriterHelper.BuildPosition(pad.Location, pad.Rotation));
+        pb.AddChild(WriterHelper.BuildPositionCompact(pad.Location, pad.Rotation));
         pb.AddChild("size", s =>
         {
-            s.AddValue(pad.Size.X.ToMm());
-            s.AddValue(pad.Size.Y.ToMm());
+            s.AddMm(pad.Size.X);
+            s.AddMm(pad.Size.Y);
         });
+
+        // rect_delta (raw) - must come after size, before drill
+        if (pad.RectDeltaRaw is not null)
+            pb.AddChild(pad.RectDeltaRaw);
 
         if (pad.HoleSize != Coord.Zero)
         {
@@ -405,35 +436,64 @@ public static class FootprintWriter
                 pb.AddChild("drill", d =>
                 {
                     d.AddSymbol("oval");
-                    d.AddValue(pad.HoleSize.ToMm());
+                    d.AddMm(pad.HoleSize);
                     if (pad.DrillSizeY != Coord.Zero)
-                        d.AddValue(pad.DrillSizeY.ToMm());
+                        d.AddMm(pad.DrillSizeY);
                     if (pad.DrillOffset != CoordPoint.Zero)
-                        d.AddChild("offset", o => { o.AddValue(pad.DrillOffset.X.ToMm()); o.AddValue(pad.DrillOffset.Y.ToMm()); });
+                        d.AddChild("offset", o => { o.AddMm(pad.DrillOffset.X); o.AddMm(pad.DrillOffset.Y); });
                 });
             }
             else
             {
                 pb.AddChild("drill", d =>
                 {
-                    d.AddValue(pad.HoleSize.ToMm());
+                    d.AddMm(pad.HoleSize);
                     if (pad.DrillOffset != CoordPoint.Zero)
-                        d.AddChild("offset", o => { o.AddValue(pad.DrillOffset.X.ToMm()); o.AddValue(pad.DrillOffset.Y.ToMm()); });
+                        d.AddChild("offset", o => { o.AddMm(pad.DrillOffset.X); o.AddMm(pad.DrillOffset.Y); });
                 });
             }
         }
+
+        // pad property (e.g. pad_prop_heatsink) - must come after drill, before layers
+        if (pad.PadProperty is not null)
+            pb.AddChild("property", p => p.AddSymbol(pad.PadProperty));
 
         if (pad.Layers.Count > 0)
         {
             pb.AddChild("layers", l =>
             {
                 foreach (var layer in pad.Layers)
-                    l.AddSymbol(layer);
+                    l.AddValue(layer);
             });
         }
 
-        if (pad.CornerRadiusPercentage > 0)
+        if (pad.HasRemoveUnusedLayers)
+            pb.AddChild("remove_unused_layers", r => r.AddBool(pad.RemoveUnusedLayers));
+        else if (pad.RemoveUnusedLayers)
+            pb.AddChild("remove_unused_layers", _ => { });
+        if (pad.HasKeepEndLayers)
+            pb.AddChild("keep_end_layers", k => k.AddBool(pad.KeepEndLayers));
+        else if (pad.KeepEndLayers)
+            pb.AddChild("keep_end_layers", _ => { });
+
+        if (pad.HasRoundRectRatio)
+            pb.AddChild("roundrect_rratio", r => r.AddValue(pad.RoundRectRatio));
+        else if (pad.RoundRectRatio > 0)
+            pb.AddChild("roundrect_rratio", r => r.AddValue(pad.RoundRectRatio));
+        else if (pad.CornerRadiusPercentage > 0)
             pb.AddChild("roundrect_rratio", r => r.AddValue(pad.CornerRadiusPercentage / 100.0));
+
+        // Chamfer (must come before net/pinfunction/pintype per KiCad ordering)
+        if (pad.ChamferRatio > 0)
+            pb.AddChild("chamfer_ratio", c => c.AddValue(pad.ChamferRatio));
+        if (pad.ChamferCorners.Length > 0)
+        {
+            pb.AddChild("chamfer", c =>
+            {
+                foreach (var corner in pad.ChamferCorners)
+                    c.AddSymbol(corner);
+            });
+        }
 
         if (pad.Net > 0 || pad.NetName is not null)
         {
@@ -450,54 +510,25 @@ public static class FootprintWriter
             pb.AddChild("pintype", p => p.AddValue(pad.PinType));
 
         if (pad.SolderMaskExpansion != Coord.Zero)
-            pb.AddChild("solder_mask_margin", c => c.AddValue(pad.SolderMaskExpansion.ToMm()));
+            pb.AddChild("solder_mask_margin", c => c.AddMm(pad.SolderMaskExpansion));
         if (pad.Clearance != Coord.Zero)
-            pb.AddChild("clearance", c => c.AddValue(pad.Clearance.ToMm()));
+            pb.AddChild("clearance", c => c.AddMm(pad.Clearance));
         if (pad.SolderPasteMargin != Coord.Zero)
-            pb.AddChild("solder_paste_margin", c => c.AddValue(pad.SolderPasteMargin.ToMm()));
+            pb.AddChild("solder_paste_margin", c => c.AddMm(pad.SolderPasteMargin));
         if (pad.SolderPasteRatio != 0)
             pb.AddChild("solder_paste_margin_ratio", c => c.AddValue(pad.SolderPasteRatio));
         if (pad.ThermalWidth != Coord.Zero)
-            pb.AddChild("thermal_width", c => c.AddValue(pad.ThermalWidth.ToMm()));
-        if (pad.ThermalGap != Coord.Zero)
-            pb.AddChild("thermal_gap", c => c.AddValue(pad.ThermalGap.ToMm()));
+            pb.AddChild("thermal_width", c => c.AddMm(pad.ThermalWidth));
+        if (pad.DieLength != Coord.Zero)
+            pb.AddChild("die_length", c => c.AddMm(pad.DieLength));
         if (pad.HasZoneConnect || pad.ZoneConnect != ZoneConnectionType.Inherited)
             pb.AddChild("zone_connect", c => c.AddValue((int)pad.ZoneConnect));
-        if (pad.DieLength != Coord.Zero)
-            pb.AddChild("die_length", c => c.AddValue(pad.DieLength.ToMm()));
+        if (pad.ThermalBridgeWidth != Coord.Zero)
+            pb.AddChild("thermal_bridge_width", c => c.AddMm(pad.ThermalBridgeWidth));
         if (pad.HasThermalBridgeAngle || pad.ThermalBridgeAngle != 0)
             pb.AddChild("thermal_bridge_angle", c => c.AddValue(pad.ThermalBridgeAngle));
-
-        if (pad.HasRemoveUnusedLayers)
-            pb.AddChild("remove_unused_layers", r => r.AddBool(pad.RemoveUnusedLayers));
-        else if (pad.RemoveUnusedLayers)
-            pb.AddChild("remove_unused_layers", _ => { });
-        if (pad.HasKeepEndLayers)
-            pb.AddChild("keep_end_layers", k => k.AddBool(pad.KeepEndLayers));
-        else if (pad.KeepEndLayers)
-            pb.AddChild("keep_end_layers", _ => { });
-
-        // rect_delta (raw)
-        if (pad.RectDeltaRaw is not null)
-            pb.AddChild(pad.RectDeltaRaw);
-
-        if (pad.ChamferRatio > 0)
-            pb.AddChild("chamfer_ratio", c => c.AddValue(pad.ChamferRatio));
-        if (pad.ChamferCorners.Length > 0)
-        {
-            pb.AddChild("chamfer", c =>
-            {
-                foreach (var corner in pad.ChamferCorners)
-                    c.AddSymbol(corner);
-            });
-        }
-
-        if (pad.PadProperty is not null)
-            pb.AddChild("property", p => p.AddValue(pad.PadProperty));
-
-        // Per-pad tenting (raw)
-        if (pad.TentingRaw is not null)
-            pb.AddChild(pad.TentingRaw);
+        if (pad.ThermalGap != Coord.Zero)
+            pb.AddChild("thermal_gap", c => c.AddMm(pad.ThermalGap));
 
         // Custom pad options (raw)
         if (pad.OptionsRaw is not null)
@@ -506,6 +537,10 @@ public static class FootprintWriter
         // Custom pad primitives (raw)
         if (pad.PrimitivesRaw is not null)
             pb.AddChild(pad.PrimitivesRaw);
+
+        // Per-pad tenting (raw) - after options/primitives
+        if (pad.TentingRaw is not null)
+            pb.AddChild(pad.TentingRaw);
 
         // Per-pad teardrops (raw)
         if (pad.TeardropsRaw is not null)
@@ -532,7 +567,7 @@ public static class FootprintWriter
             pb.AddChild(WriterHelper.BuildFill(poly.FillType, poly.FillColor));
 
         if (poly.LayerName is not null)
-            pb.AddChild("layer", l => l.AddSymbol(poly.LayerName));
+            pb.AddChild("layer", l => l.AddValue(poly.LayerName));
 
         if (poly.Uuid is not null)
             pb.AddChild(WriterHelper.BuildUuid(poly.Uuid));
@@ -550,7 +585,7 @@ public static class FootprintWriter
         cb.AddChild(WriterHelper.BuildStroke(curve.Width, curve.StrokeStyle, curve.StrokeColor));
 
         if (curve.LayerName is not null)
-            cb.AddChild("layer", l => l.AddSymbol(curve.LayerName));
+            cb.AddChild("layer", l => l.AddValue(curve.LayerName));
 
         if (curve.Uuid is not null)
             cb.AddChild(WriterHelper.BuildUuid(curve.Uuid));
@@ -565,20 +600,20 @@ public static class FootprintWriter
             mb.AddChild("hide", h => h.AddBool(true));
         mb.AddChild("offset", o => o.AddChild("xyz", xyz =>
         {
-            xyz.AddValue(model.Offset.X.ToMm());
-            xyz.AddValue(model.Offset.Y.ToMm());
+            xyz.AddMm(model.Offset.X);
+            xyz.AddMm(model.Offset.Y);
             xyz.AddValue(model.OffsetZ);
         }));
         mb.AddChild("scale", s => s.AddChild("xyz", xyz =>
         {
-            xyz.AddValue(model.Scale.X.ToMm());
-            xyz.AddValue(model.Scale.Y.ToMm());
+            xyz.AddMm(model.Scale.X);
+            xyz.AddMm(model.Scale.Y);
             xyz.AddValue(model.ScaleZ);
         }));
         mb.AddChild("rotate", r => r.AddChild("xyz", xyz =>
         {
-            xyz.AddValue(model.Rotation.X.ToMm());
-            xyz.AddValue(model.Rotation.Y.ToMm());
+            xyz.AddMm(model.Rotation.X);
+            xyz.AddMm(model.Rotation.Y);
             xyz.AddValue(model.RotationZ);
         }));
         return mb.Build();

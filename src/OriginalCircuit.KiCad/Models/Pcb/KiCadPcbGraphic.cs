@@ -29,6 +29,11 @@ public abstract class KiCadPcbGraphic
     public EdaColor StrokeColor { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the stroke node was explicitly present in the source file.
+    /// </summary>
+    public bool HasStroke { get; set; }
+
+    /// <summary>
     /// Gets or sets the UUID.
     /// </summary>
     public string? Uuid { get; set; }
@@ -44,9 +49,21 @@ public abstract class KiCadPcbGraphic
     public EdaColor FillColor { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the fill node uses PCB boolean format (<c>(fill yes)</c>/<c>(fill no)</c>)
+    /// instead of schematic format (<c>(fill (type ...))</c>).
+    /// </summary>
+    public bool UsePcbFillFormat { get; set; }
+
+    /// <summary>
     /// Gets or sets whether this graphic is locked.
     /// </summary>
     public bool IsLocked { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the locked flag uses child node format (<c>(locked yes)</c>)
+    /// instead of bare symbol format (<c>locked</c>). Used for round-trip fidelity.
+    /// </summary>
+    public bool LockedIsChildNode { get; set; }
 }
 
 /// <summary>

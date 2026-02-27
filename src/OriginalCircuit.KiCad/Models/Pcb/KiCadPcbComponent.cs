@@ -25,6 +25,7 @@ public sealed class KiCadPcbComponent : IPcbComponent
     private readonly List<KiCadPcb3DModel> _models3D = [];
     private readonly List<KiCadSchParameter> _properties = [];
     private readonly List<KiCadDiagnostic> _diagnostics = [];
+    private readonly List<object> _graphicalItemOrder = [];
 
     /// <inheritdoc />
     public string Name { get; set; } = "";
@@ -107,6 +108,13 @@ public sealed class KiCadPcbComponent : IPcbComponent
     internal List<KiCadPcbCurve> CurveList => _curves;
 
     /// <summary>
+    /// Gets all graphical items (lines, rects, circles, arcs, polygons, curves) in their original parse order.
+    /// Used by the writer for round-trip ordering fidelity.
+    /// </summary>
+    public IReadOnlyList<object> GraphicalItemOrder => _graphicalItemOrder;
+    internal List<object> GraphicalItemOrderList => _graphicalItemOrder;
+
+    /// <summary>
     /// Gets the footprint location on the board.
     /// </summary>
     public CoordPoint Location { get; set; }
@@ -122,6 +130,12 @@ public sealed class KiCadPcbComponent : IPcbComponent
     public bool IsLocked { get; set; }
 
     /// <summary>
+    /// Gets whether the locked/placed flags use child node format (<c>(locked yes)</c>)
+    /// instead of bare symbol format (<c>locked</c>). Used for round-trip fidelity.
+    /// </summary>
+    public bool UsesChildNodeFlags { get; set; }
+
+    /// <summary>
     /// Gets whether the footprint is placed.
     /// </summary>
     public bool IsPlaced { get; set; }
@@ -134,8 +148,9 @@ public sealed class KiCadPcbComponent : IPcbComponent
 
     /// <summary>
     /// Gets or sets whether duplicate pad numbers are treated as jumpers (net-tie footprint flag).
+    /// Null means the token was not present in the source file.
     /// </summary>
-    public bool DuplicatePadNumbersAreJumpers { get; set; }
+    public bool? DuplicatePadNumbersAreJumpers { get; set; }
 
     /// <summary>
     /// Gets the footprint tags.
@@ -146,6 +161,16 @@ public sealed class KiCadPcbComponent : IPcbComponent
     /// Gets the path (hierarchical sheet reference).
     /// </summary>
     public string? Path { get; set; }
+
+    /// <summary>
+    /// Gets or sets the sheet name (set by the schematic when placing footprints on the PCB).
+    /// </summary>
+    public string? SheetName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the sheet file name (set by the schematic when placing footprints on the PCB).
+    /// </summary>
+    public string? SheetFile { get; set; }
 
     /// <summary>
     /// Gets the footprint attributes.
@@ -287,6 +312,21 @@ public sealed class KiCadPcbComponent : IPcbComponent
     /// Gets the raw group nodes within this footprint for round-trip fidelity.
     /// </summary>
     public List<SExpr> GroupsRaw { get; } = [];
+
+    /// <summary>
+    /// Gets the raw dimension nodes within this footprint for round-trip fidelity.
+    /// </summary>
+    public List<SExpr> DimensionsRaw { get; } = [];
+
+    /// <summary>
+    /// Gets the raw component_classes node for round-trip fidelity.
+    /// </summary>
+    public SExpr? ComponentClassesRaw { get; set; }
+
+    /// <summary>
+    /// Gets or sets the raw embedded_files S-expression subtree for round-trip fidelity.
+    /// </summary>
+    public SExpr? EmbeddedFilesRaw { get; set; }
 
     /// <summary>
     /// Gets the properties of this footprint.

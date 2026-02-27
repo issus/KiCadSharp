@@ -39,6 +39,7 @@ public sealed class KiCadPcb : IPcbDocument
     private readonly List<KiCadPcbZone> _zones = [];
     private readonly List<KiCadPcbNetClass> _netClasses = [];
     private readonly List<SExpr> _rawElements = [];
+    private readonly List<object> _boardElementOrder = [];
 
     /// <summary>
     /// Gets the file format version number.
@@ -168,6 +169,19 @@ public sealed class KiCadPcb : IPcbDocument
     /// Gets raw S-expression elements that are stored verbatim for round-trip fidelity.
     /// </summary>
     internal List<SExpr> RawElementList => _rawElements;
+
+    /// <summary>
+    /// Gets all board-level elements (graphics, segments, vias, arcs, texts, zones, raw)
+    /// in their original parse order. Used by the writer for round-trip ordering fidelity.
+    /// Each entry is one of: <see cref="KiCadPcbGraphicLine"/>, <see cref="KiCadPcbGraphicArc"/>,
+    /// <see cref="KiCadPcbGraphicCircle"/>, <see cref="KiCadPcbGraphicRect"/>,
+    /// <see cref="KiCadPcbGraphicPoly"/>, <see cref="KiCadPcbGraphicBezier"/>,
+    /// <see cref="KiCadPcbTrack"/>, <see cref="KiCadPcbVia"/>, <see cref="KiCadPcbArc"/>,
+    /// <see cref="KiCadPcbText"/>, <see cref="KiCadPcbZone"/>, or <see cref="SExpression.SExpression"/>
+    /// (for raw elements like dimension, target, group, generated).
+    /// </summary>
+    public IReadOnlyList<object> BoardElementOrder => _boardElementOrder;
+    internal List<object> BoardElementOrderList => _boardElementOrder;
 
     /// <summary>
     /// Gets the raw <c>(setup ...)</c> S-expression subtree, stored verbatim for round-trip.

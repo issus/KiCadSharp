@@ -43,6 +43,19 @@ public sealed class SExpressionBuilder
     }
 
     /// <summary>
+    /// Adds a numeric value with explicit text formatting for round-trip fidelity.
+    /// The value is stored as a double for computation, but serialized with the given text.
+    /// </summary>
+    /// <param name="value">The numeric value.</param>
+    /// <param name="formattedText">The text representation to use when serializing.</param>
+    /// <returns>This builder for method chaining.</returns>
+    public SExpressionBuilder AddFormattedValue(double value, string formattedText)
+    {
+        _values.Add(new SExprNumber(value) { OriginalText = formattedText });
+        return this;
+    }
+
+    /// <summary>
     /// Adds an unquoted symbol value to this S-expression.
     /// </summary>
     /// <param name="symbol">The symbol text.</param>

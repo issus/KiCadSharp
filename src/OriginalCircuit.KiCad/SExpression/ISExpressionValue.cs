@@ -42,8 +42,10 @@ public sealed record SExprNumber(double Value) : ISExpressionValue
     /// </summary>
     internal static string FormatNumber(double value)
     {
-        // Use G17 for full precision, then trim trailing zeros after decimal point
-        var result = value.ToString("G17", System.Globalization.CultureInfo.InvariantCulture);
+        // Use R (round-trip) format which produces the shortest representation
+        // that round-trips through double.Parse. This avoids G17's tendency to
+        // produce very long representations while still preserving precision.
+        var result = value.ToString("R", System.Globalization.CultureInfo.InvariantCulture);
 
         // If it contains exponential notation, fall back to fixed-point
         if (result.Contains('E') || result.Contains('e'))

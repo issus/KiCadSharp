@@ -45,6 +45,17 @@ public sealed class KiCadPcbPad : IPcbPad
     public int CornerRadiusPercentage { get; set; }
 
     /// <summary>
+    /// Gets the raw roundrect_rratio value for round-trip fidelity.
+    /// When set, this exact value is emitted instead of <see cref="CornerRadiusPercentage"/> / 100.
+    /// </summary>
+    public double RoundRectRatio { get; set; }
+
+    /// <summary>
+    /// Gets whether the roundrect_rratio token was explicitly present in the source file.
+    /// </summary>
+    public bool HasRoundRectRatio { get; set; }
+
+    /// <summary>
     /// Gets the KiCad pad type.
     /// </summary>
     public PadType PadType { get; set; }
@@ -168,6 +179,11 @@ public sealed class KiCadPcbPad : IPcbPad
     /// Gets whether the thermal_bridge_angle token was explicitly present in the source file.
     /// </summary>
     public bool HasThermalBridgeAngle { get; set; }
+
+    /// <summary>
+    /// Gets the thermal bridge (spoke) width for this pad.
+    /// </summary>
+    public Coord ThermalBridgeWidth { get; set; }
 
     /// <summary>
     /// Gets the raw rect_delta node for round-trip fidelity.

@@ -22,5 +22,14 @@ public enum FootprintAttribute
     ExcludeFromPosFiles = 8,
 
     /// <summary>Exclude from BOM.</summary>
-    ExcludeFromBom = 16
+    ExcludeFromBom = 16,
+
+    /// <summary>Allow missing courtyard (suppress DRC warning).</summary>
+    AllowMissingCourtyard = 32,
+
+    /// <summary>Do not populate (DNP).</summary>
+    Dnp = 64,
+
+    /// <summary>Allow solder mask bridges between pads.</summary>
+    AllowSoldermaskBridges = 128
 }
