@@ -3,6 +3,7 @@ using OriginalCircuit.Eda.Models;
 using OriginalCircuit.Eda.Models.Pcb;
 using OriginalCircuit.Eda.Primitives;
 using OriginalCircuit.KiCad.Serialization;
+using SExpr = OriginalCircuit.KiCad.SExpression.SExpression;
 
 namespace OriginalCircuit.KiCad.Models.Pcb;
 
@@ -35,6 +36,23 @@ public sealed class KiCadPcb : IPcbDocument
     /// Gets the generator version.
     /// </summary>
     public string? GeneratorVersion { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether embedded fonts are enabled (KiCad 8+).
+    /// </summary>
+    public bool EmbeddedFonts { get; set; }
+
+    /// <summary>
+    /// Gets the list of raw S-expression nodes for <c>(generated ...)</c> elements.
+    /// These are auto-generated graphical primitives preserved verbatim during round-trip.
+    /// </summary>
+    public List<SExpr> GeneratedElements { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the raw S-expression for <c>(embedded_files ...)</c> data,
+    /// preserved verbatim during round-trip.
+    /// </summary>
+    public SExpr? EmbeddedFilesRaw { get; set; }
 
     /// <summary>
     /// Gets the diagnostics collected during parsing.
