@@ -10,6 +10,9 @@ namespace OriginalCircuit.KiCad.Serialization;
 /// </summary>
 internal static class WriterHelper
 {
+    /// <summary>KiCad's default text size in mm.</summary>
+    internal static readonly Coord DefaultTextSize = Coord.FromMm(1.27);
+
     /// <summary>
     /// Builds an <c>(at X Y [ANGLE])</c> node.
     /// </summary>

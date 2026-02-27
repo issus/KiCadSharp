@@ -1,3 +1,4 @@
+using OriginalCircuit.Eda.Enums;
 using OriginalCircuit.Eda.Models.Sch;
 using OriginalCircuit.Eda.Primitives;
 using OriginalCircuit.KiCad.Models.Sch;
@@ -79,7 +80,7 @@ public static class SchWriter
             var tb = new SExpressionBuilder("text")
                 .AddValue(label.Text)
                 .AddChild(WriterHelper.BuildPosition(label.Location, label.Rotation))
-                .AddChild(WriterHelper.BuildTextEffects(Coord.FromMm(1.27), Coord.FromMm(1.27), label.Justification, label.IsHidden, label.IsMirrored));
+                .AddChild(WriterHelper.BuildTextEffects(WriterHelper.DefaultTextSize, WriterHelper.DefaultTextSize, label.Justification, label.IsHidden, label.IsMirrored));
             b.AddChild(tb.Build());
         }
 
@@ -153,10 +154,16 @@ public static class SchWriter
 
     private static SExpr BuildNetLabel(KiCadSchNetLabel label)
     {
-        var lb = new SExpressionBuilder("label")
+        var token = label.LabelType switch
+        {
+            NetLabelType.Global => "global_label",
+            NetLabelType.Hierarchical => "hierarchical_label",
+            _ => "label"
+        };
+        var lb = new SExpressionBuilder(token)
             .AddValue(label.Text)
             .AddChild(WriterHelper.BuildPosition(label.Location, label.Orientation))
-            .AddChild(WriterHelper.BuildTextEffects(Coord.FromMm(1.27), Coord.FromMm(1.27), label.Justification));
+            .AddChild(WriterHelper.BuildTextEffects(WriterHelper.DefaultTextSize, WriterHelper.DefaultTextSize, label.Justification));
         if (label.Uuid is not null) lb.AddChild(WriterHelper.BuildUuid(label.Uuid));
         return lb.Build();
     }
@@ -178,14 +185,14 @@ public static class SchWriter
             p.AddValue("Sheetname");
             p.AddValue(sheet.SheetName);
             p.AddChild(WriterHelper.BuildPosition(sheet.Location));
-            p.AddChild(WriterHelper.BuildTextEffects(Coord.FromMm(1.27), Coord.FromMm(1.27)));
+            p.AddChild(WriterHelper.BuildTextEffects(WriterHelper.DefaultTextSize, WriterHelper.DefaultTextSize));
         });
         sb.AddChild("property", p =>
         {
             p.AddValue("Sheetfile");
             p.AddValue(sheet.FileName);
             p.AddChild(WriterHelper.BuildPosition(sheet.Location));
-            p.AddChild(WriterHelper.BuildTextEffects(Coord.FromMm(1.27), Coord.FromMm(1.27)));
+            p.AddChild(WriterHelper.BuildTextEffects(WriterHelper.DefaultTextSize, WriterHelper.DefaultTextSize));
         });
 
         foreach (var pin in sheet.Pins.OfType<KiCadSchSheetPin>())
@@ -211,7 +218,7 @@ public static class SchWriter
                 .AddValue(pin.Name)
                 .AddSymbol(ioStr)
                 .AddChild(WriterHelper.BuildPosition(pin.Location, angleFromSide))
-                .AddChild(WriterHelper.BuildTextEffects(Coord.FromMm(1.27), Coord.FromMm(1.27)));
+                .AddChild(WriterHelper.BuildTextEffects(WriterHelper.DefaultTextSize, WriterHelper.DefaultTextSize));
             if (pin.Uuid is not null) pb.AddChild(WriterHelper.BuildUuid(pin.Uuid));
             sb.AddChild(pb.Build());
         }

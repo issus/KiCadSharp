@@ -25,6 +25,9 @@ public sealed class KiCadSchNetLabel : ISchNetLabel
     /// <inheritdoc />
     public TextJustification Justification { get; set; }
 
+    /// <inheritdoc />
+    public NetLabelType LabelType { get; set; }
+
     /// <summary>
     /// Gets the UUID of the net label.
     /// </summary>

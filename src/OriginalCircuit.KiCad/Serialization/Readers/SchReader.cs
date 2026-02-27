@@ -117,13 +117,13 @@ public static class SchReader
                         junctions.Add(ParseJunction(child));
                         break;
                     case "label":
-                        netLabels.Add(ParseNetLabel(child));
+                        netLabels.Add(ParseNetLabel(child, NetLabelType.Local));
                         break;
                     case "global_label":
-                        netLabels.Add(ParseNetLabel(child));
+                        netLabels.Add(ParseNetLabel(child, NetLabelType.Global));
                         break;
                     case "hierarchical_label":
-                        netLabels.Add(ParseNetLabel(child));
+                        netLabels.Add(ParseNetLabel(child, NetLabelType.Hierarchical));
                         break;
                     case "text":
                         labels.Add(ParseTextLabel(child));
@@ -217,7 +217,7 @@ public static class SchReader
         };
     }
 
-    private static KiCadSchNetLabel ParseNetLabel(SExpr node)
+    private static KiCadSchNetLabel ParseNetLabel(SExpr node, NetLabelType labelType)
     {
         var (loc, angle) = SExpressionHelper.ParsePosition(node);
         var (_, _, justification, _, _, _, _) = SExpressionHelper.ParseTextEffects(node);
@@ -228,6 +228,7 @@ public static class SchReader
             Location = loc,
             Orientation = (int)angle,
             Justification = justification,
+            LabelType = labelType,
             Uuid = SExpressionHelper.ParseUuid(node)
         };
     }
