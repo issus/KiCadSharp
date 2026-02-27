@@ -1,5 +1,7 @@
 using Xunit;
 using FluentAssertions;
+using OriginalCircuit.Eda.Enums;
+using OriginalCircuit.Eda.Primitives;
 using OriginalCircuit.KiCad.Models.Pcb;
 using OriginalCircuit.KiCad.Serialization;
 
@@ -71,5 +73,50 @@ public class FootprintWriterTests
 
         var fp2 = await FootprintReader.ReadAsync(ms);
         fp2.Description.Should().Be(fp1.Description);
+    }
+
+    [Fact]
+    public async Task Write_PadWithSolderPasteMargin_ProducesToken()
+    {
+        var fp = new KiCadPcbComponent { Name = "TestFP", LayerName = "F.Cu" };
+        fp.AddPad(new KiCadPcbPad
+        {
+            Designator = "1",
+            PadType = PadType.Smd,
+            Shape = PadShape.Rect,
+            Size = new CoordPoint(Coord.FromMm(1), Coord.FromMm(1)),
+            Layers = ["F.Cu"],
+            SolderPasteMargin = Coord.FromMm(0.1)
+        });
+
+        using var ms = new MemoryStream();
+        await FootprintWriter.WriteAsync(fp, ms);
+        ms.Position = 0;
+
+        var text = new StreamReader(ms).ReadToEnd();
+        text.Should().Contain("solder_paste_margin");
+    }
+
+    [Fact]
+    public async Task Write_3DModel_PreservesZValues()
+    {
+        var fp = new KiCadPcbComponent
+        {
+            Name = "TestFP",
+            LayerName = "F.Cu",
+            Model3D = "test.wrl",
+            Model3DOffsetZ = 1.5,
+            Model3DScaleZ = 2.0,
+            Model3DRotationZ = 45.0
+        };
+
+        using var ms = new MemoryStream();
+        await FootprintWriter.WriteAsync(fp, ms);
+        ms.Position = 0;
+
+        var fp2 = await FootprintReader.ReadAsync(ms);
+        fp2.Model3DOffsetZ.Should().BeApproximately(1.5, 0.01);
+        fp2.Model3DScaleZ.Should().BeApproximately(2.0, 0.01);
+        fp2.Model3DRotationZ.Should().BeApproximately(45.0, 0.01);
     }
 }

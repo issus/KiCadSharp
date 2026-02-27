@@ -1,5 +1,6 @@
 using Xunit;
 using FluentAssertions;
+using OriginalCircuit.Eda.Enums;
 using OriginalCircuit.KiCad.Models.Sch;
 using OriginalCircuit.KiCad.Serialization;
 
@@ -75,5 +76,48 @@ public class SchWriterTests
         var sch2 = await SchReader.ReadAsync(ms);
         sch2.Labels.Count.Should().Be(sch1.Labels.Count);
         sch2.NetLabels.Count.Should().Be(sch1.NetLabels.Count);
+    }
+
+    [Fact]
+    public async Task Write_GlobalLabel_UsesCorrectToken()
+    {
+        var sch = new KiCadSch();
+        sch.AddNetLabel(new KiCadSchNetLabel { Text = "VCC", LabelType = NetLabelType.Global, Uuid = Guid.NewGuid().ToString("D") });
+
+        using var ms = new MemoryStream();
+        await SchWriter.WriteAsync(sch, ms);
+        ms.Position = 0;
+
+        var text = new StreamReader(ms).ReadToEnd();
+        text.Should().Contain("global_label");
+        text.Should().NotContain("(label \"VCC\"");
+    }
+
+    [Fact]
+    public async Task Write_HierarchicalLabel_UsesCorrectToken()
+    {
+        var sch = new KiCadSch();
+        sch.AddNetLabel(new KiCadSchNetLabel { Text = "DATA", LabelType = NetLabelType.Hierarchical, Uuid = Guid.NewGuid().ToString("D") });
+
+        using var ms = new MemoryStream();
+        await SchWriter.WriteAsync(sch, ms);
+        ms.Position = 0;
+
+        var text = new StreamReader(ms).ReadToEnd();
+        text.Should().Contain("hierarchical_label");
+    }
+
+    [Fact]
+    public async Task Write_LocalLabel_UsesLabelToken()
+    {
+        var sch = new KiCadSch();
+        sch.AddNetLabel(new KiCadSchNetLabel { Text = "NET1", LabelType = NetLabelType.Local, Uuid = Guid.NewGuid().ToString("D") });
+
+        using var ms = new MemoryStream();
+        await SchWriter.WriteAsync(sch, ms);
+        ms.Position = 0;
+
+        var text = new StreamReader(ms).ReadToEnd();
+        text.Should().Contain("(label \"NET1\"");
     }
 }

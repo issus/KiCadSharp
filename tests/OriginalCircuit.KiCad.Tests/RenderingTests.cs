@@ -2,6 +2,7 @@ using System.Xml.Linq;
 using FluentAssertions;
 using OriginalCircuit.Eda.Primitives;
 using OriginalCircuit.Eda.Rendering;
+using OriginalCircuit.KiCad.Models.Sch;
 using OriginalCircuit.KiCad.Rendering;
 using OriginalCircuit.KiCad.Serialization;
 using Xunit;
@@ -354,5 +355,46 @@ public sealed class RenderingTests
         ms.Position = 0;
         var svg = new StreamReader(ms).ReadToEnd();
         svg.Should().Contain("<svg");
+    }
+
+    // ── Document-Level Rendering ────────────────────────────────────
+
+    private static string TestDataPath(string file) =>
+        Path.Combine(AppContext.BaseDirectory, "TestData", file);
+
+    [Fact]
+    public async Task SchRenderer_RenderDocument_ProducesOutput()
+    {
+        var schPath = TestDataPath("minimal.kicad_sch");
+        if (!File.Exists(schPath)) return;
+
+        var sch = await SchReader.ReadAsync(schPath);
+        var transform = new CoordTransform
+        {
+            ScreenWidth = 800,
+            ScreenHeight = 600
+        };
+        transform.AutoZoom(sch.Bounds);
+        var renderer = new KiCadSchRenderer(transform);
+
+        // Render to SVG
+        var svgCtx = new OriginalCircuit.Eda.Rendering.Svg.SvgRenderContext(800, 600);
+        renderer.RenderDocument(sch, svgCtx);
+        var svgStr = svgCtx.ToSvgString();
+        svgStr.Should().Contain("<svg");
+    }
+
+    [Fact]
+    public void ContrastColor_ReturnsBlackOnLightBackground()
+    {
+        ColorHelper.ContrastColor(ColorHelper.White).Should().Be(ColorHelper.Black);
+        ColorHelper.ContrastColor(ColorHelper.Yellow).Should().Be(ColorHelper.Black);
+    }
+
+    [Fact]
+    public void ContrastColor_ReturnsWhiteOnDarkBackground()
+    {
+        ColorHelper.ContrastColor(ColorHelper.Black).Should().Be(ColorHelper.White);
+        ColorHelper.ContrastColor(ColorHelper.Blue).Should().Be(ColorHelper.White);
     }
 }
