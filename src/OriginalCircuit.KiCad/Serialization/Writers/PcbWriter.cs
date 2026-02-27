@@ -43,6 +43,10 @@ public static class PcbWriter
             .AddChild("generator", g => g.AddValue(pcb.Generator ?? "kicadsharp"))
             .AddChild("generator_version", g => g.AddValue(pcb.GeneratorVersion ?? "1.0"));
 
+        // Embedded fonts (KiCad 8+)
+        if (pcb.EmbeddedFonts)
+            b.AddChild("embedded_fonts", ef => ef.AddBool(true));
+
         // General (prefer raw subtree for round-trip, fallback to constructed)
         if (pcb.GeneralRaw is not null)
             b.AddChild(pcb.GeneralRaw);
@@ -166,6 +170,18 @@ public static class PcbWriter
         foreach (var raw in pcb.RawElementList)
         {
             b.AddChild(raw);
+        }
+
+        // Generated elements (raw S-expression pass-through)
+        foreach (var gen in pcb.GeneratedElements)
+        {
+            b.AddChild(gen);
+        }
+
+        // Embedded files (raw S-expression pass-through)
+        if (pcb.EmbeddedFilesRaw is not null)
+        {
+            b.AddChild(pcb.EmbeddedFilesRaw);
         }
 
         return b.Build();

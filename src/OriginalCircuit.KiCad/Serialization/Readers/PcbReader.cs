@@ -162,6 +162,15 @@ public static class PcbReader
                         // Store raw for round-trip
                         pcb.RawElementList.Add(child);
                         break;
+                    case "embedded_fonts":
+                        pcb.EmbeddedFonts = child.GetBool() ?? false;
+                        break;
+                    case "generated":
+                        pcb.GeneratedElements.Add(child);
+                        break;
+                    case "embedded_files":
+                        pcb.EmbeddedFilesRaw = child;
+                        break;
                     case "version":
                     case "generator":
                     case "generator_version":
