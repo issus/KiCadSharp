@@ -44,6 +44,36 @@ public sealed class KiCadSchParameter : ISchParameter
     /// </summary>
     public Coord FontSizeHeight { get; set; }
 
+    /// <summary>
+    /// Gets the parameter identifier from the KiCad file.
+    /// </summary>
+    public int? Id { get; set; }
+
+    /// <summary>
+    /// Gets the font face name.
+    /// </summary>
+    public string? FontFace { get; set; }
+
+    /// <summary>
+    /// Gets the line spacing value from text effects.
+    /// </summary>
+    public double? LineSpacing { get; set; }
+
+    /// <summary>
+    /// Gets the font color.
+    /// </summary>
+    public EdaColor FontColor { get; set; }
+
+    /// <summary>
+    /// Gets whether the text is bold.
+    /// </summary>
+    public bool IsBold { get; set; }
+
+    /// <summary>
+    /// Gets whether the text is italic.
+    /// </summary>
+    public bool IsItalic { get; set; }
+
     /// <inheritdoc />
     public CoordRect Bounds
     {

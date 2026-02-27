@@ -156,9 +156,13 @@ public static class SymLibWriter
     {
         var b = new SExpressionBuilder("property")
             .AddValue(param.Name)
-            .AddValue(param.Value)
-            .AddChild(WriterHelper.BuildPosition(param.Location, param.Orientation))
-            .AddChild(WriterHelper.BuildTextEffects(param.FontSizeHeight, param.FontSizeWidth, param.Justification, !param.IsVisible, param.IsMirrored));
+            .AddValue(param.Value);
+
+        if (param.Id.HasValue)
+            b.AddChild("id", id => id.AddValue(param.Id.Value));
+
+        b.AddChild(WriterHelper.BuildPosition(param.Location, param.Orientation))
+         .AddChild(WriterHelper.BuildPropertyTextEffects(param));
         return b.Build();
     }
 
@@ -169,19 +173,36 @@ public static class SymLibWriter
             .AddSymbol(SExpressionHelper.PinGraphicStyleToString(pin.GraphicStyle));
 
         b.AddChild(WriterHelper.BuildPosition(pin.Location, SExpressionHelper.PinOrientationToAngle(pin.Orientation)))
-         .AddChild("length", l => l.AddValue(pin.Length.ToMm()))
-         .AddChild("name", n =>
-         {
-             n.AddValue(pin.Name ?? "~");
-             if (!pin.ShowName)
-                 n.AddChild(WriterHelper.BuildTextEffects(WriterHelper.DefaultTextSize, WriterHelper.DefaultTextSize, hide: true));
-         })
-         .AddChild("number", n =>
-         {
-             n.AddValue(pin.Designator ?? "~");
-             if (!pin.ShowDesignator)
-                 n.AddChild(WriterHelper.BuildTextEffects(WriterHelper.DefaultTextSize, WriterHelper.DefaultTextSize, hide: true));
-         });
+         .AddChild("length", l => l.AddValue(pin.Length.ToMm()));
+
+        // Name with font size
+        var nameFontH = pin.NameFontSizeHeight != Coord.Zero ? pin.NameFontSizeHeight : WriterHelper.DefaultTextSize;
+        var nameFontW = pin.NameFontSizeWidth != Coord.Zero ? pin.NameFontSizeWidth : WriterHelper.DefaultTextSize;
+        b.AddChild("name", n =>
+        {
+            n.AddValue(pin.Name ?? "~");
+            n.AddChild(WriterHelper.BuildTextEffects(nameFontH, nameFontW, hide: !pin.ShowName));
+        });
+
+        // Number with font size
+        var numFontH = pin.NumberFontSizeHeight != Coord.Zero ? pin.NumberFontSizeHeight : WriterHelper.DefaultTextSize;
+        var numFontW = pin.NumberFontSizeWidth != Coord.Zero ? pin.NumberFontSizeWidth : WriterHelper.DefaultTextSize;
+        b.AddChild("number", n =>
+        {
+            n.AddValue(pin.Designator ?? "~");
+            n.AddChild(WriterHelper.BuildTextEffects(numFontH, numFontW, hide: !pin.ShowDesignator));
+        });
+
+        // Alternates
+        foreach (var alt in pin.Alternates)
+        {
+            b.AddChild("alternate", a =>
+            {
+                a.AddValue(alt.Name);
+                a.AddSymbol(SExpressionHelper.PinElectricalTypeToString(alt.ElectricalType));
+                a.AddSymbol(SExpressionHelper.PinGraphicStyleToString(alt.GraphicStyle));
+            });
+        }
 
         return b.Build();
     }
@@ -246,10 +267,17 @@ public static class SymLibWriter
 
     private static SExpr BuildTextLabel(KiCadSchLabel label)
     {
-        return new SExpressionBuilder("text")
+        var fontH = label.FontSizeHeight != Coord.Zero ? label.FontSizeHeight : WriterHelper.DefaultTextSize;
+        var fontW = label.FontSizeWidth != Coord.Zero ? label.FontSizeWidth : WriterHelper.DefaultTextSize;
+        var b = new SExpressionBuilder("text")
             .AddValue(label.Text)
-            .AddChild(WriterHelper.BuildPosition(label.Location, label.Rotation))
-            .AddChild(WriterHelper.BuildTextEffects(WriterHelper.DefaultTextSize, WriterHelper.DefaultTextSize, label.Justification, label.IsHidden, label.IsMirrored))
-            .Build();
+            .AddChild(WriterHelper.BuildPosition(label.Location, label.Rotation));
+
+        // Write stroke if present
+        if (label.StrokeWidth != Coord.Zero || label.StrokeColor != default)
+            b.AddChild(WriterHelper.BuildStroke(label.StrokeWidth, label.StrokeLineStyle, label.StrokeColor));
+
+        b.AddChild(WriterHelper.BuildTextEffects(fontH, fontW, label.Justification, label.IsHidden, label.IsMirrored, label.IsBold, label.IsItalic));
+        return b.Build();
     }
 }
