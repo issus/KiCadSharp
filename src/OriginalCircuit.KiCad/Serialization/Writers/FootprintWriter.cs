@@ -40,6 +40,14 @@ public static class FootprintWriter
     {
         var b = new SExpressionBuilder("footprint").AddValue(component.Name);
 
+        // Standalone .kicad_mod file metadata (only emitted when present)
+        if (component.Version is not null)
+            b.AddChild("version", v => v.AddValue((double)component.Version.Value));
+        if (component.Generator is not null)
+            b.AddChild("generator", g => g.AddValue(component.Generator));
+        if (component.GeneratorVersion is not null)
+            b.AddChild("generator_version", g => g.AddValue(component.GeneratorVersion));
+
         if (component.IsLocked)
             b.AddSymbol("locked");
 
@@ -54,6 +62,12 @@ public static class FootprintWriter
 
         if (component.Tags is not null)
             b.AddChild("tags", t => t.AddValue(component.Tags));
+
+        if (component.EmbeddedFonts)
+            b.AddChild("embedded_fonts", e => e.AddBool(true));
+
+        if (component.DuplicatePadNumbersAreJumpers)
+            b.AddChild(new SExpressionBuilder("duplicate_pad_numbers_are_jumpers").Build());
 
         // Attributes
         if (component.Attributes != FootprintAttribute.None)
@@ -81,6 +95,8 @@ public static class FootprintWriter
             b.AddChild("solder_mask_margin", c => c.AddValue(component.SolderMaskMargin.ToMm()));
         if (component.SolderPasteMargin != Coord.Zero)
             b.AddChild("solder_paste_margin", c => c.AddValue(component.SolderPasteMargin.ToMm()));
+        if (component.SolderPasteMarginRatio.HasValue)
+            b.AddChild("solder_paste_margin_ratio", c => c.AddValue(component.SolderPasteMarginRatio.Value));
         if (component.ThermalWidth != Coord.Zero)
             b.AddChild("thermal_width", c => c.AddValue(component.ThermalWidth.ToMm()));
         if (component.ThermalGap != Coord.Zero)

@@ -64,6 +64,14 @@ public static class FootprintReader
             Name = node.GetString() ?? ""
         };
 
+        // Standalone .kicad_mod file metadata
+        var versionNode = node.GetChild("version");
+        if (versionNode is not null)
+            component.Version = versionNode.GetInt();
+
+        component.Generator = node.GetChild("generator")?.GetString();
+        component.GeneratorVersion = node.GetChild("generator_version")?.GetString();
+
         var (loc, angle) = SExpressionHelper.ParsePosition(node);
         component.Location = loc;
         component.Rotation = angle;
@@ -73,6 +81,10 @@ public static class FootprintReader
         component.Tags = node.GetChild("tags")?.GetString();
         component.Path = node.GetChild("path")?.GetString();
         component.Uuid = SExpressionHelper.ParseUuid(node);
+
+        // KiCad 8+ tokens
+        component.EmbeddedFonts = node.GetChild("embedded_fonts")?.GetBool() ?? false;
+        component.DuplicatePadNumbersAreJumpers = node.GetChild("duplicate_pad_numbers_are_jumpers") is not null;
 
         // Parse attr
         var attrNode = node.GetChild("attr");
@@ -111,6 +123,9 @@ public static class FootprintReader
         component.SolderMaskMargin = Coord.FromMm(node.GetChild("solder_mask_margin")?.GetDouble() ?? 0);
         component.SolderPasteMargin = Coord.FromMm(node.GetChild("solder_paste_margin")?.GetDouble() ?? 0);
         component.SolderPasteRatio = node.GetChild("solder_paste_ratio")?.GetDouble() ?? 0;
+        var pasteMarginRatioNode = node.GetChild("solder_paste_margin_ratio");
+        if (pasteMarginRatioNode is not null)
+            component.SolderPasteMarginRatio = pasteMarginRatioNode.GetDouble();
         component.ThermalWidth = Coord.FromMm(node.GetChild("thermal_width")?.GetDouble() ?? 0);
         component.ThermalGap = Coord.FromMm(node.GetChild("thermal_gap")?.GetDouble() ?? 0);
 
@@ -201,9 +216,15 @@ public static class FootprintReader
                     case "solder_mask_margin":
                     case "solder_paste_margin":
                     case "solder_paste_ratio":
+                    case "solder_paste_margin_ratio":
                     case "thermal_width":
                     case "thermal_gap":
                     case "zone_connect":
+                    case "version":
+                    case "generator":
+                    case "generator_version":
+                    case "embedded_fonts":
+                    case "duplicate_pad_numbers_are_jumpers":
                     case "fp_text_private":
                         // Known tokens handled elsewhere or intentionally skipped
                         break;

@@ -23,6 +23,21 @@ public sealed class KiCadPcbComponent : IPcbComponent
     /// <inheritdoc />
     public string Name { get; set; } = "";
 
+    /// <summary>
+    /// Gets or sets the footprint file version (only present in standalone .kicad_mod files).
+    /// </summary>
+    public int? Version { get; set; }
+
+    /// <summary>
+    /// Gets or sets the generator name (only present in standalone .kicad_mod files).
+    /// </summary>
+    public string? Generator { get; set; }
+
+    /// <summary>
+    /// Gets or sets the generator version (only present in standalone .kicad_mod files).
+    /// </summary>
+    public string? GeneratorVersion { get; set; }
+
     /// <inheritdoc />
     public string? Description { get; set; }
 
@@ -82,6 +97,16 @@ public sealed class KiCadPcbComponent : IPcbComponent
     public bool IsPlaced { get; set; }
 
     /// <summary>
+    /// Gets or sets whether embedded fonts are used (KiCad 8+).
+    /// </summary>
+    public bool EmbeddedFonts { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether duplicate pad numbers are treated as jumpers (net-tie footprint flag).
+    /// </summary>
+    public bool DuplicatePadNumbersAreJumpers { get; set; }
+
+    /// <summary>
     /// Gets the footprint tags.
     /// </summary>
     public string? Tags { get; set; }
@@ -120,6 +145,11 @@ public sealed class KiCadPcbComponent : IPcbComponent
     /// Gets the solder paste ratio.
     /// </summary>
     public double SolderPasteRatio { get; set; }
+
+    /// <summary>
+    /// Gets the solder paste margin ratio (footprint-level paste ratio override).
+    /// </summary>
+    public double? SolderPasteMarginRatio { get; set; }
 
     /// <summary>
     /// Gets the clearance override.
