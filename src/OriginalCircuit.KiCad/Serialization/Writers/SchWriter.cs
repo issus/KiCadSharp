@@ -77,10 +77,13 @@ public static class SchWriter
         // Text labels
         foreach (var label in sch.Labels.OfType<KiCadSchLabel>())
         {
+            var fontH = label.FontSizeHeight != Coord.Zero ? label.FontSizeHeight : WriterHelper.DefaultTextSize;
+            var fontW = label.FontSizeWidth != Coord.Zero ? label.FontSizeWidth : WriterHelper.DefaultTextSize;
             var tb = new SExpressionBuilder("text")
                 .AddValue(label.Text)
                 .AddChild(WriterHelper.BuildPosition(label.Location, label.Rotation))
-                .AddChild(WriterHelper.BuildTextEffects(WriterHelper.DefaultTextSize, WriterHelper.DefaultTextSize, label.Justification, label.IsHidden, label.IsMirrored));
+                .AddChild(WriterHelper.BuildTextEffects(fontH, fontW, label.Justification, label.IsHidden, label.IsMirrored, label.IsBold, label.IsItalic));
+            if (label.Uuid is not null) tb.AddChild(WriterHelper.BuildUuid(label.Uuid));
             b.AddChild(tb.Build());
         }
 
@@ -161,9 +164,27 @@ public static class SchWriter
             _ => "label"
         };
         var lb = new SExpressionBuilder(token)
-            .AddValue(label.Text)
-            .AddChild(WriterHelper.BuildPosition(label.Location, label.Orientation))
-            .AddChild(WriterHelper.BuildTextEffects(WriterHelper.DefaultTextSize, WriterHelper.DefaultTextSize, label.Justification));
+            .AddValue(label.Text);
+
+        var fontH = label.FontSizeHeight != Coord.Zero ? label.FontSizeHeight : WriterHelper.DefaultTextSize;
+        var fontW = label.FontSizeWidth != Coord.Zero ? label.FontSizeWidth : WriterHelper.DefaultTextSize;
+
+        if (label.Shape is not null)
+            lb.AddChild("shape", s => s.AddSymbol(label.Shape));
+
+        lb.AddChild(WriterHelper.BuildPosition(label.Location, label.Orientation));
+
+        if (label.FieldsAutoplaced)
+            lb.AddChild("fields_autoplaced", f => f.AddBool(true));
+
+        lb.AddChild(WriterHelper.BuildTextEffects(fontH, fontW, label.Justification, isMirrored: label.IsMirrored, isBold: label.IsBold, isItalic: label.IsItalic));
+
+        // Write properties for global/hierarchical labels
+        foreach (var prop in label.Properties)
+        {
+            lb.AddChild(SymLibWriter.BuildProperty(prop));
+        }
+
         if (label.Uuid is not null) lb.AddChild(WriterHelper.BuildUuid(label.Uuid));
         return lb.Build();
     }

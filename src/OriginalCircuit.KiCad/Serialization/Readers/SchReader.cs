@@ -221,7 +221,20 @@ public static class SchReader
     private static KiCadSchNetLabel ParseNetLabel(SExpr node, NetLabelType labelType)
     {
         var (loc, angle) = SExpressionHelper.ParsePosition(node);
-        var (_, _, justification, _, _, _, _) = SExpressionHelper.ParseTextEffects(node);
+        var (fontH, fontW, justification, _, isMirrored, isBold, isItalic) = SExpressionHelper.ParseTextEffects(node);
+
+        // Parse shape for global/hierarchical labels
+        var shape = node.GetChild("shape")?.GetString();
+
+        // Parse fields_autoplaced
+        var fieldsAutoplaced = node.GetChild("fields_autoplaced")?.GetBool() ?? false;
+
+        // Parse properties (for global/hierarchical labels)
+        var properties = new List<KiCadSchParameter>();
+        foreach (var propNode in node.GetChildren("property"))
+        {
+            properties.Add(SymLibReader.ParseProperty(propNode));
+        }
 
         return new KiCadSchNetLabel
         {
@@ -230,6 +243,14 @@ public static class SchReader
             Orientation = (int)angle,
             Justification = justification,
             LabelType = labelType,
+            FontSizeHeight = fontH,
+            FontSizeWidth = fontW,
+            IsBold = isBold,
+            IsItalic = isItalic,
+            IsMirrored = isMirrored,
+            Shape = shape,
+            FieldsAutoplaced = fieldsAutoplaced,
+            Properties = properties,
             Uuid = SExpressionHelper.ParseUuid(node)
         };
     }
@@ -237,7 +258,7 @@ public static class SchReader
     private static KiCadSchLabel ParseTextLabel(SExpr node)
     {
         var (loc, angle) = SExpressionHelper.ParsePosition(node);
-        var (_, _, justification, isHidden, isMirrored, _, _) = SExpressionHelper.ParseTextEffects(node);
+        var (fontH, fontW, justification, isHidden, isMirrored, isBold, isItalic) = SExpressionHelper.ParseTextEffects(node);
 
         return new KiCadSchLabel
         {
@@ -246,7 +267,12 @@ public static class SchReader
             Rotation = angle,
             Justification = justification,
             IsHidden = isHidden,
-            IsMirrored = isMirrored
+            IsMirrored = isMirrored,
+            FontSizeHeight = fontH,
+            FontSizeWidth = fontW,
+            IsBold = isBold,
+            IsItalic = isItalic,
+            Uuid = SExpressionHelper.ParseUuid(node)
         };
     }
 

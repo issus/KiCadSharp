@@ -29,6 +29,47 @@ public sealed class KiCadSchNetLabel : ISchNetLabel
     public NetLabelType LabelType { get; set; }
 
     /// <summary>
+    /// Gets or sets the font size height.
+    /// </summary>
+    public Coord FontSizeHeight { get; set; }
+
+    /// <summary>
+    /// Gets or sets the font size width.
+    /// </summary>
+    public Coord FontSizeWidth { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the label text is bold.
+    /// </summary>
+    public bool IsBold { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the label text is italic.
+    /// </summary>
+    public bool IsItalic { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the label text is mirrored.
+    /// </summary>
+    public bool IsMirrored { get; set; }
+
+    /// <summary>
+    /// Gets or sets the net label shape (e.g., input, output, bidirectional).
+    /// Only meaningful for global and hierarchical labels.
+    /// </summary>
+    public string? Shape { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the label fields are auto-placed.
+    /// </summary>
+    public bool FieldsAutoplaced { get; set; }
+
+    /// <summary>
+    /// Gets or sets the properties associated with this label (for global/hierarchical labels).
+    /// </summary>
+    public List<KiCadSchParameter> Properties { get; set; } = [];
+
+    /// <summary>
     /// Gets the UUID of the net label.
     /// </summary>
     public string? Uuid { get; set; }
@@ -38,9 +79,9 @@ public sealed class KiCadSchNetLabel : ISchNetLabel
     {
         get
         {
-            var fontSize = Coord.FromMm(1.27);
-            var textWidth = Coord.FromMm(Text.Length * fontSize.ToMm() * 0.6);
-            return CoordRect.FromCenterAndSize(Location, textWidth, fontSize);
+            var fontH = FontSizeHeight != Coord.Zero ? FontSizeHeight : Coord.FromMm(1.27);
+            var textWidth = Coord.FromMm(Text.Length * fontH.ToMm() * 0.6);
+            return CoordRect.FromCenterAndSize(Location, textWidth, fontH);
         }
     }
 }
