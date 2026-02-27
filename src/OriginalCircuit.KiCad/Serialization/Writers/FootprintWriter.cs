@@ -86,10 +86,30 @@ public static class FootprintWriter
         if (component.ThermalGap != Coord.Zero)
             b.AddChild("thermal_gap", c => c.AddValue(component.ThermalGap.ToMm()));
 
+        // Private layers
+        if (component.PrivateLayersRaw is not null)
+            b.AddChild(component.PrivateLayersRaw);
+
+        // Net tie pad groups
+        if (component.NetTiePadGroupsRaw is not null)
+            b.AddChild(component.NetTiePadGroupsRaw);
+
         // Texts
         foreach (var text in component.Texts.OfType<KiCadPcbText>())
         {
             b.AddChild(BuildFpText(text));
+        }
+
+        // Text private (raw)
+        foreach (var tp in component.TextPrivateRaw)
+        {
+            b.AddChild(tp);
+        }
+
+        // Text boxes (raw)
+        foreach (var tb2 in component.TextBoxesRaw)
+        {
+            b.AddChild(tb2);
         }
 
         // Lines (stored as tracks in the model)
@@ -108,6 +128,22 @@ public static class FootprintWriter
         foreach (var pad in component.Pads.OfType<KiCadPcbPad>())
         {
             b.AddChild(BuildPad(pad));
+        }
+
+        // Teardrop (raw)
+        if (component.TeardropRaw is not null)
+            b.AddChild(component.TeardropRaw);
+
+        // Zones within footprint (raw)
+        foreach (var zone in component.ZonesRaw)
+        {
+            b.AddChild(zone);
+        }
+
+        // Groups within footprint (raw)
+        foreach (var group in component.GroupsRaw)
+        {
+            b.AddChild(group);
         }
 
         // 3D model
@@ -149,15 +185,25 @@ public static class FootprintWriter
         if (text.IsHidden)
             tb.AddSymbol("hide");
 
+        if (text.IsUnlocked)
+            tb.AddSymbol("unlocked");
+
         tb.AddChild(WriterHelper.BuildPosition(text.Location, text.Rotation));
 
         if (text.LayerName is not null)
             tb.AddChild("layer", l => l.AddSymbol(text.LayerName));
 
+        if (text.IsKnockout)
+            tb.AddSymbol("knockout");
+
         tb.AddChild(WriterHelper.BuildTextEffects(text.Height, text.Height, isBold: text.FontBold, isItalic: text.FontItalic));
 
         if (text.Uuid is not null)
             tb.AddChild(WriterHelper.BuildUuid(text.Uuid));
+
+        // Render cache (raw)
+        if (text.RenderCache is not null)
+            tb.AddChild(text.RenderCache);
 
         return tb.Build();
     }
@@ -201,6 +247,9 @@ public static class FootprintWriter
             .AddValue(pad.Designator ?? "")
             .AddSymbol(SExpressionHelper.PadTypeToString(pad.PadType))
             .AddSymbol(SExpressionHelper.PadShapeToString(pad.Shape));
+
+        if (pad.IsLocked)
+            pb.AddSymbol("locked");
 
         pb.AddChild(WriterHelper.BuildPosition(pad.Location, pad.Rotation));
         pb.AddChild("size", s =>
@@ -267,6 +316,14 @@ public static class FootprintWriter
             pb.AddChild("zone_connect", c => c.AddValue((int)pad.ZoneConnect));
         if (pad.DieLength != Coord.Zero)
             pb.AddChild("die_length", c => c.AddValue(pad.DieLength.ToMm()));
+        if (pad.RemoveUnusedLayers)
+            pb.AddChild("remove_unused_layers", _ => { });
+        if (pad.KeepEndLayers)
+            pb.AddChild("keep_end_layers", _ => { });
+
+        // Custom pad primitives (raw)
+        if (pad.PrimitivesRaw is not null)
+            pb.AddChild(pad.PrimitivesRaw);
 
         if (pad.Uuid is not null)
             pb.AddChild(WriterHelper.BuildUuid(pad.Uuid));

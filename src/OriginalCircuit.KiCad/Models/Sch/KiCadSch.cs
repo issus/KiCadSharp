@@ -3,6 +3,7 @@ using OriginalCircuit.Eda.Models;
 using OriginalCircuit.Eda.Models.Sch;
 using OriginalCircuit.Eda.Primitives;
 using OriginalCircuit.KiCad.Serialization;
+using SExpr = OriginalCircuit.KiCad.SExpression.SExpression;
 
 namespace OriginalCircuit.KiCad.Models.Sch;
 
@@ -100,6 +101,11 @@ public sealed class KiCadSch : ISchDocument
     /// </summary>
     public IReadOnlyList<KiCadSchComponent> LibSymbols => _libSymbols;
     internal List<KiCadSchComponent> LibSymbolList => _libSymbols;
+
+    /// <summary>
+    /// Gets the raw image nodes at schematic level for round-trip fidelity.
+    /// </summary>
+    public List<SExpr> ImagesRaw { get; } = [];
 
     /// <inheritdoc />
     /// <remarks>This property is computed on each access. Cache the result if accessing repeatedly.</remarks>

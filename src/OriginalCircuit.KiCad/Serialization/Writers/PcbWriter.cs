@@ -177,8 +177,12 @@ public static class PcbWriter
     private static SExpr BuildGrText(KiCadPcbText text)
     {
         var tb = new SExpressionBuilder("gr_text")
-            .AddValue(text.Text)
-            .AddChild(WriterHelper.BuildPosition(text.Location, text.Rotation));
+            .AddValue(text.Text);
+
+        if (text.IsKnockout)
+            tb.AddSymbol("knockout");
+
+        tb.AddChild(WriterHelper.BuildPosition(text.Location, text.Rotation));
 
         if (text.LayerName is not null)
             tb.AddChild("layer", l => l.AddSymbol(text.LayerName));
@@ -187,6 +191,10 @@ public static class PcbWriter
 
         if (text.Uuid is not null)
             tb.AddChild(WriterHelper.BuildUuid(text.Uuid));
+
+        // Render cache (raw)
+        if (text.RenderCache is not null)
+            tb.AddChild(text.RenderCache);
 
         return tb.Build();
     }

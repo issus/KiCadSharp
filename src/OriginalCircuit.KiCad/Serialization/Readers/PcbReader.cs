@@ -274,11 +274,26 @@ public static class PcbReader
         text.LayerName = node.GetChild("layer")?.GetString();
         text.Uuid = SExpressionHelper.ParseUuid(node);
 
+        // Check for knockout
+        foreach (var v in node.Values)
+        {
+            if (v is SExprSymbol s && s.Value == "knockout")
+            {
+                text.IsKnockout = true;
+                break;
+            }
+        }
+
         var (fontH, _, _, isHidden, _, isBold, isItalic) = SExpressionHelper.ParseTextEffects(node);
         text.Height = fontH;
         text.FontBold = isBold;
         text.FontItalic = isItalic;
         text.IsHidden = isHidden;
+
+        // Render cache (raw preservation)
+        var renderCache = node.GetChild("render_cache");
+        if (renderCache is not null)
+            text.RenderCache = renderCache;
 
         return text;
     }

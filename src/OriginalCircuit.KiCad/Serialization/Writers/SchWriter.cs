@@ -124,6 +124,12 @@ public static class SchWriter
             b.AddChild(BuildSheet(sheet));
         }
 
+        // Images (raw)
+        foreach (var image in sch.ImagesRaw)
+        {
+            b.AddChild(image);
+        }
+
         // Placed symbols
         foreach (var comp in sch.Components.OfType<KiCadSchComponent>())
         {
