@@ -67,26 +67,6 @@ public sealed class KiCadPcbText : IPcbText
     public bool FontItalic { get; set; }
 
     /// <summary>
-    /// Gets the font width (horizontal size). If zero, same as Height.
-    /// </summary>
-    public Coord FontWidth { get; set; }
-
-    /// <summary>
-    /// Gets the font stroke thickness.
-    /// </summary>
-    public Coord FontThickness { get; set; }
-
-    /// <summary>
-    /// Gets the font color, if explicitly set.
-    /// </summary>
-    public EdaColor FontColor { get; set; }
-
-    /// <summary>
-    /// Gets the text justification.
-    /// </summary>
-    public TextJustification Justification { get; set; } = TextJustification.MiddleCenter;
-
-    /// <summary>
     /// Gets the text type (for fp_text: reference, value, user).
     /// </summary>
     public string? TextType { get; set; }
