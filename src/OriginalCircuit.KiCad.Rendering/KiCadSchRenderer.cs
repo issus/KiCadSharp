@@ -2,6 +2,7 @@ using OriginalCircuit.Eda.Enums;
 using OriginalCircuit.Eda.Models.Sch;
 using OriginalCircuit.Eda.Primitives;
 using OriginalCircuit.Eda.Rendering;
+using OriginalCircuit.KiCad.Models;
 using OriginalCircuit.KiCad.Models.Sch;
 
 namespace OriginalCircuit.KiCad.Rendering;
@@ -50,6 +51,41 @@ public sealed class KiCadSchRenderer
         {
             Render(sub, ctx);
         }
+    }
+
+    /// <summary>
+    /// Renders an entire schematic document including wires, junctions, labels,
+    /// buses, no-connects, sheets, images, and placed symbol instances.
+    /// </summary>
+    /// <param name="schematic">The schematic document to render.</param>
+    /// <param name="ctx">The render context to draw on.</param>
+    public void RenderDocument(KiCadSch schematic, IRenderContext ctx)
+    {
+        ArgumentNullException.ThrowIfNull(schematic);
+        ArgumentNullException.ThrowIfNull(ctx);
+
+        // Render connectivity elements first (background)
+        foreach (var wire in schematic.Wires) RenderWire(wire, ctx);
+        foreach (var bus in schematic.Buses) RenderBus(bus, ctx);
+        foreach (var entry in schematic.BusEntries) RenderBusEntry(entry, ctx);
+
+        // Render markers
+        foreach (var junction in schematic.Junctions) RenderJunction(junction, ctx);
+        foreach (var nc in schematic.NoConnects) RenderNoConnect(nc, ctx);
+
+        // Render sheets
+        foreach (var sheet in schematic.Sheets) RenderSheet(sheet, ctx);
+
+        // Render placed symbols (using lib symbols for graphical data)
+        foreach (var comp in schematic.Components)
+        {
+            if (comp is KiCadSchComponent kComp)
+                Render(kComp, ctx);
+        }
+
+        // Render labels on top
+        foreach (var label in schematic.Labels) RenderLabel(label, ctx);
+        foreach (var netLabel in schematic.NetLabels) RenderNetLabel(netLabel, ctx);
     }
 
     /// <summary>
@@ -108,7 +144,7 @@ public sealed class KiCadSchRenderer
         var hidePinNames = parent?.HidePinNames ?? false;
         if (pin.ShowName && !hidePinNames && !string.IsNullOrEmpty(pin.Name) && pin.Name != "~")
         {
-            var fontSize = Math.Max(8, _transform.ScaleValue(Coord.FromMm(1.27)));
+            var fontSize = Math.Max(6, _transform.ScaleValue(Coord.FromMm(1.27)));
             var textOptions = new TextRenderOptions
             {
                 HorizontalAlignment = pin.Orientation is PinOrientation.Left ? TextHAlign.Right : TextHAlign.Left,
@@ -237,8 +273,7 @@ public sealed class KiCadSchRenderer
         var lineWidth = Math.Max(MinLineWidth, _transform.ScaleValue(arc.LineWidth));
 
         // Convert angles: KiCad uses math convention (CCW from +X), screen uses CW from +X
-        var startAngle = -arc.StartAngle; // Negate for screen Y-inversion
-        var sweepAngle = -(arc.EndAngle - arc.StartAngle);
+        var (startAngle, sweepAngle) = ComputeScreenArcAngles(arc.StartAngle, arc.EndAngle);
 
         // Normalize sweep
         if (sweepAngle > 360) sweepAngle -= 360;
@@ -558,6 +593,15 @@ public sealed class KiCadSchRenderer
         var h = Math.Abs(y2 - y1);
 
         ctx.DrawImage(image.ImageData, x, y, w, h);
+    }
+
+    /// <summary>
+    /// Converts KiCad world-space arc angles (CCW from +X) to screen-space
+    /// angles (CW from +X due to Y-axis inversion).
+    /// </summary>
+    internal static (double startAngle, double sweepAngle) ComputeScreenArcAngles(double worldStart, double worldEnd)
+    {
+        return (-worldStart, -(worldEnd - worldStart));
     }
 
     private static uint ResolveColor(EdaColor color, uint defaultColor)

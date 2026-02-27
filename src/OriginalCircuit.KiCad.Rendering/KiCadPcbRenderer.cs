@@ -12,6 +12,7 @@ namespace OriginalCircuit.KiCad.Rendering;
 public sealed class KiCadPcbRenderer
 {
     private readonly CoordTransform _transform;
+    private readonly uint _backgroundColor;
     private const double MinLineWidth = 1.0;
     private const double DefaultFontSize = 10.0;
 
@@ -19,9 +20,11 @@ public sealed class KiCadPcbRenderer
     /// Initializes a new instance of the <see cref="KiCadPcbRenderer"/> class.
     /// </summary>
     /// <param name="transform">The coordinate transform for world-to-screen conversion.</param>
-    public KiCadPcbRenderer(CoordTransform transform)
+    /// <param name="backgroundColor">The background color used for drill holes (default white).</param>
+    public KiCadPcbRenderer(CoordTransform transform, uint backgroundColor = ColorHelper.White)
     {
         _transform = transform ?? throw new ArgumentNullException(nameof(transform));
+        _backgroundColor = backgroundColor;
     }
 
     /// <summary>
@@ -119,7 +122,7 @@ public sealed class KiCadPcbRenderer
             var holeR = _transform.ScaleValue(pad.HoleSize) / 2;
             var holeCx = pad.Rotation != 0 ? cx : cx;
             var holeCy = pad.Rotation != 0 ? cy : cy;
-            ctx.FillEllipse(holeCx, holeCy, holeR, holeR, ColorHelper.White);
+            ctx.FillEllipse(holeCx, holeCy, holeR, holeR, _backgroundColor);
             ctx.DrawEllipse(holeCx, holeCy, holeR, holeR, ColorHelper.Gray, Math.Max(MinLineWidth, 0.5));
         }
 
@@ -134,7 +137,7 @@ public sealed class KiCadPcbRenderer
                     HorizontalAlignment = TextHAlign.Center,
                     VerticalAlignment = TextVAlign.Middle,
                 };
-                ctx.DrawText(pad.Designator, cx, cy, fontSize, ColorHelper.White, textOptions);
+                ctx.DrawText(pad.Designator, cx, cy, fontSize, ColorHelper.ContrastColor(color), textOptions);
             }
         }
     }
@@ -178,6 +181,8 @@ public sealed class KiCadPcbRenderer
 
     private static uint GetPadColor(IPcbPad pad)
     {
+        // For multi-layer pads (e.g. through-hole on *.Cu), use the first copper
+        // layer color. This matches KiCad's display convention.
         if (pad is KiCadPcbPad kPad && kPad.Layers.Count > 0)
         {
             return KiCadLayerColors.GetColor(kPad.Layers[0]);
@@ -207,11 +212,13 @@ public sealed class KiCadPcbRenderer
         var outerR = _transform.ScaleValue(via.Diameter) / 2;
         var innerR = _transform.ScaleValue(via.HoleSize) / 2;
 
-        // Outer annulus (copper)
-        ctx.FillEllipse(cx, cy, outerR, outerR, ColorHelper.Gray);
+        // Outer annulus (copper) — colored by start layer
+        var viaLayer = via is KiCadPcbVia kv ? kv.StartLayerName ?? "F.Cu" : "F.Cu";
+        var viaColor = KiCadLayerColors.GetColor(viaLayer);
+        ctx.FillEllipse(cx, cy, outerR, outerR, viaColor);
 
         // Drill hole
-        ctx.FillEllipse(cx, cy, innerR, innerR, ColorHelper.White);
+        ctx.FillEllipse(cx, cy, innerR, innerR, _backgroundColor);
         ctx.DrawEllipse(cx, cy, innerR, innerR, ColorHelper.Gray, Math.Max(MinLineWidth, 0.5));
     }
 
@@ -226,8 +233,7 @@ public sealed class KiCadPcbRenderer
         var layerName = arc is KiCadPcbArc ka ? ka.LayerName : null;
         var color = KiCadLayerColors.GetColor(layerName);
 
-        var startAngle = -arc.StartAngle;
-        var sweepAngle = -(arc.EndAngle - arc.StartAngle);
+        var (startAngle, sweepAngle) = KiCadSchRenderer.ComputeScreenArcAngles(arc.StartAngle, arc.EndAngle);
 
         if (sweepAngle > 360) sweepAngle -= 360;
         if (sweepAngle < -360) sweepAngle += 360;
