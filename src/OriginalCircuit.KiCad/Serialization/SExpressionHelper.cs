@@ -223,6 +223,19 @@ internal static class SExpressionHelper
     }
 
     /// <summary>
+    /// Parses a UUID from a parent node, returning whether it was an unquoted symbol.
+    /// </summary>
+    public static (string? Uuid, bool IsSymbol) ParseUuidEx(SExpr parent)
+    {
+        var uuidNode = parent.GetChild("uuid") ?? parent.GetChild("tstamp");
+        if (uuidNode is null)
+            return (null, false);
+        var value = uuidNode.GetString();
+        var isSymbol = uuidNode.Values.Count > 0 && uuidNode.Values[0] is SExprSymbol;
+        return (value, isSymbol);
+    }
+
+    /// <summary>
     /// Converts a KiCad electrical type string to the shared enum.
     /// </summary>
     public static PinElectricalType ParsePinElectricalType(string? type)

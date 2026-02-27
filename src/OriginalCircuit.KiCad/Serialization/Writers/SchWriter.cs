@@ -45,9 +45,6 @@ public static class SchWriter
         if (sch.GeneratorVersion is not null)
             b.AddChild("generator_version", g => g.AddValue(sch.GeneratorVersion));
 
-        if (sch.EmbeddedFonts.HasValue)
-            b.AddChild("embedded_fonts", v => v.AddBool(sch.EmbeddedFonts.Value));
-
         if (sch.Uuid is not null)
             b.AddChild(WriterHelper.BuildUuid(sch.Uuid));
 
@@ -69,176 +66,18 @@ public static class SchWriter
             });
         }
 
-        // Wires
-        foreach (var wire in sch.Wires.OfType<KiCadSchWire>())
+        // Content elements - use ordered list when available to preserve original file ordering
+        if (sch.OrderedElements.Count > 0)
         {
-            b.AddChild(BuildWire(wire));
+            foreach (var elem in sch.OrderedElements)
+            {
+                EmitElement(b, elem);
+            }
         }
-
-        // Junctions
-        foreach (var junction in sch.Junctions.OfType<KiCadSchJunction>())
+        else
         {
-            b.AddChild(BuildJunction(junction));
-        }
-
-        // Net labels
-        foreach (var label in sch.NetLabels.OfType<KiCadSchNetLabel>())
-        {
-            b.AddChild(BuildNetLabel(label));
-        }
-
-        // Text labels
-        foreach (var label in sch.Labels.OfType<KiCadSchLabel>())
-        {
-            var fontH = label.FontSizeHeight != Coord.Zero ? label.FontSizeHeight : WriterHelper.DefaultTextSize;
-            var fontW = label.FontSizeWidth != Coord.Zero ? label.FontSizeWidth : WriterHelper.DefaultTextSize;
-            var tb = new SExpressionBuilder("text")
-                .AddValue(label.Text)
-                .AddChild(WriterHelper.BuildPosition(label.Location, label.Rotation))
-                .AddChild(WriterHelper.BuildTextEffects(fontH, fontW, label.Justification, label.IsHidden, label.IsMirrored, label.IsBold, label.IsItalic));
-            if (label.Uuid is not null) tb.AddChild(WriterHelper.BuildUuid(label.Uuid));
-            b.AddChild(tb.Build());
-        }
-
-        // No connects
-        foreach (var nc in sch.NoConnects.OfType<KiCadSchNoConnect>())
-        {
-            var ncb = new SExpressionBuilder("no_connect")
-                .AddChild(WriterHelper.BuildPosition(nc.Location));
-            if (nc.Uuid is not null) ncb.AddChild(WriterHelper.BuildUuid(nc.Uuid));
-            b.AddChild(ncb.Build());
-        }
-
-        // Buses
-        foreach (var bus in sch.Buses.OfType<KiCadSchBus>())
-        {
-            var bb = new SExpressionBuilder("bus")
-                .AddChild(WriterHelper.BuildPoints(bus.Vertices))
-                .AddChild(WriterHelper.BuildStroke(bus.LineWidth, bus.LineStyle, bus.Color));
-            if (bus.Uuid is not null) bb.AddChild(WriterHelper.BuildUuid(bus.Uuid));
-            b.AddChild(bb.Build());
-        }
-
-        // Bus entries
-        foreach (var entry in sch.BusEntries.OfType<KiCadSchBusEntry>())
-        {
-            var eb = new SExpressionBuilder("bus_entry")
-                .AddChild(WriterHelper.BuildPosition(entry.Location))
-                .AddChild("size", s =>
-                {
-                    s.AddValue((entry.Corner.X - entry.Location.X).ToMm());
-                    s.AddValue((entry.Corner.Y - entry.Location.Y).ToMm());
-                })
-                .AddChild(WriterHelper.BuildStroke(entry.LineWidth, entry.LineStyle, entry.Color));
-            if (entry.Uuid is not null) eb.AddChild(WriterHelper.BuildUuid(entry.Uuid));
-            b.AddChild(eb.Build());
-        }
-
-        // Graphical shapes
-        foreach (var poly in sch.Polylines)
-        {
-            b.AddChild(new SExpressionBuilder("polyline")
-                .AddChild(WriterHelper.BuildPoints(poly.Vertices))
-                .AddChild(WriterHelper.BuildStroke(poly.LineWidth, poly.LineStyle, poly.Color))
-                .AddChild(WriterHelper.BuildFill(SchFillType.None))
-                .Build());
-        }
-
-        foreach (var line in sch.Lines)
-        {
-            b.AddChild(new SExpressionBuilder("polyline")
-                .AddChild(WriterHelper.BuildPoints([line.Start, line.End]))
-                .AddChild(WriterHelper.BuildStroke(line.Width, line.LineStyle, line.Color))
-                .AddChild(WriterHelper.BuildFill(SchFillType.None))
-                .Build());
-        }
-
-        foreach (var circle in sch.Circles)
-        {
-            b.AddChild(new SExpressionBuilder("circle")
-                .AddChild("center", c => { c.AddValue(circle.Center.X.ToMm()); c.AddValue(circle.Center.Y.ToMm()); })
-                .AddChild("radius", r => r.AddValue(circle.Radius.ToMm()))
-                .AddChild(WriterHelper.BuildStroke(circle.LineWidth))
-                .AddChild(WriterHelper.BuildFill(circle.FillType, circle.FillColor))
-                .Build());
-        }
-
-        foreach (var rect in sch.Rectangles)
-        {
-            b.AddChild(new SExpressionBuilder("rectangle")
-                .AddChild("start", s => { s.AddValue(rect.Corner1.X.ToMm()); s.AddValue(rect.Corner1.Y.ToMm()); })
-                .AddChild("end", e => { e.AddValue(rect.Corner2.X.ToMm()); e.AddValue(rect.Corner2.Y.ToMm()); })
-                .AddChild(WriterHelper.BuildStroke(rect.LineWidth))
-                .AddChild(WriterHelper.BuildFill(rect.FillType, rect.FillColor))
-                .Build());
-        }
-
-        foreach (var arc in sch.Arcs)
-        {
-            b.AddChild(new SExpressionBuilder("arc")
-                .AddChild("start", s => { s.AddValue(arc.ArcStart.X.ToMm()); s.AddValue(arc.ArcStart.Y.ToMm()); })
-                .AddChild("mid", m => { m.AddValue(arc.ArcMid.X.ToMm()); m.AddValue(arc.ArcMid.Y.ToMm()); })
-                .AddChild("end", e => { e.AddValue(arc.ArcEnd.X.ToMm()); e.AddValue(arc.ArcEnd.Y.ToMm()); })
-                .AddChild(WriterHelper.BuildStroke(arc.LineWidth))
-                .AddChild(WriterHelper.BuildFill(SchFillType.None))
-                .Build());
-        }
-
-        foreach (var bezier in sch.Beziers)
-        {
-            b.AddChild(new SExpressionBuilder("bezier")
-                .AddChild(WriterHelper.BuildPoints(bezier.ControlPoints))
-                .AddChild(WriterHelper.BuildStroke(bezier.LineWidth))
-                .AddChild(WriterHelper.BuildFill(SchFillType.None))
-                .Build());
-        }
-
-        // Sheets
-        foreach (var sheet in sch.Sheets)
-        {
-            b.AddChild(BuildSheet(sheet));
-        }
-
-        // Power ports
-        foreach (var power in sch.PowerObjects.OfType<KiCadSchPowerObject>())
-        {
-            b.AddChild(BuildPowerPort(power));
-        }
-
-        // Images (raw)
-        foreach (var image in sch.ImagesRaw)
-        {
-            b.AddChild(image);
-        }
-
-        // Tables (raw S-expression, KiCad 8+)
-        foreach (var table in sch.TablesRaw)
-        {
-            b.AddChild(table);
-        }
-
-        // Rule areas (raw S-expression, KiCad 8+)
-        foreach (var ruleArea in sch.RuleAreasRaw)
-        {
-            b.AddChild(ruleArea);
-        }
-
-        // Netclass flags (raw S-expression, KiCad 8+)
-        foreach (var netclassFlag in sch.NetclassFlagsRaw)
-        {
-            b.AddChild(netclassFlag);
-        }
-
-        // Bus aliases (raw S-expression)
-        foreach (var busAlias in sch.BusAliasesRaw)
-        {
-            b.AddChild(busAlias);
-        }
-
-        // Placed symbols
-        foreach (var comp in sch.Components.OfType<KiCadSchComponent>())
-        {
-            b.AddChild(BuildPlacedSymbol(comp));
+            // Fallback: emit in type-grouped order for newly created schematics
+            EmitElementsGrouped(b, sch);
         }
 
         // Sheet instances
@@ -249,7 +88,115 @@ public static class SchWriter
         if (sch.SymbolInstances is not null)
             b.AddChild(sch.SymbolInstances);
 
+        // embedded_fonts is emitted at the end of the file (KiCad 9+ position)
+        if (sch.EmbeddedFonts.HasValue)
+            b.AddChild("embedded_fonts", v => v.AddBool(sch.EmbeddedFonts.Value));
+
         return b.Build();
+    }
+
+    private static void EmitElement(SExpressionBuilder b, object elem)
+    {
+        switch (elem)
+        {
+            case KiCadSchWire wire:
+                b.AddChild(BuildWire(wire));
+                break;
+            case KiCadSchJunction junction:
+                b.AddChild(BuildJunction(junction));
+                break;
+            case KiCadSchNetLabel label:
+                b.AddChild(BuildNetLabel(label));
+                break;
+            case KiCadSchLabel textLabel:
+                b.AddChild(BuildTextLabel(textLabel));
+                break;
+            case KiCadSchNoConnect nc:
+                b.AddChild(BuildNoConnect(nc));
+                break;
+            case KiCadSchBus bus:
+                b.AddChild(BuildBus(bus));
+                break;
+            case KiCadSchBusEntry entry:
+                b.AddChild(BuildBusEntry(entry));
+                break;
+            case KiCadSchComponent comp:
+                b.AddChild(BuildPlacedSymbol(comp));
+                break;
+            case KiCadSchSheet sheet:
+                b.AddChild(BuildSheet(sheet));
+                break;
+            case KiCadSchPowerObject power:
+                b.AddChild(BuildPowerPort(power));
+                break;
+            case KiCadSchPolyline poly:
+                b.AddChild(BuildPolyline(poly));
+                break;
+            case KiCadSchLine line:
+                b.AddChild(BuildLine(line));
+                break;
+            case KiCadSchCircle circle:
+                b.AddChild(BuildCircle(circle));
+                break;
+            case KiCadSchRectangle rect:
+                b.AddChild(BuildRectangle(rect));
+                break;
+            case KiCadSchArc arc:
+                b.AddChild(BuildArc(arc));
+                break;
+            case KiCadSchBezier bezier:
+                b.AddChild(BuildBezier(bezier));
+                break;
+            case SExpr raw:
+                b.AddChild(raw);
+                break;
+        }
+    }
+
+    private static void EmitElementsGrouped(SExpressionBuilder b, KiCadSch sch)
+    {
+        foreach (var wire in sch.Wires.OfType<KiCadSchWire>())
+            b.AddChild(BuildWire(wire));
+        foreach (var junction in sch.Junctions.OfType<KiCadSchJunction>())
+            b.AddChild(BuildJunction(junction));
+        foreach (var label in sch.NetLabels.OfType<KiCadSchNetLabel>())
+            b.AddChild(BuildNetLabel(label));
+        foreach (var label in sch.Labels.OfType<KiCadSchLabel>())
+            b.AddChild(BuildTextLabel(label));
+        foreach (var nc in sch.NoConnects.OfType<KiCadSchNoConnect>())
+            b.AddChild(BuildNoConnect(nc));
+        foreach (var bus in sch.Buses.OfType<KiCadSchBus>())
+            b.AddChild(BuildBus(bus));
+        foreach (var entry in sch.BusEntries.OfType<KiCadSchBusEntry>())
+            b.AddChild(BuildBusEntry(entry));
+        foreach (var poly in sch.Polylines)
+            b.AddChild(BuildPolyline(poly));
+        foreach (var line in sch.Lines)
+            b.AddChild(BuildLine(line));
+        foreach (var circle in sch.Circles)
+            b.AddChild(BuildCircle(circle));
+        foreach (var rect in sch.Rectangles)
+            b.AddChild(BuildRectangle(rect));
+        foreach (var arc in sch.Arcs)
+            b.AddChild(BuildArc(arc));
+        foreach (var bezier in sch.Beziers)
+            b.AddChild(BuildBezier(bezier));
+        foreach (var sheet in sch.Sheets)
+            b.AddChild(BuildSheet(sheet));
+        foreach (var power in sch.PowerObjects.OfType<KiCadSchPowerObject>())
+            b.AddChild(BuildPowerPort(power));
+        foreach (var image in sch.ImagesRaw)
+            b.AddChild(image);
+        foreach (var table in sch.TablesRaw)
+            b.AddChild(table);
+        foreach (var ruleArea in sch.RuleAreasRaw)
+            b.AddChild(ruleArea);
+        foreach (var netclassFlag in sch.NetclassFlagsRaw)
+            b.AddChild(netclassFlag);
+        foreach (var busAlias in sch.BusAliasesRaw)
+            b.AddChild(busAlias);
+        foreach (var comp in sch.Components.OfType<KiCadSchComponent>())
+            b.AddChild(BuildPlacedSymbol(comp));
     }
 
     private static SExpr BuildWire(KiCadSchWire wire)
@@ -264,8 +211,8 @@ public static class SchWriter
     private static SExpr BuildJunction(KiCadSchJunction junction)
     {
         var jb = new SExpressionBuilder("junction")
-            .AddChild(WriterHelper.BuildPosition(junction.Location))
-            .AddChild("diameter", d => d.AddValue(junction.Size.ToMm()))
+            .AddChild(WriterHelper.BuildPositionCompact(junction.Location))
+            .AddChild("diameter", d => d.AddMm(junction.Size))
             .AddChild(WriterHelper.BuildColor(junction.Color));
         if (junction.Uuid is not null) jb.AddChild(WriterHelper.BuildUuid(junction.Uuid));
         return jb.Build();
@@ -295,31 +242,47 @@ public static class SchWriter
 
         lb.AddChild(WriterHelper.BuildTextEffects(fontH, fontW, label.Justification, isMirrored: label.IsMirrored, isBold: label.IsBold, isItalic: label.IsItalic));
 
+        // uuid comes before properties in KiCad 9+
+        if (label.Uuid is not null) lb.AddChild(WriterHelper.BuildUuid(label.Uuid));
+
         // Write properties for global/hierarchical labels
         foreach (var prop in label.Properties)
         {
             lb.AddChild(SymLibWriter.BuildProperty(prop));
         }
-
-        if (label.Uuid is not null) lb.AddChild(WriterHelper.BuildUuid(label.Uuid));
         return lb.Build();
     }
 
     private static SExpr BuildSheet(KiCadSchSheet sheet)
     {
         var sb = new SExpressionBuilder("sheet")
-            .AddChild(WriterHelper.BuildPosition(sheet.Location))
+            .AddChild(WriterHelper.BuildPositionCompact(sheet.Location))
             .AddChild("size", s =>
             {
-                s.AddValue(sheet.Size.X.ToMm());
-                s.AddValue(sheet.Size.Y.ToMm());
+                s.AddMm(sheet.Size.X);
+                s.AddMm(sheet.Size.Y);
             });
+
+        // KiCad 9+ flags (emitted before stroke/fill)
+        if (sheet.ExcludeFromSimPresent)
+            sb.AddChild("exclude_from_sim", v => v.AddBool(sheet.ExcludeFromSim));
+        if (sheet.InBomPresent)
+            sb.AddChild("in_bom", v => v.AddBool(sheet.InBom));
+        if (sheet.OnBoardPresent)
+            sb.AddChild("on_board", v => v.AddBool(sheet.OnBoard));
+        if (sheet.DnpPresent)
+            sb.AddChild("dnp", v => v.AddBool(sheet.Dnp));
 
         if (sheet.FieldsAutoplaced)
             sb.AddChild("fields_autoplaced", f => f.AddBool(true));
 
         sb.AddChild(WriterHelper.BuildStroke(sheet.LineWidth, sheet.LineStyle, sheet.Color));
-        sb.AddChild(WriterHelper.BuildFill(sheet.FillType, sheet.FillColor));
+        if (sheet.FillColorOnly)
+            sb.AddChild(WriterHelper.BuildFillColorOnly(sheet.FillColor));
+        else
+            sb.AddChild(WriterHelper.BuildFill(sheet.FillType, sheet.FillColor));
+
+        if (sheet.Uuid is not null) sb.AddChild(WriterHelper.BuildUuid(sheet.Uuid));
 
         // Properties - use stored per-property data if available, otherwise fall back to defaults
         if (sheet.SheetProperties.Count > 0)
@@ -351,12 +314,15 @@ public static class SchWriter
         {
             var ioStr = SExpressionHelper.SheetPinIoTypeToString(pin.IoType);
             var angleFromSide = SExpressionHelper.SheetPinSideToAngle(pin.Side);
+            var fontH = pin.FontSizeHeight != Coord.Zero ? pin.FontSizeHeight : WriterHelper.DefaultTextSize;
+            var fontW = pin.FontSizeWidth != Coord.Zero ? pin.FontSizeWidth : WriterHelper.DefaultTextSize;
             var pb = new SExpressionBuilder("pin")
                 .AddValue(pin.Name)
                 .AddSymbol(ioStr)
-                .AddChild(WriterHelper.BuildPosition(pin.Location, angleFromSide))
-                .AddChild(WriterHelper.BuildTextEffects(WriterHelper.DefaultTextSize, WriterHelper.DefaultTextSize));
+                .AddChild(WriterHelper.BuildPosition(pin.Location, angleFromSide));
             if (pin.Uuid is not null) pb.AddChild(WriterHelper.BuildUuid(pin.Uuid));
+            pb.AddChild(WriterHelper.BuildTextEffects(fontH, fontW, pin.Justification,
+                isBold: pin.IsBold, isItalic: pin.IsItalic, fontColor: pin.FontColor));
             sb.AddChild(pb.Build());
         }
 
@@ -364,8 +330,115 @@ public static class SchWriter
         if (sheet.Instances is not null)
             sb.AddChild(sheet.Instances);
 
-        if (sheet.Uuid is not null) sb.AddChild(WriterHelper.BuildUuid(sheet.Uuid));
         return sb.Build();
+    }
+
+    private static SExpr BuildTextLabel(KiCadSchLabel label)
+    {
+        var fontH = label.FontSizeHeight != Coord.Zero ? label.FontSizeHeight : WriterHelper.DefaultTextSize;
+        var fontW = label.FontSizeWidth != Coord.Zero ? label.FontSizeWidth : WriterHelper.DefaultTextSize;
+        var tb = new SExpressionBuilder("text")
+            .AddValue(label.Text);
+        if (label.ExcludeFromSimPresent)
+            tb.AddChild("exclude_from_sim", v => v.AddBool(label.ExcludeFromSim));
+        tb.AddChild(WriterHelper.BuildPosition(label.Location, label.Rotation))
+            .AddChild(WriterHelper.BuildTextEffects(fontH, fontW, label.Justification, label.IsHidden, label.IsMirrored, label.IsBold, label.IsItalic, fontThickness: label.FontThickness, fontColor: label.FontColor, href: label.Href));
+        if (label.Uuid is not null) tb.AddChild(WriterHelper.BuildUuid(label.Uuid));
+        return tb.Build();
+    }
+
+    private static SExpr BuildNoConnect(KiCadSchNoConnect nc)
+    {
+        var ncb = new SExpressionBuilder("no_connect")
+            .AddChild(WriterHelper.BuildPositionCompact(nc.Location));
+        if (nc.Uuid is not null) ncb.AddChild(WriterHelper.BuildUuid(nc.Uuid));
+        return ncb.Build();
+    }
+
+    private static SExpr BuildBus(KiCadSchBus bus)
+    {
+        var bb = new SExpressionBuilder("bus")
+            .AddChild(WriterHelper.BuildPoints(bus.Vertices))
+            .AddChild(WriterHelper.BuildStroke(bus.LineWidth, bus.LineStyle, bus.Color));
+        if (bus.Uuid is not null) bb.AddChild(WriterHelper.BuildUuid(bus.Uuid));
+        return bb.Build();
+    }
+
+    private static SExpr BuildBusEntry(KiCadSchBusEntry entry)
+    {
+        var eb = new SExpressionBuilder("bus_entry")
+            .AddChild(WriterHelper.BuildPositionCompact(entry.Location))
+            .AddChild("size", s =>
+            {
+                s.AddMm(entry.Corner.X - entry.Location.X);
+                s.AddMm(entry.Corner.Y - entry.Location.Y);
+            })
+            .AddChild(WriterHelper.BuildStroke(entry.LineWidth, entry.LineStyle, entry.Color));
+        if (entry.Uuid is not null) eb.AddChild(WriterHelper.BuildUuid(entry.Uuid));
+        return eb.Build();
+    }
+
+    private static SExpr BuildPolyline(KiCadSchPolyline poly)
+    {
+        var pb = new SExpressionBuilder("polyline")
+            .AddChild(WriterHelper.BuildPoints(poly.Vertices))
+            .AddChild(WriterHelper.BuildStroke(poly.LineWidth, poly.LineStyle, poly.Color));
+        if (poly.HasFill)
+            pb.AddChild(WriterHelper.BuildFill(poly.FillType, poly.FillColor));
+        if (poly.Uuid is not null) pb.AddChild(WriterHelper.BuildUuid(poly.Uuid, poly.UuidIsSymbol));
+        return pb.Build();
+    }
+
+    private static SExpr BuildLine(KiCadSchLine line)
+    {
+        var lb = new SExpressionBuilder("polyline")
+            .AddChild(WriterHelper.BuildPoints([line.Start, line.End]))
+            .AddChild(WriterHelper.BuildStroke(line.Width, line.LineStyle, line.Color));
+        if (line.HasFill)
+            lb.AddChild(WriterHelper.BuildFill(SchFillType.None));
+        if (line.Uuid is not null) lb.AddChild(WriterHelper.BuildUuid(line.Uuid, line.UuidIsSymbol));
+        return lb.Build();
+    }
+
+    private static SExpr BuildCircle(KiCadSchCircle circle)
+    {
+        return new SExpressionBuilder("circle")
+            .AddChild("center", c => { c.AddMm(circle.Center.X); c.AddMm(circle.Center.Y); })
+            .AddChild("radius", r => r.AddMm(circle.Radius))
+            .AddChild(WriterHelper.BuildStroke(circle.LineWidth))
+            .AddChild(WriterHelper.BuildFill(circle.FillType, circle.FillColor))
+            .Build();
+    }
+
+    private static SExpr BuildRectangle(KiCadSchRectangle rect)
+    {
+        var rb = new SExpressionBuilder("rectangle")
+            .AddChild("start", s => { s.AddMm(rect.Corner1.X); s.AddMm(rect.Corner1.Y); })
+            .AddChild("end", e => { e.AddMm(rect.Corner2.X); e.AddMm(rect.Corner2.Y); })
+            .AddChild(WriterHelper.BuildStroke(rect.LineWidth, rect.LineStyle, rect.Color, emitColor: rect.HasStrokeColor))
+            .AddChild(WriterHelper.BuildFill(rect.FillType, rect.FillColor));
+        if (rect.Uuid is not null) rb.AddChild(WriterHelper.BuildUuid(rect.Uuid, rect.UuidIsSymbol));
+        return rb.Build();
+    }
+
+    private static SExpr BuildArc(KiCadSchArc arc)
+    {
+        return new SExpressionBuilder("arc")
+            .AddChild("start", s => { s.AddMm(arc.ArcStart.X); s.AddMm(arc.ArcStart.Y); })
+            .AddChild("mid", m => { m.AddMm(arc.ArcMid.X); m.AddMm(arc.ArcMid.Y); })
+            .AddChild("end", e => { e.AddMm(arc.ArcEnd.X); e.AddMm(arc.ArcEnd.Y); })
+            .AddChild(WriterHelper.BuildStroke(arc.LineWidth))
+            .AddChild(WriterHelper.BuildFill(SchFillType.None))
+            .Build();
+    }
+
+    private static SExpr BuildBezier(KiCadSchBezier bezier)
+    {
+        return new SExpressionBuilder("bezier")
+            .AddChild(WriterHelper.BuildPoints(bezier.ControlPoints))
+            .AddChild(WriterHelper.BuildStroke(bezier.LineWidth))
+            .AddChild(WriterHelper.BuildFill(SchFillType.None))
+            .Build();
     }
 
     private static SExpr BuildPowerPort(KiCadSchPowerObject power)
@@ -385,36 +458,55 @@ public static class SchWriter
 
     private static SExpr BuildPlacedSymbol(KiCadSchComponent comp)
     {
-        var sb = new SExpressionBuilder("symbol")
-            .AddChild("lib_id", l => l.AddValue(comp.Name));
+        var sb = new SExpressionBuilder("symbol");
+
+        // lib_name comes before lib_id when present
+        if (comp.LibName is not null)
+            sb.AddChild("lib_name", l => l.AddValue(comp.LibName));
+
+        sb.AddChild("lib_id", l => l.AddValue(comp.Name));
 
         sb.AddChild(WriterHelper.BuildPosition(comp.Location, comp.Rotation));
 
-        // Mirror - support "x", "y", and "xy"
-        if (comp.IsMirroredX && comp.IsMirroredY)
-            sb.AddChild("mirror", m => m.AddSymbol("xy"));
-        else if (comp.IsMirroredX)
-            sb.AddChild("mirror", m => m.AddSymbol("x"));
-        else if (comp.IsMirroredY)
-            sb.AddChild("mirror", m => m.AddSymbol("y"));
+        // Mirror - only emit when it was present in the source file
+        if (comp.MirrorPresent)
+        {
+            if (comp.IsMirroredX && comp.IsMirroredY)
+                sb.AddChild("mirror", m => m.AddSymbol("xy"));
+            else if (comp.IsMirroredX)
+                sb.AddChild("mirror", m => m.AddSymbol("x"));
+            else if (comp.IsMirroredY)
+                sb.AddChild("mirror", m => m.AddSymbol("y"));
+        }
 
         if (comp.Unit > 0)
             sb.AddChild("unit", u => u.AddValue(comp.Unit));
+
+        // convert / body_style - comes right after unit
+        if (comp.BodyStyle > 0)
+        {
+            var tokenName = comp.UseBodyStyleToken ? "body_style" : "convert";
+            sb.AddChild(tokenName, c => c.AddValue(comp.BodyStyle));
+        }
+
+        // exclude_from_sim - emit before in_bom when present
+        if (comp.ExcludeFromSimPresent)
+            sb.AddChild("exclude_from_sim", v => v.AddBool(comp.ExcludeFromSim));
 
         // in_bom / on_board
         sb.AddChild("in_bom", v => v.AddBool(comp.InBom));
         sb.AddChild("on_board", v => v.AddBool(comp.OnBoard));
 
-        // convert / body_style
-        if (comp.BodyStyle > 0)
-            sb.AddChild("convert", c => c.AddValue(comp.BodyStyle));
+        // dnp - emit after on_board when present
+        if (comp.DnpPresent)
+            sb.AddChild("dnp", v => v.AddBool(comp.Dnp));
 
         if (comp.FieldsAutoplaced)
             sb.AddChild("fields_autoplaced", f => f.AddBool(true));
 
-        // lib_name
-        if (comp.LibName is not null)
-            sb.AddChild("lib_name", l => l.AddValue(comp.LibName));
+        // uuid - emitted before properties in KiCad 9+
+        if (comp.Uuid is not null)
+            sb.AddChild(WriterHelper.BuildUuid(comp.Uuid));
 
         foreach (var param in comp.Parameters.OfType<KiCadSchParameter>())
         {
@@ -430,9 +522,6 @@ public static class SchWriter
         // Instances
         if (comp.InstancesRaw is not null)
             sb.AddChild(comp.InstancesRaw);
-
-        if (comp.Uuid is not null)
-            sb.AddChild(WriterHelper.BuildUuid(comp.Uuid));
 
         return sb.Build();
     }

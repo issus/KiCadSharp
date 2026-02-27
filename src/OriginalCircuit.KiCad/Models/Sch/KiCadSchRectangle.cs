@@ -30,6 +30,11 @@ public sealed class KiCadSchRectangle : ISchRectangle
     /// </summary>
     public LineStyle LineStyle { get; set; }
 
+    /// <summary>
+    /// Gets or sets whether the stroke color child was present in the source file.
+    /// </summary>
+    public bool HasStrokeColor { get; set; }
+
     /// <inheritdoc />
     public bool IsFilled { get; set; }
 
@@ -37,6 +42,16 @@ public sealed class KiCadSchRectangle : ISchRectangle
     /// Gets the KiCad fill type.
     /// </summary>
     public SchFillType FillType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the UUID of the rectangle.
+    /// </summary>
+    public string? Uuid { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the UUID was an unquoted symbol in the source file (KiCad 9+).
+    /// </summary>
+    public bool UuidIsSymbol { get; set; }
 
     /// <inheritdoc />
     public CoordRect Bounds => new(Corner1, Corner2);

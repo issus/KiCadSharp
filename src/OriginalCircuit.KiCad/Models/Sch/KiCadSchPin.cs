@@ -38,6 +38,12 @@ public sealed class KiCadSchPin : ISchPin
     public bool IsHidden { get; set; }
 
     /// <summary>
+    /// Gets whether the hide attribute was stored as a bare symbol value (KiCad 6 format: <c>(pin ... hide)</c>)
+    /// rather than as a child node (KiCad 8 format: <c>(pin ... (hide yes))</c>).
+    /// </summary>
+    public bool HideIsSymbolValue { get; set; }
+
+    /// <summary>
     /// Gets the KiCad-specific graphic style for the pin.
     /// </summary>
     public PinGraphicStyle GraphicStyle { get; set; }

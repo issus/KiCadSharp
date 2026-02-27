@@ -122,71 +122,115 @@ public static class SchReader
                 switch (child.Token)
                 {
                     case "wire":
-                        wires.Add(ParseWire(child));
+                        var wire = ParseWire(child);
+                        wires.Add(wire);
+                        sch.OrderedElementsList.Add(wire);
                         break;
                     case "junction":
-                        junctions.Add(ParseJunction(child));
+                        var junc = ParseJunction(child);
+                        junctions.Add(junc);
+                        sch.OrderedElementsList.Add(junc);
                         break;
                     case "label":
-                        netLabels.Add(ParseNetLabel(child, NetLabelType.Local));
+                        var localLabel = ParseNetLabel(child, NetLabelType.Local);
+                        netLabels.Add(localLabel);
+                        sch.OrderedElementsList.Add(localLabel);
                         break;
                     case "global_label":
-                        netLabels.Add(ParseNetLabel(child, NetLabelType.Global));
+                        var globalLabel = ParseNetLabel(child, NetLabelType.Global);
+                        netLabels.Add(globalLabel);
+                        sch.OrderedElementsList.Add(globalLabel);
                         break;
                     case "hierarchical_label":
-                        netLabels.Add(ParseNetLabel(child, NetLabelType.Hierarchical));
+                        var hierLabel = ParseNetLabel(child, NetLabelType.Hierarchical);
+                        netLabels.Add(hierLabel);
+                        sch.OrderedElementsList.Add(hierLabel);
                         break;
                     case "text":
-                        labels.Add(ParseTextLabel(child));
+                        var textLabel = ParseTextLabel(child);
+                        labels.Add(textLabel);
+                        sch.OrderedElementsList.Add(textLabel);
                         break;
                     case "no_connect":
-                        noConnects.Add(ParseNoConnect(child));
+                        var nc = ParseNoConnect(child);
+                        noConnects.Add(nc);
+                        sch.OrderedElementsList.Add(nc);
                         break;
                     case "bus":
-                        buses.Add(ParseBus(child));
+                        var bus = ParseBus(child);
+                        buses.Add(bus);
+                        sch.OrderedElementsList.Add(bus);
                         break;
                     case "bus_entry":
-                        busEntries.Add(ParseBusEntry(child));
+                        var busEntry = ParseBusEntry(child);
+                        busEntries.Add(busEntry);
+                        sch.OrderedElementsList.Add(busEntry);
                         break;
                     case "symbol":
                         var comp = ParsePlacedSymbol(child, diagnostics);
                         components.Add(comp);
+                        sch.OrderedElementsList.Add(comp);
                         break;
                     case "sheet":
-                        sheets.Add(ParseSheet(child));
+                        var sheet = ParseSheet(child);
+                        sheets.Add(sheet);
+                        sch.OrderedElementsList.Add(sheet);
                         break;
                     case "power_port":
-                        powerObjects.Add(ParsePowerPort(child));
+                        var power = ParsePowerPort(child);
+                        powerObjects.Add(power);
+                        sch.OrderedElementsList.Add(power);
                         break;
                     case "polyline":
-                        ParseSchPolylineOrLine(child, lines, polylines);
+                        {
+                            var beforeLines = lines.Count;
+                            var beforePolylines = polylines.Count;
+                            ParseSchPolylineOrLine(child, lines, polylines);
+                            if (lines.Count > beforeLines)
+                                sch.OrderedElementsList.Add(lines[^1]);
+                            else if (polylines.Count > beforePolylines)
+                                sch.OrderedElementsList.Add(polylines[^1]);
+                        }
                         break;
                     case "circle":
-                        circles.Add(ParseSchCircle(child));
+                        var circle = ParseSchCircle(child);
+                        circles.Add(circle);
+                        sch.OrderedElementsList.Add(circle);
                         break;
                     case "rectangle":
-                        rectangles.Add(ParseSchRectangle(child));
+                        var rect = ParseSchRectangle(child);
+                        rectangles.Add(rect);
+                        sch.OrderedElementsList.Add(rect);
                         break;
                     case "arc":
-                        arcs.Add(ParseSchArc(child));
+                        var arc = ParseSchArc(child);
+                        arcs.Add(arc);
+                        sch.OrderedElementsList.Add(arc);
                         break;
                     case "bezier":
-                        beziers.Add(ParseSchBezier(child));
+                        var bez = ParseSchBezier(child);
+                        beziers.Add(bez);
+                        sch.OrderedElementsList.Add(bez);
                         break;
                     case "image":
                         sch.ImagesRaw.Add(child);
+                        sch.OrderedElementsList.Add(child);
                         break;
                     case "table":
                         sch.TablesRawList.Add(child);
+                        sch.OrderedElementsList.Add(child);
                         break;
                     case "rule_area":
                         sch.RuleAreasRawList.Add(child);
+                        sch.OrderedElementsList.Add(child);
                         break;
                     case "netclass_flag":
                         sch.NetclassFlagsRawList.Add(child);
+                        sch.OrderedElementsList.Add(child);
                         break;
                     case "bus_alias":
                         sch.BusAliasesRawList.Add(child);
+                        sch.OrderedElementsList.Add(child);
                         break;
                     case "version":
                     case "generator":
@@ -307,9 +351,9 @@ public static class SchReader
     private static KiCadSchLabel ParseTextLabel(SExpr node)
     {
         var (loc, angle) = SExpressionHelper.ParsePosition(node);
-        var (fontH, fontW, justification, isHidden, isMirrored, isBold, isItalic, _, _, _) = SExpressionHelper.ParseTextEffects(node);
+        var (fontH, fontW, justification, isHidden, isMirrored, isBold, isItalic, _, fontThickness, fontColor) = SExpressionHelper.ParseTextEffects(node);
 
-        return new KiCadSchLabel
+        var label = new KiCadSchLabel
         {
             Text = node.GetString() ?? "",
             Location = loc,
@@ -321,8 +365,29 @@ public static class SchReader
             FontSizeWidth = fontW,
             IsBold = isBold,
             IsItalic = isItalic,
+            FontThickness = fontThickness,
+            FontColor = fontColor,
             Uuid = SExpressionHelper.ParseUuid(node)
         };
+
+        // Parse exclude_from_sim (KiCad 9+)
+        var excludeFromSimNode = node.GetChild("exclude_from_sim");
+        if (excludeFromSimNode is not null)
+        {
+            label.ExcludeFromSimPresent = true;
+            label.ExcludeFromSim = excludeFromSimNode.GetBool() ?? false;
+        }
+
+        // Parse href from effects (KiCad 9+)
+        var effectsNode = node.GetChild("effects");
+        if (effectsNode is not null)
+        {
+            var hrefNode = effectsNode.GetChild("href");
+            if (hrefNode is not null)
+                label.Href = hrefNode.GetString();
+        }
+
+        return label;
     }
 
     private static KiCadSchNoConnect ParseNoConnect(SExpr node)
@@ -393,6 +458,10 @@ public static class SchReader
         var (strokeWidth, strokeStyle, strokeColor) = SExpressionHelper.ParseStroke(node);
         var (fillType, _, fillColor) = SExpressionHelper.ParseFill(node);
 
+        // Detect color-only fill format (KiCad 9+: fill has color but no type)
+        var fillNode = node.GetChild("fill");
+        var fillColorOnly = fillNode is not null && fillNode.GetChild("color") is not null && fillNode.GetChild("type") is null;
+
         var sheetName = "";
         var fileName = "";
         var sheetProperties = new List<KiCadSchParameter>();
@@ -415,7 +484,7 @@ public static class SchReader
         var fieldsAutoplaced = node.GetChild("fields_autoplaced")?.GetBool() ?? false;
         var instances = node.GetChild("instances");
 
-        return new KiCadSchSheet
+        var sheet = new KiCadSchSheet
         {
             Location = loc,
             Size = new CoordPoint(w, h),
@@ -427,11 +496,43 @@ public static class SchReader
             LineWidth = strokeWidth,
             LineStyle = strokeStyle,
             FillType = fillType,
+            FillColorOnly = fillColorOnly,
             FieldsAutoplaced = fieldsAutoplaced,
             SheetProperties = sheetProperties,
             Instances = instances,
             Uuid = SExpressionHelper.ParseUuid(node)
         };
+
+        // Parse KiCad 9+ flags
+        var excludeFromSimNode = node.GetChild("exclude_from_sim");
+        if (excludeFromSimNode is not null)
+        {
+            sheet.ExcludeFromSimPresent = true;
+            sheet.ExcludeFromSim = excludeFromSimNode.GetBool() ?? false;
+        }
+
+        var inBomNode = node.GetChild("in_bom");
+        if (inBomNode is not null)
+        {
+            sheet.InBomPresent = true;
+            sheet.InBom = inBomNode.GetBool() ?? true;
+        }
+
+        var onBoardNode = node.GetChild("on_board");
+        if (onBoardNode is not null)
+        {
+            sheet.OnBoardPresent = true;
+            sheet.OnBoard = onBoardNode.GetBool() ?? true;
+        }
+
+        var dnpNode = node.GetChild("dnp");
+        if (dnpNode is not null)
+        {
+            sheet.DnpPresent = true;
+            sheet.Dnp = dnpNode.GetBool() ?? false;
+        }
+
+        return sheet;
     }
 
     private static KiCadSchSheetPin ParseSheetPin(SExpr node)
@@ -443,7 +544,7 @@ public static class SchReader
         var (loc, angle) = SExpressionHelper.ParsePosition(node);
         var side = SExpressionHelper.AngleToSheetPinSide(angle);
 
-        return new KiCadSchSheetPin
+        var pin = new KiCadSchSheetPin
         {
             Name = name,
             IoType = ioType,
@@ -451,6 +552,22 @@ public static class SchReader
             Location = loc,
             Uuid = SExpressionHelper.ParseUuid(node)
         };
+
+        // Parse text effects (font size, justification, bold, italic, color)
+        var effectsNode = node.GetChild("effects");
+        if (effectsNode is not null)
+        {
+            var (fontH, fontW, justification, _, _, isBold, isItalic, _, _, fontColor) =
+                SExpressionHelper.ParseTextEffects(node);
+            pin.FontSizeHeight = fontH;
+            pin.FontSizeWidth = fontW;
+            pin.Justification = justification;
+            pin.IsBold = isBold;
+            pin.IsItalic = isItalic;
+            pin.FontColor = fontColor;
+        }
+
+        return pin;
     }
 
     private static KiCadSchComponent ParsePlacedSymbol(SExpr node, List<KiCadDiagnostic> diagnostics)
@@ -469,6 +586,7 @@ public static class SchReader
         var mirror = node.GetChild("mirror");
         if (mirror is not null)
         {
+            component.MirrorPresent = true;
             var mirrorVal = mirror.GetString();
             if (mirrorVal == "xy" || mirrorVal == "yx")
             {
@@ -487,6 +605,14 @@ public static class SchReader
         if (unitNode is not null)
             component.Unit = unitNode.GetInt() ?? 1;
 
+        // Parse exclude_from_sim for placed symbols
+        var excludeFromSimNode = node.GetChild("exclude_from_sim");
+        if (excludeFromSimNode is not null)
+        {
+            component.ExcludeFromSimPresent = true;
+            component.ExcludeFromSim = excludeFromSimNode.GetBool() ?? false;
+        }
+
         // Parse in_bom / on_board for placed symbols
         var inBomNode = node.GetChild("in_bom");
         if (inBomNode is not null)
@@ -496,13 +622,24 @@ public static class SchReader
         if (onBoardNode is not null)
             component.OnBoard = onBoardNode.GetBool() ?? true;
 
+        // Parse dnp for placed symbols
+        var dnpNode = node.GetChild("dnp");
+        if (dnpNode is not null)
+        {
+            component.DnpPresent = true;
+            component.Dnp = dnpNode.GetBool() ?? false;
+        }
+
         // Parse convert / body_style
         var convertNode = node.GetChild("convert");
         if (convertNode is not null)
             component.BodyStyle = convertNode.GetInt() ?? 0;
         var bodyStyleNode = node.GetChild("body_style");
         if (bodyStyleNode is not null)
+        {
             component.BodyStyle = bodyStyleNode.GetInt() ?? 0;
+            component.UseBodyStyleToken = true;
+        }
 
         // Parse fields_autoplaced
         component.FieldsAutoplaced = node.GetChild("fields_autoplaced")?.GetBool() ?? false;
@@ -542,7 +679,8 @@ public static class SchReader
     {
         var pts = SExpressionHelper.ParsePoints(node);
         var (width, lineStyle, color) = SExpressionHelper.ParseStroke(node);
-        var uuid = SExpressionHelper.ParseUuid(node);
+        var (uuid, uuidIsSymbol) = SExpressionHelper.ParseUuidEx(node);
+        var hasFill = node.GetChild("fill") is not null;
 
         if (pts.Count == 2)
         {
@@ -552,7 +690,10 @@ public static class SchReader
                 End = pts[1],
                 Color = color,
                 Width = width,
-                LineStyle = lineStyle
+                LineStyle = lineStyle,
+                HasFill = hasFill,
+                Uuid = uuid,
+                UuidIsSymbol = uuidIsSymbol
             });
         }
         else
@@ -562,7 +703,10 @@ public static class SchReader
                 Vertices = pts,
                 Color = color,
                 LineWidth = width,
-                LineStyle = lineStyle
+                LineStyle = lineStyle,
+                HasFill = hasFill,
+                Uuid = uuid,
+                UuidIsSymbol = uuidIsSymbol
             });
         }
     }
@@ -593,8 +737,9 @@ public static class SchReader
         var endNode = node.GetChild("end");
         var start = startNode is not null ? SExpressionHelper.ParseXY(startNode) : CoordPoint.Zero;
         var end = endNode is not null ? SExpressionHelper.ParseXY(endNode) : CoordPoint.Zero;
-        var (width, _, color) = SExpressionHelper.ParseStroke(node);
+        var (width, lineStyle, color, hasStrokeColor) = SExpressionHelper.ParseStrokeEx(node);
         var (fillType, isFilled, fillColor) = SExpressionHelper.ParseFill(node);
+        var (uuid, uuidIsSymbol) = SExpressionHelper.ParseUuidEx(node);
 
         return new KiCadSchRectangle
         {
@@ -603,8 +748,12 @@ public static class SchReader
             Color = color,
             FillColor = fillColor,
             LineWidth = width,
+            LineStyle = lineStyle,
+            HasStrokeColor = hasStrokeColor,
             IsFilled = isFilled,
-            FillType = fillType
+            FillType = fillType,
+            Uuid = uuid,
+            UuidIsSymbol = uuidIsSymbol
         };
     }
 

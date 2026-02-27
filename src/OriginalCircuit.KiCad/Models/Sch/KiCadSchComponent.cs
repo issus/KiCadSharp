@@ -26,6 +26,7 @@ public sealed class KiCadSchComponent : ISchComponent
     private readonly List<KiCadSchParameter> _parameters = [];
     private readonly List<KiCadSchComponent> _subSymbols = [];
     private readonly List<KiCadDiagnostic> _diagnostics = [];
+    private readonly List<object> _orderedPrimitives = [];
 
     /// <inheritdoc />
     public string Name { get; set; } = "";
@@ -106,6 +107,13 @@ public sealed class KiCadSchComponent : ISchComponent
     public IReadOnlyList<ISchBezier> Beziers => _beziers;
     internal List<KiCadSchBezier> BezierList => _beziers;
 
+    /// <summary>
+    /// Gets the ordered list of all graphical primitives in their original file order.
+    /// Used to preserve primitive ordering during round-trip.
+    /// </summary>
+    public IReadOnlyList<object> OrderedPrimitives => _orderedPrimitives;
+    internal List<object> OrderedPrimitivesList => _orderedPrimitives;
+
     /// <inheritdoc />
     public IReadOnlyList<ISchNetLabel> NetLabels => _netLabels;
     internal List<KiCadSchNetLabel> NetLabelList => _netLabels;
@@ -138,6 +146,21 @@ public sealed class KiCadSchComponent : ISchComponent
     public int BodyStyle { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the source file used <c>body_style</c> (KiCad 9+) instead of <c>convert</c> (KiCad 8).
+    /// </summary>
+    public bool UseBodyStyleToken { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the <c>duplicate_pin_numbers_are_jumpers</c> flag is present (KiCad 9+).
+    /// </summary>
+    public bool DuplicatePinNumbersAreJumpersPresent { get; set; }
+
+    /// <summary>
+    /// Gets or sets the value of the <c>duplicate_pin_numbers_are_jumpers</c> flag.
+    /// </summary>
+    public bool DuplicatePinNumbersAreJumpers { get; set; }
+
+    /// <summary>
     /// Gets or sets whether the placed symbol's fields are auto-placed.
     /// </summary>
     public bool FieldsAutoplaced { get; set; }
@@ -158,6 +181,16 @@ public sealed class KiCadSchComponent : ISchComponent
     public bool ExcludeFromSim { get; set; }
 
     /// <summary>
+    /// Gets or sets whether this placed symbol is marked as "Do Not Populate" (KiCad 8+).
+    /// </summary>
+    public bool Dnp { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the dnp node was present in the source file.
+    /// </summary>
+    public bool DnpPresent { get; set; }
+
+    /// <summary>
     /// Gets or sets whether embedded fonts are used in this symbol (KiCad 8+).
     /// Null means the token was not present in the source file.
     /// </summary>
@@ -167,6 +200,12 @@ public sealed class KiCadSchComponent : ISchComponent
     /// Gets or sets whether this symbol is a power symbol (KiCad 8+).
     /// </summary>
     public bool IsPower { get; set; }
+
+    /// <summary>
+    /// Gets or sets the power type value (e.g., "global" in KiCad 9+).
+    /// Null when <c>(power)</c> has no value argument.
+    /// </summary>
+    public string? PowerType { get; set; }
 
     /// <summary>
     /// Gets the name of the symbol this one extends (derived/inherited symbols).
@@ -190,9 +229,19 @@ public sealed class KiCadSchComponent : ISchComponent
     public bool ExcludeFromSimPresent { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the mirror node was present in the source file for this placed symbol.
+    /// </summary>
+    public bool MirrorPresent { get; set; }
+
+    /// <summary>
     /// Gets the pin names offset from the pin end.
     /// </summary>
     public Coord PinNamesOffset { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the (offset N) child was explicitly present in the pin_names node.
+    /// </summary>
+    public bool PinNamesHasOffset { get; set; }
 
     /// <summary>
     /// Gets whether pin numbers are hidden.

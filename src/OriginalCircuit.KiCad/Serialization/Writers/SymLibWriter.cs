@@ -40,7 +40,14 @@ public static class SymLibWriter
     {
         var b = new SExpressionBuilder("kicad_symbol_lib")
             .AddChild("version", v => v.AddValue(lib.Version == 0 ? 20231120 : lib.Version))
-            .AddChild("generator", g => g.AddValue(lib.Generator ?? "kicadsharp"));
+            .AddChild("generator", g =>
+            {
+                var gen = lib.Generator ?? "kicadsharp";
+                if (lib.GeneratorIsSymbol)
+                    g.AddSymbol(gen);
+                else
+                    g.AddValue(gen);
+            });
 
         if (lib.GeneratorVersion is not null)
             b.AddChild("generator_version", g => g.AddValue(lib.GeneratorVersion));
@@ -67,7 +74,10 @@ public static class SymLibWriter
             // power (KiCad 8+)
             if (component.IsPower)
             {
-                b.AddChild("power", _ => { });
+                if (component.PowerType is not null)
+                    b.AddChild("power", p => p.AddSymbol(component.PowerType));
+                else
+                    b.AddChild("power", _ => { });
             }
 
             // Determine if this is KiCad 8+ format (embedded_fonts presence is the indicator)
@@ -95,7 +105,7 @@ public static class SymLibWriter
                 {
                     // Only emit (offset N) when it was explicitly present in the source file
                     if (component.PinNamesHasOffset)
-                        pn.AddChild("offset", o => o.AddValue(component.PinNamesOffset.ToMm()));
+                        pn.AddChild("offset", o => o.AddMm(component.PinNamesOffset));
                     if (component.HidePinNames)
                     {
                         if (isKiCad8)
@@ -113,6 +123,9 @@ public static class SymLibWriter
             b.AddChild("in_bom", v => v.AddBool(component.InBom));
             b.AddChild("on_board", v => v.AddBool(component.OnBoard));
 
+            if (component.DuplicatePinNumbersAreJumpersPresent)
+                b.AddChild("duplicate_pin_numbers_are_jumpers", v => v.AddBool(component.DuplicatePinNumbersAreJumpers));
+
             // Properties
             foreach (var param in component.Parameters.OfType<KiCadSchParameter>())
             {
@@ -127,58 +140,63 @@ public static class SymLibWriter
         }
 
         // Direct graphical primitives (from this level, not sub-symbols)
-        foreach (var pin in component.Pins.OfType<KiCadSchPin>())
+        // Use OrderedPrimitives to preserve original file ordering when available
+        if (component.SubSymbols.Count == 0 && component.OrderedPrimitives.Count > 0)
         {
-            // Only write pins that belong directly to this symbol, not inherited from sub-symbols
-            if (component.SubSymbols.Count == 0)
+            foreach (var prim in component.OrderedPrimitives)
+            {
+                switch (prim)
+                {
+                    case KiCadSchPin pin:
+                        b.AddChild(BuildPin(pin));
+                        break;
+                    case KiCadSchRectangle rect:
+                        b.AddChild(BuildRectangle(rect));
+                        break;
+                    case KiCadSchLine line:
+                        b.AddChild(BuildPolyline([line.Start, line.End], line.Width, line.LineStyle, line.Color, emitColor: line.HasStrokeColor));
+                        break;
+                    case KiCadSchPolyline poly:
+                        b.AddChild(BuildPolyline(poly.Vertices, poly.LineWidth, poly.LineStyle, poly.Color, poly.FillType, poly.FillColor, emitColor: poly.HasStrokeColor));
+                        break;
+                    case KiCadSchPolygon polygon:
+                        b.AddChild(BuildPolygon(polygon));
+                        break;
+                    case KiCadSchArc arc:
+                        b.AddChild(BuildArc(arc));
+                        break;
+                    case KiCadSchCircle circle:
+                        b.AddChild(BuildCircle(circle));
+                        break;
+                    case KiCadSchBezier bezier:
+                        b.AddChild(BuildBezier(bezier));
+                        break;
+                    case KiCadSchLabel label:
+                        b.AddChild(BuildTextLabel(label));
+                        break;
+                }
+            }
+        }
+        else if (component.SubSymbols.Count == 0)
+        {
+            // Fallback: emit in type-grouped order
+            foreach (var pin in component.Pins.OfType<KiCadSchPin>())
                 b.AddChild(BuildPin(pin));
-        }
-
-        foreach (var rect in component.Rectangles.OfType<KiCadSchRectangle>())
-        {
-            if (component.SubSymbols.Count == 0)
+            foreach (var rect in component.Rectangles.OfType<KiCadSchRectangle>())
                 b.AddChild(BuildRectangle(rect));
-        }
-
-        foreach (var line in component.Lines.OfType<KiCadSchLine>())
-        {
-            if (component.SubSymbols.Count == 0)
+            foreach (var line in component.Lines.OfType<KiCadSchLine>())
                 b.AddChild(BuildPolyline([line.Start, line.End], line.Width, line.LineStyle, line.Color, emitColor: line.HasStrokeColor));
-        }
-
-        foreach (var poly in component.Polylines.OfType<KiCadSchPolyline>())
-        {
-            if (component.SubSymbols.Count == 0)
+            foreach (var poly in component.Polylines.OfType<KiCadSchPolyline>())
                 b.AddChild(BuildPolyline(poly.Vertices, poly.LineWidth, poly.LineStyle, poly.Color, poly.FillType, poly.FillColor, emitColor: poly.HasStrokeColor));
-        }
-
-        foreach (var poly in component.Polygons.OfType<KiCadSchPolygon>())
-        {
-            if (component.SubSymbols.Count == 0)
+            foreach (var poly in component.Polygons.OfType<KiCadSchPolygon>())
                 b.AddChild(BuildPolygon(poly));
-        }
-
-        foreach (var arc in component.Arcs.OfType<KiCadSchArc>())
-        {
-            if (component.SubSymbols.Count == 0)
+            foreach (var arc in component.Arcs.OfType<KiCadSchArc>())
                 b.AddChild(BuildArc(arc));
-        }
-
-        foreach (var circle in component.Circles.OfType<KiCadSchCircle>())
-        {
-            if (component.SubSymbols.Count == 0)
+            foreach (var circle in component.Circles.OfType<KiCadSchCircle>())
                 b.AddChild(BuildCircle(circle));
-        }
-
-        foreach (var bezier in component.Beziers.OfType<KiCadSchBezier>())
-        {
-            if (component.SubSymbols.Count == 0)
+            foreach (var bezier in component.Beziers.OfType<KiCadSchBezier>())
                 b.AddChild(BuildBezier(bezier));
-        }
-
-        foreach (var label in component.Labels.OfType<KiCadSchLabel>())
-        {
-            if (component.SubSymbols.Count == 0)
+            foreach (var label in component.Labels.OfType<KiCadSchLabel>())
                 b.AddChild(BuildTextLabel(label));
         }
 
@@ -211,6 +229,15 @@ public static class SymLibWriter
 
         b.AddChild(WriterHelper.BuildPosition(param.Location, param.Orientation));
 
+        // (do_not_autoplace) or (do_not_autoplace yes) - KiCad 9+
+        if (param.DoNotAutoplace)
+        {
+            if (param.DoNotAutoplaceHasValue)
+                b.AddChild("do_not_autoplace", d => d.AddBool(true));
+            else
+                b.AddChild("do_not_autoplace", _ => { });
+        }
+
         // KiCad 8 footprint property attributes
         if (param.IsUnlocked)
             b.AddChild("unlocked", u => u.AddBool(true));
@@ -218,9 +245,9 @@ public static class SymLibWriter
         if (param.LayerName is not null)
             b.AddChild("layer", l => l.AddValue(param.LayerName));
 
-        if (!param.IsVisible && (param.LayerName is not null || param.Uuid is not null))
+        if (!param.IsVisible && param.HideIsDirectChild)
         {
-            // Use KiCad 8 (hide yes) format for footprint properties
+            // KiCad 8 footprint / KiCad 9 lib symbol: (hide yes) as direct child
             b.AddChild("hide", h => h.AddBool(true));
         }
 
@@ -238,28 +265,39 @@ public static class SymLibWriter
             .AddSymbol(SExpressionHelper.PinGraphicStyleToString(pin.GraphicStyle));
 
         b.AddChild(WriterHelper.BuildPosition(pin.Location, SExpressionHelper.PinOrientationToAngle(pin.Orientation)))
-         .AddChild("length", l => l.AddValue(pin.Length.ToMm()));
+         .AddChild("length", l => l.AddMm(pin.Length));
 
         // Hide attribute - emit before name/number as KiCad does
+        // KiCad 6: (pin ... hide) — bare symbol value
+        // KiCad 8: (pin ... (hide yes)) — child node
         if (pin.IsHidden)
-            b.AddChild("hide", h => h.AddBool(true));
+        {
+            if (pin.HideIsSymbolValue)
+                b.AddSymbol("hide");
+            else
+                b.AddChild("hide", h => h.AddBool(true));
+        }
 
         // Name with font size
-        var nameFontH = pin.NameFontSizeHeight != Coord.Zero ? pin.NameFontSizeHeight : WriterHelper.DefaultTextSize;
-        var nameFontW = pin.NameFontSizeWidth != Coord.Zero ? pin.NameFontSizeWidth : WriterHelper.DefaultTextSize;
+        // When the font size is zero, KiCad implicitly hides the text via (size 0 0),
+        // so preserve zero font sizes and don't add a separate (hide yes) node.
+        bool nameHiddenByZeroFont = pin.NameFontSizeHeight == Coord.Zero && pin.NameFontSizeWidth == Coord.Zero && !pin.ShowName;
+        var nameFontH = nameHiddenByZeroFont ? Coord.Zero : (pin.NameFontSizeHeight != Coord.Zero ? pin.NameFontSizeHeight : WriterHelper.DefaultTextSize);
+        var nameFontW = nameHiddenByZeroFont ? Coord.Zero : (pin.NameFontSizeWidth != Coord.Zero ? pin.NameFontSizeWidth : WriterHelper.DefaultTextSize);
         b.AddChild("name", n =>
         {
             n.AddValue(pin.Name ?? "~");
-            n.AddChild(WriterHelper.BuildTextEffects(nameFontH, nameFontW, hide: !pin.ShowName));
+            n.AddChild(WriterHelper.BuildTextEffects(nameFontH, nameFontW, hide: !pin.ShowName && !nameHiddenByZeroFont));
         });
 
         // Number with font size
-        var numFontH = pin.NumberFontSizeHeight != Coord.Zero ? pin.NumberFontSizeHeight : WriterHelper.DefaultTextSize;
-        var numFontW = pin.NumberFontSizeWidth != Coord.Zero ? pin.NumberFontSizeWidth : WriterHelper.DefaultTextSize;
+        bool numHiddenByZeroFont = pin.NumberFontSizeHeight == Coord.Zero && pin.NumberFontSizeWidth == Coord.Zero && !pin.ShowDesignator;
+        var numFontH = numHiddenByZeroFont ? Coord.Zero : (pin.NumberFontSizeHeight != Coord.Zero ? pin.NumberFontSizeHeight : WriterHelper.DefaultTextSize);
+        var numFontW = numHiddenByZeroFont ? Coord.Zero : (pin.NumberFontSizeWidth != Coord.Zero ? pin.NumberFontSizeWidth : WriterHelper.DefaultTextSize);
         b.AddChild("number", n =>
         {
             n.AddValue(pin.Designator ?? "~");
-            n.AddChild(WriterHelper.BuildTextEffects(numFontH, numFontW, hide: !pin.ShowDesignator));
+            n.AddChild(WriterHelper.BuildTextEffects(numFontH, numFontW, hide: !pin.ShowDesignator && !numHiddenByZeroFont));
         });
 
         // Alternates
@@ -279,8 +317,8 @@ public static class SymLibWriter
     private static SExpr BuildRectangle(KiCadSchRectangle rect)
     {
         return new SExpressionBuilder("rectangle")
-            .AddChild("start", s => { s.AddValue(rect.Corner1.X.ToMm()); s.AddValue(rect.Corner1.Y.ToMm()); })
-            .AddChild("end", e => { e.AddValue(rect.Corner2.X.ToMm()); e.AddValue(rect.Corner2.Y.ToMm()); })
+            .AddChild("start", s => { s.AddMm(rect.Corner1.X); s.AddMm(rect.Corner1.Y); })
+            .AddChild("end", e => { e.AddMm(rect.Corner2.X); e.AddMm(rect.Corner2.Y); })
             .AddChild(WriterHelper.BuildStroke(rect.LineWidth, rect.LineStyle, rect.Color, emitColor: rect.HasStrokeColor))
             .AddChild(WriterHelper.BuildFill(rect.FillType, rect.FillColor))
             .Build();
@@ -307,9 +345,9 @@ public static class SymLibWriter
     private static SExpr BuildArc(KiCadSchArc arc)
     {
         return new SExpressionBuilder("arc")
-            .AddChild("start", s => { s.AddValue(arc.ArcStart.X.ToMm()); s.AddValue(arc.ArcStart.Y.ToMm()); })
-            .AddChild("mid", m => { m.AddValue(arc.ArcMid.X.ToMm()); m.AddValue(arc.ArcMid.Y.ToMm()); })
-            .AddChild("end", e => { e.AddValue(arc.ArcEnd.X.ToMm()); e.AddValue(arc.ArcEnd.Y.ToMm()); })
+            .AddChild("start", s => { s.AddMm(arc.ArcStart.X); s.AddMm(arc.ArcStart.Y); })
+            .AddChild("mid", m => { m.AddMm(arc.ArcMid.X); m.AddMm(arc.ArcMid.Y); })
+            .AddChild("end", e => { e.AddMm(arc.ArcEnd.X); e.AddMm(arc.ArcEnd.Y); })
             .AddChild(WriterHelper.BuildStroke(arc.LineWidth, arc.LineStyle, arc.Color, emitColor: arc.HasStrokeColor))
             .AddChild(WriterHelper.BuildFill(arc.FillType, arc.FillColor))
             .Build();
@@ -318,8 +356,8 @@ public static class SymLibWriter
     private static SExpr BuildCircle(KiCadSchCircle circle)
     {
         return new SExpressionBuilder("circle")
-            .AddChild("center", c => { c.AddValue(circle.Center.X.ToMm()); c.AddValue(circle.Center.Y.ToMm()); })
-            .AddChild("radius", r => r.AddValue(circle.Radius.ToMm()))
+            .AddChild("center", c => { c.AddMm(circle.Center.X); c.AddMm(circle.Center.Y); })
+            .AddChild("radius", r => r.AddMm(circle.Radius))
             .AddChild(WriterHelper.BuildStroke(circle.LineWidth, circle.LineStyle, circle.Color, emitColor: circle.HasStrokeColor))
             .AddChild(WriterHelper.BuildFill(circle.FillType, circle.FillColor))
             .Build();

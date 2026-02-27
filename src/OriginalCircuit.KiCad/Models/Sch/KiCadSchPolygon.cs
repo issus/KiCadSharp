@@ -27,6 +27,11 @@ public sealed class KiCadSchPolygon : ISchPolygon
     /// </summary>
     public LineStyle LineStyle { get; set; }
 
+    /// <summary>
+    /// Gets or sets whether the stroke color child was present in the source file.
+    /// </summary>
+    public bool HasStrokeColor { get; set; }
+
     /// <inheritdoc />
     public bool IsFilled { get; set; }
 

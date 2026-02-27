@@ -43,6 +43,7 @@ public sealed class KiCadSch : ISchDocument
     private readonly List<SExpr> _ruleAreasRaw = [];
     private readonly List<SExpr> _netclassFlagsRaw = [];
     private readonly List<SExpr> _busAliasesRaw = [];
+    private readonly List<object> _orderedElements = [];
 
     /// <summary>
     /// Gets the file format version number.
@@ -113,6 +114,14 @@ public sealed class KiCadSch : ISchDocument
     /// </summary>
     public IReadOnlyList<SExpr> BusAliasesRaw => _busAliasesRaw;
     internal List<SExpr> BusAliasesRawList => _busAliasesRaw;
+
+    /// <summary>
+    /// Gets the ordered list of all content elements in their original file order.
+    /// Used to preserve element ordering during round-trip. Each entry is a typed
+    /// schematic object (wire, junction, label, symbol, etc.) or a raw <see cref="SExpr"/>.
+    /// </summary>
+    public IReadOnlyList<object> OrderedElements => _orderedElements;
+    internal List<object> OrderedElementsList => _orderedElements;
 
     /// <summary>
     /// Gets the diagnostics collected during parsing.

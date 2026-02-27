@@ -25,6 +25,11 @@ public sealed class KiCadSchBezier : ISchBezier
     public LineStyle LineStyle { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the stroke color child was present in the source file.
+    /// </summary>
+    public bool HasStrokeColor { get; set; }
+
+    /// <summary>
     /// Gets the KiCad fill type.
     /// </summary>
     public SchFillType FillType { get; set; }

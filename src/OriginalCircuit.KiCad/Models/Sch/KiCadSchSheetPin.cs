@@ -1,3 +1,4 @@
+using OriginalCircuit.Eda.Enums;
 using OriginalCircuit.Eda.Models;
 using OriginalCircuit.Eda.Models.Sch;
 using OriginalCircuit.Eda.Primitives;
@@ -25,6 +26,36 @@ public sealed class KiCadSchSheetPin : ISchSheetPin
     /// Gets the UUID of the sheet pin.
     /// </summary>
     public string? Uuid { get; set; }
+
+    /// <summary>
+    /// Gets or sets the font height for the sheet pin text effects.
+    /// </summary>
+    public Coord FontSizeHeight { get; set; }
+
+    /// <summary>
+    /// Gets or sets the font width for the sheet pin text effects.
+    /// </summary>
+    public Coord FontSizeWidth { get; set; }
+
+    /// <summary>
+    /// Gets or sets the text justification.
+    /// </summary>
+    public TextJustification Justification { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the text is bold.
+    /// </summary>
+    public bool IsBold { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the text is italic.
+    /// </summary>
+    public bool IsItalic { get; set; }
+
+    /// <summary>
+    /// Gets or sets the font color.
+    /// </summary>
+    public EdaColor FontColor { get; set; }
 
     /// <inheritdoc />
     public CoordRect Bounds

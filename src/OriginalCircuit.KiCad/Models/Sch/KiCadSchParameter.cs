@@ -101,10 +101,28 @@ public sealed class KiCadSchParameter : ISchParameter
     public bool HideIsSymbolValue { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the <c>(hide yes)</c> node is a direct child of the property node
+    /// (KiCad 8 footprint / KiCad 9 lib symbol format) rather than inside effects.
+    /// </summary>
+    public bool HideIsDirectChild { get; set; }
+
+    /// <summary>
     /// Gets whether this is an inline property without position or text effects
     /// (e.g., <c>(property ki_fp_filters "...")</c>).
     /// </summary>
     public bool IsInline { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the property has a <c>(do_not_autoplace)</c> flag (KiCad 9+).
+    /// </summary>
+    public bool DoNotAutoplace { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the <c>do_not_autoplace</c> flag uses the value format
+    /// <c>(do_not_autoplace yes)</c> (placed symbols) versus the bare format
+    /// <c>(do_not_autoplace)</c> (lib symbols).
+    /// </summary>
+    public bool DoNotAutoplaceHasValue { get; set; }
 
     /// <inheritdoc />
     public CoordRect Bounds

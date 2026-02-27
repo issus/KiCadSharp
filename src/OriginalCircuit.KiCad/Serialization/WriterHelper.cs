@@ -14,15 +14,73 @@ internal static class WriterHelper
     /// <summary>KiCad's default text size in mm.</summary>
     internal static readonly Coord DefaultTextSize = Coord.FromMm(1.27);
 
+    /// <summary>Number of decimal places used when rounding mm values for output.</summary>
+    private const int MmDecimalPlaces = 6;
+
+    /// <summary>Format string for mm values.</summary>
+    private static readonly string MmFormat = $"0.######";
+
     /// <summary>
-    /// Builds an <c>(at X Y [ANGLE])</c> node.
+    /// Rounds a millimeter value to compensate for floating-point precision loss
+    /// in the Coord int-to-mm conversion. KiCad files use up to 6 decimal places.
+    /// </summary>
+    internal static double RoundMm(double mm) => Math.Round(mm, MmDecimalPlaces);
+
+    /// <summary>
+    /// Converts a Coord to mm with rounding.
+    /// </summary>
+    internal static double ToRoundedMm(this Coord c) => RoundMm(c.ToMm());
+
+    /// <summary>
+    /// Formats a rounded mm value as a string with controlled decimal places.
+    /// This avoids IEEE 754 representation artifacts like 0.000998 becoming 0.00099799999999999997.
+    /// </summary>
+    internal static string FormatMm(double roundedMm)
+    {
+        return roundedMm.ToString(MmFormat, System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    /// <summary>
+    /// Adds a Coord value as a properly formatted mm number to the builder.
+    /// </summary>
+    internal static SExpressionBuilder AddMm(this SExpressionBuilder builder, Coord c)
+    {
+        var rounded = RoundMm(c.ToMm());
+        return builder.AddFormattedValue(rounded, FormatMm(rounded));
+    }
+
+    /// <summary>
+    /// Adds a pre-rounded mm value as a properly formatted number to the builder.
+    /// </summary>
+    internal static SExpressionBuilder AddMm(this SExpressionBuilder builder, double roundedMm)
+    {
+        return builder.AddFormattedValue(roundedMm, FormatMm(roundedMm));
+    }
+
+    /// <summary>
+    /// Builds an <c>(at X Y ANGLE)</c> node, always including the angle value.
+    /// Used for property and text positions where KiCad always emits the angle.
     /// </summary>
     public static SExpr BuildPosition(CoordPoint location, double angle = 0)
     {
+        return new SExpressionBuilder("at")
+            .AddMm(location.X)
+            .AddMm(location.Y)
+            .AddValue(angle)
+            .Build();
+    }
+
+    /// <summary>
+    /// Builds an <c>(at X Y [ANGLE])</c> node, omitting angle when zero.
+    /// Used for footprint and pad positions where KiCad omits angle=0.
+    /// </summary>
+    public static SExpr BuildPositionCompact(CoordPoint location, double angle = 0)
+    {
         var b = new SExpressionBuilder("at")
-            .AddValue(location.X.ToMm())
-            .AddValue(location.Y.ToMm())
-            .AddValue(angle);
+            .AddMm(location.X)
+            .AddMm(location.Y);
+        if (angle != 0)
+            b.AddValue(angle);
         return b.Build();
     }
 
@@ -32,8 +90,8 @@ internal static class WriterHelper
     public static SExpr BuildXY(CoordPoint point)
     {
         return new SExpressionBuilder("xy")
-            .AddValue(point.X.ToMm())
-            .AddValue(point.Y.ToMm())
+            .AddMm(point.X)
+            .AddMm(point.Y)
             .Build();
     }
 
@@ -54,7 +112,7 @@ internal static class WriterHelper
     public static SExpr BuildStroke(Coord width, LineStyle style = LineStyle.Solid, EdaColor color = default, bool emitColor = false)
     {
         var b = new SExpressionBuilder("stroke")
-            .AddChild("width", w => w.AddValue(width.ToMm()))
+            .AddChild("width", w => w.AddMm(width))
             .AddChild("type", t => t.AddSymbol(SExpressionHelper.LineStyleToString(style)));
         if (color != default || emitColor)
             b.AddChild(BuildColor(color));
@@ -74,6 +132,17 @@ internal static class WriterHelper
     }
 
     /// <summary>
+    /// Builds a <c>(fill (color R G B A))</c> node with color only, no type child.
+    /// Used for KiCad 9+ sheet fill format.
+    /// </summary>
+    public static SExpr BuildFillColorOnly(EdaColor color)
+    {
+        return new SExpressionBuilder("fill")
+            .AddChild(BuildColor(color))
+            .Build();
+    }
+
+    /// <summary>
     /// Builds a <c>(fill yes)</c> or <c>(fill no)</c> node using PCB fill format.
     /// </summary>
     public static SExpr BuildPcbFill(SchFillType fillType)
@@ -86,7 +155,7 @@ internal static class WriterHelper
     /// <summary>
     /// Builds an <c>(effects (font (size H W)))</c> node.
     /// </summary>
-    public static SExpr BuildTextEffects(Coord fontH, Coord fontW, TextJustification justification = TextJustification.MiddleCenter, bool hide = false, bool isMirrored = false, bool isBold = false, bool isItalic = false, string? fontFace = null, Coord fontThickness = default, EdaColor fontColor = default)
+    public static SExpr BuildTextEffects(Coord fontH, Coord fontW, TextJustification justification = TextJustification.MiddleCenter, bool hide = false, bool isMirrored = false, bool isBold = false, bool isItalic = false, string? fontFace = null, Coord fontThickness = default, EdaColor fontColor = default, string? href = null)
     {
         var b = new SExpressionBuilder("effects")
             .AddChild("font", f =>
@@ -95,13 +164,13 @@ internal static class WriterHelper
                     f.AddChild("face", fc => fc.AddValue(fontFace));
                 f.AddChild("size", s =>
                 {
-                    s.AddValue(fontH.ToMm());
-                    s.AddValue(fontW.ToMm());
+                    s.AddMm(fontH);
+                    s.AddMm(fontW);
                 });
                 if (fontThickness != Coord.Zero)
-                    f.AddChild("thickness", t => t.AddValue(fontThickness.ToMm()));
-                if (isBold) f.AddChild("bold", _ => { });
-                if (isItalic) f.AddChild("italic", _ => { });
+                    f.AddChild("thickness", t => t.AddMm(fontThickness));
+                if (isBold) f.AddChild("bold", bl => bl.AddBool(true));
+                if (isItalic) f.AddChild("italic", it => it.AddBool(true));
                 if (fontColor != default)
                     f.AddChild(BuildColor(fontColor));
             });
@@ -141,6 +210,9 @@ internal static class WriterHelper
             });
         }
 
+        if (href is not null)
+            b.AddChild("href", h => h.AddValue(href));
+
         if (hide)
             b.AddChild("hide", h => h.AddBool(true));
 
@@ -160,13 +232,13 @@ internal static class WriterHelper
                     f.AddChild("face", face => face.AddValue(param.FontFace));
                 f.AddChild("size", s =>
                 {
-                    s.AddValue(param.FontSizeHeight.ToMm());
-                    s.AddValue(param.FontSizeWidth.ToMm());
+                    s.AddMm(param.FontSizeHeight);
+                    s.AddMm(param.FontSizeWidth);
                 });
                 if (param.FontThickness != Coord.Zero)
-                    f.AddChild("thickness", t => t.AddValue(param.FontThickness.ToMm()));
-                if (param.IsBold) f.AddChild("bold", _ => { });
-                if (param.IsItalic) f.AddChild("italic", _ => { });
+                    f.AddChild("thickness", t => t.AddMm(param.FontThickness));
+                if (param.IsBold) f.AddChild("bold", bl => bl.AddBool(true));
+                if (param.IsItalic) f.AddChild("italic", it => it.AddBool(true));
                 if (param.FontColor != default)
                     f.AddChild(BuildColor(param.FontColor));
             });
@@ -209,10 +281,10 @@ internal static class WriterHelper
             });
         }
 
-        // For KiCad 8 footprint properties, hide is emitted as a direct child
-        // of the property node, not inside effects. For symbol library properties
-        // (no LayerName/Uuid), hide goes inside effects.
-        if (!param.IsVisible && param.LayerName is null && param.Uuid is null)
+        // For KiCad 8 footprint properties and KiCad 9 lib symbol properties,
+        // hide is emitted as a direct child of the property node (HideIsDirectChild).
+        // For older symbol library properties, hide goes inside effects.
+        if (!param.IsVisible && !param.HideIsDirectChild)
         {
             if (param.HideIsSymbolValue)
                 b.AddSymbol("hide"); // KiCad 6 format: (effects ... hide)
@@ -245,7 +317,20 @@ internal static class WriterHelper
     /// </summary>
     public static SExpr BuildUuid(string uuid)
     {
-        return new SExpressionBuilder("uuid").AddSymbol(uuid).Build();
+        return new SExpressionBuilder("uuid").AddValue(uuid).Build();
+    }
+
+    /// <summary>
+    /// Builds a <c>(uuid ...)</c> node, optionally using symbol format (unquoted).
+    /// </summary>
+    public static SExpr BuildUuid(string uuid, bool asSymbol)
+    {
+        var b = new SExpressionBuilder("uuid");
+        if (asSymbol)
+            b.AddSymbol(uuid);
+        else
+            b.AddValue(uuid);
+        return b.Build();
     }
 
     /// <summary>

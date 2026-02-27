@@ -59,10 +59,12 @@ public static class SymLibReader
 
         const int MaxTestedVersion = 20231120;
 
+        var generatorNode = root.GetChild("generator");
         var lib = new KiCadSymLib
         {
             Version = root.GetChild("version")?.GetInt() ?? 0,
-            Generator = root.GetChild("generator")?.GetString(),
+            Generator = generatorNode?.GetString(),
+            GeneratorIsSymbol = generatorNode?.Values.Count > 0 && generatorNode.Values[0] is SExprSymbol,
             GeneratorVersion = root.GetChild("generator_version")?.GetString()
         };
 
@@ -130,6 +132,13 @@ public static class SymLibReader
         component.InBom = node.GetChild("in_bom")?.GetBool() ?? true;
         component.OnBoard = node.GetChild("on_board")?.GetBool() ?? true;
 
+        var dupPinNode = node.GetChild("duplicate_pin_numbers_are_jumpers");
+        if (dupPinNode is not null)
+        {
+            component.DuplicatePinNumbersAreJumpersPresent = true;
+            component.DuplicatePinNumbersAreJumpers = dupPinNode.GetBool() ?? false;
+        }
+
         var excludeFromSimNode = node.GetChild("exclude_from_sim");
         if (excludeFromSimNode is not null)
         {
@@ -139,7 +148,10 @@ public static class SymLibReader
 
         var embeddedFontsNode = node.GetChild("embedded_fonts");
         component.EmbeddedFonts = embeddedFontsNode is not null ? embeddedFontsNode.GetBool() : null;
-        component.IsPower = node.GetChild("power") is not null;
+        var powerNode = node.GetChild("power");
+        component.IsPower = powerNode is not null;
+        if (powerNode is not null)
+            component.PowerType = powerNode.GetString();
         component.Extends = node.GetChild("extends")?.GetString();
 
         // Parse properties
@@ -185,25 +197,48 @@ public static class SymLibReader
                     labels.AddRange(sub.Labels.OfType<KiCadSchLabel>());
                     break;
                 case "pin":
-                    pins.Add(ParsePin(child));
+                    var pin = ParsePin(child);
+                    pins.Add(pin);
+                    component.OrderedPrimitivesList.Add(pin);
                     break;
                 case "polyline":
-                    ParsePolylineOrLine(child, lines, polylines, polygons);
+                    {
+                        var beforeLines = lines.Count;
+                        var beforePolylines = polylines.Count;
+                        var beforePolygons = polygons.Count;
+                        ParsePolylineOrLine(child, lines, polylines, polygons);
+                        if (lines.Count > beforeLines)
+                            component.OrderedPrimitivesList.Add(lines[^1]);
+                        else if (polylines.Count > beforePolylines)
+                            component.OrderedPrimitivesList.Add(polylines[^1]);
+                        else if (polygons.Count > beforePolygons)
+                            component.OrderedPrimitivesList.Add(polygons[^1]);
+                    }
                     break;
                 case "rectangle":
-                    rectangles.Add(ParseRectangle(child));
+                    var rect = ParseRectangle(child);
+                    rectangles.Add(rect);
+                    component.OrderedPrimitivesList.Add(rect);
                     break;
                 case "arc":
-                    arcs.Add(ParseSchArc(child));
+                    var arc = ParseSchArc(child);
+                    arcs.Add(arc);
+                    component.OrderedPrimitivesList.Add(arc);
                     break;
                 case "circle":
-                    circles.Add(ParseCircle(child));
+                    var circle = ParseCircle(child);
+                    circles.Add(circle);
+                    component.OrderedPrimitivesList.Add(circle);
                     break;
                 case "bezier":
-                    beziers.Add(ParseBezier(child));
+                    var bez = ParseBezier(child);
+                    beziers.Add(bez);
+                    component.OrderedPrimitivesList.Add(bez);
                     break;
                 case "text":
-                    labels.Add(ParseTextLabel(child));
+                    var lbl = ParseTextLabel(child);
+                    labels.Add(lbl);
+                    component.OrderedPrimitivesList.Add(lbl);
                     break;
                 case "property":
                 case "pin_names":
@@ -317,6 +352,7 @@ public static class SymLibReader
             if (v is SExprSymbol s && s.Value == "hide")
             {
                 pin.IsHidden = true;
+                pin.HideIsSymbolValue = true;
                 break;
             }
         }
@@ -324,7 +360,10 @@ public static class SymLibReader
         {
             var hideChild = node.GetChild("hide");
             if (hideChild is not null)
+            {
                 pin.IsHidden = hideChild.GetBool() ?? true;
+                pin.HideIsSymbolValue = false;
+            }
         }
 
         // Parse alternates
@@ -415,9 +454,19 @@ public static class SymLibReader
         var hideNode = node.GetChild("hide");
         if (hideNode is not null)
         {
+            param.HideIsDirectChild = true;
             var hideVal = hideNode.GetBool();
             if (hideVal.HasValue && hideVal.Value)
                 param.IsVisible = false;
+        }
+
+        // (do_not_autoplace) or (do_not_autoplace yes) - KiCad 9+
+        var doNotAutoplaceNode = node.GetChild("do_not_autoplace");
+        if (doNotAutoplaceNode is not null)
+        {
+            param.DoNotAutoplace = true;
+            // Placed symbol properties use (do_not_autoplace yes), lib symbols use bare (do_not_autoplace)
+            param.DoNotAutoplaceHasValue = doNotAutoplaceNode.Values.Count > 0;
         }
 
         return param;

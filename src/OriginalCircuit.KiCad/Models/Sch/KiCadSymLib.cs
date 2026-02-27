@@ -34,6 +34,12 @@ public sealed class KiCadSymLib : ISchLibrary
     public string? Generator { get; set; }
 
     /// <summary>
+    /// Gets whether the generator name was stored as a bare symbol (KiCad 6 format)
+    /// rather than a quoted string (KiCad 8 format).
+    /// </summary>
+    public bool GeneratorIsSymbol { get; set; }
+
+    /// <summary>
     /// Gets the generator version.
     /// </summary>
     public string? GeneratorVersion { get; set; }

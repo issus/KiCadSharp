@@ -46,6 +46,12 @@ public sealed class KiCadSchSheet : ISchSheet
     public SchFillType FillType { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the fill uses color-only format (KiCad 9+: <c>(fill (color ...))</c>)
+    /// without a <c>(type ...)</c> child.
+    /// </summary>
+    public bool FillColorOnly { get; set; }
+
+    /// <summary>
     /// Gets or sets whether the sheet fields are auto-placed.
     /// </summary>
     public bool FieldsAutoplaced { get; set; }
@@ -55,6 +61,46 @@ public sealed class KiCadSchSheet : ISchSheet
     /// positions and font sizes.
     /// </summary>
     public List<KiCadSchParameter> SheetProperties { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets whether the sheet has an <c>(exclude_from_sim)</c> flag (KiCad 9+).
+    /// </summary>
+    public bool ExcludeFromSimPresent { get; set; }
+
+    /// <summary>
+    /// Gets or sets the value of the <c>(exclude_from_sim)</c> flag.
+    /// </summary>
+    public bool ExcludeFromSim { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the sheet is included in the BOM (KiCad 9+).
+    /// </summary>
+    public bool InBomPresent { get; set; }
+
+    /// <summary>
+    /// Gets or sets the value of the <c>(in_bom)</c> flag.
+    /// </summary>
+    public bool InBom { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets whether the sheet is included on the board (KiCad 9+).
+    /// </summary>
+    public bool OnBoardPresent { get; set; }
+
+    /// <summary>
+    /// Gets or sets the value of the <c>(on_board)</c> flag.
+    /// </summary>
+    public bool OnBoard { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets whether the sheet has a <c>(dnp)</c> flag (KiCad 9+).
+    /// </summary>
+    public bool DnpPresent { get; set; }
+
+    /// <summary>
+    /// Gets or sets the value of the <c>(dnp)</c> flag.
+    /// </summary>
+    public bool Dnp { get; set; }
 
     /// <summary>
     /// Gets or sets the raw instances S-expression subtree for round-trip fidelity.

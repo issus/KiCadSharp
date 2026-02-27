@@ -52,6 +52,11 @@ public sealed class KiCadSchLabel : ISchLabel
     public bool IsItalic { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the stroke node was present in the source file.
+    /// </summary>
+    public bool HasStroke { get; set; }
+
+    /// <summary>
     /// Gets the stroke width for the text label.
     /// </summary>
     public Coord StrokeWidth { get; set; }
@@ -65,6 +70,31 @@ public sealed class KiCadSchLabel : ISchLabel
     /// Gets the stroke color for the text label.
     /// </summary>
     public EdaColor StrokeColor { get; set; }
+
+    /// <summary>
+    /// Gets or sets the font thickness (stroke width of text glyphs).
+    /// </summary>
+    public Coord FontThickness { get; set; }
+
+    /// <summary>
+    /// Gets or sets the font color.
+    /// </summary>
+    public EdaColor FontColor { get; set; }
+
+    /// <summary>
+    /// Gets or sets the hyperlink URL from the text effects (KiCad 9+).
+    /// </summary>
+    public string? Href { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the text has an <c>(exclude_from_sim)</c> flag (KiCad 9+).
+    /// </summary>
+    public bool ExcludeFromSimPresent { get; set; }
+
+    /// <summary>
+    /// Gets or sets the value of the <c>(exclude_from_sim)</c> flag.
+    /// </summary>
+    public bool ExcludeFromSim { get; set; }
 
     /// <summary>
     /// Gets the UUID of the text label.
