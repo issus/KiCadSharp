@@ -43,9 +43,14 @@ public static class FootprintWriter
 
         if (component.IsLocked)
             b.AddSymbol("locked");
+        if (component.IsPlaced)
+            b.AddSymbol("placed");
 
         if (component.LayerName is not null)
             b.AddChild("layer", l => l.AddSymbol(component.LayerName));
+
+        if (component.Tedit is not null)
+            b.AddChild("tedit", t => t.AddValue(component.Tedit));
 
         if (component.Location != CoordPoint.Zero || component.Rotation != 0)
             b.AddChild(WriterHelper.BuildPosition(component.Location, component.Rotation));
@@ -219,8 +224,10 @@ public static class FootprintWriter
 
     private static SExpr BuildFpLine(KiCadPcbTrack track)
     {
-        var lb = new SExpressionBuilder("fp_line")
-            .AddChild("start", s => { s.AddValue(track.Start.X.ToMm()); s.AddValue(track.Start.Y.ToMm()); })
+        var lb = new SExpressionBuilder("fp_line");
+        if (track.IsLocked)
+            lb.AddSymbol("locked");
+        lb.AddChild("start", s => { s.AddValue(track.Start.X.ToMm()); s.AddValue(track.Start.Y.ToMm()); })
             .AddChild("end", e => { e.AddValue(track.End.X.ToMm()); e.AddValue(track.End.Y.ToMm()); })
             .AddChild(WriterHelper.BuildStroke(track.Width, track.StrokeStyle, track.StrokeColor));
 
@@ -238,8 +245,10 @@ public static class FootprintWriter
 
     private static SExpr BuildFpRect(KiCadPcbRectangle rect)
     {
-        var rb = new SExpressionBuilder("fp_rect")
-            .AddChild("start", s => { s.AddValue(rect.Start.X.ToMm()); s.AddValue(rect.Start.Y.ToMm()); })
+        var rb = new SExpressionBuilder("fp_rect");
+        if (rect.IsLocked)
+            rb.AddSymbol("locked");
+        rb.AddChild("start", s => { s.AddValue(rect.Start.X.ToMm()); s.AddValue(rect.Start.Y.ToMm()); })
             .AddChild("end", e => { e.AddValue(rect.End.X.ToMm()); e.AddValue(rect.End.Y.ToMm()); })
             .AddChild(WriterHelper.BuildStroke(rect.Width, rect.StrokeStyle, rect.StrokeColor));
 
@@ -257,8 +266,10 @@ public static class FootprintWriter
 
     private static SExpr BuildFpCircle(KiCadPcbCircle circle)
     {
-        var cb = new SExpressionBuilder("fp_circle")
-            .AddChild("center", c => { c.AddValue(circle.Center.X.ToMm()); c.AddValue(circle.Center.Y.ToMm()); })
+        var cb = new SExpressionBuilder("fp_circle");
+        if (circle.IsLocked)
+            cb.AddSymbol("locked");
+        cb.AddChild("center", c => { c.AddValue(circle.Center.X.ToMm()); c.AddValue(circle.Center.Y.ToMm()); })
             .AddChild("end", e => { e.AddValue(circle.End.X.ToMm()); e.AddValue(circle.End.Y.ToMm()); })
             .AddChild(WriterHelper.BuildStroke(circle.Width, circle.StrokeStyle, circle.StrokeColor));
 
@@ -276,8 +287,10 @@ public static class FootprintWriter
 
     private static SExpr BuildFpArc(KiCadPcbArc arc)
     {
-        var ab = new SExpressionBuilder("fp_arc")
-            .AddChild("start", s => { s.AddValue(arc.ArcStart.X.ToMm()); s.AddValue(arc.ArcStart.Y.ToMm()); })
+        var ab = new SExpressionBuilder("fp_arc");
+        if (arc.IsLocked)
+            ab.AddSymbol("locked");
+        ab.AddChild("start", s => { s.AddValue(arc.ArcStart.X.ToMm()); s.AddValue(arc.ArcStart.Y.ToMm()); })
             .AddChild("mid", m => { m.AddValue(arc.ArcMid.X.ToMm()); m.AddValue(arc.ArcMid.Y.ToMm()); })
             .AddChild("end", e => { e.AddValue(arc.ArcEnd.X.ToMm()); e.AddValue(arc.ArcEnd.Y.ToMm()); })
             .AddChild(WriterHelper.BuildStroke(arc.Width, arc.StrokeStyle, arc.StrokeColor));
@@ -403,6 +416,8 @@ public static class FootprintWriter
     private static SExpr BuildFpPoly(KiCadPcbPolygon poly)
     {
         var pb = new SExpressionBuilder("fp_poly");
+        if (poly.IsLocked)
+            pb.AddSymbol("locked");
 
         pb.AddChild(WriterHelper.BuildPoints(poly.Points));
         pb.AddChild(WriterHelper.BuildStroke(poly.Width, poly.StrokeStyle, poly.StrokeColor));
@@ -422,6 +437,8 @@ public static class FootprintWriter
     private static SExpr BuildFpCurve(KiCadPcbCurve curve)
     {
         var cb = new SExpressionBuilder("fp_curve");
+        if (curve.IsLocked)
+            cb.AddSymbol("locked");
 
         cb.AddChild(WriterHelper.BuildPoints(curve.Points));
         cb.AddChild(WriterHelper.BuildStroke(curve.Width, curve.StrokeStyle, curve.StrokeColor));

@@ -159,6 +159,19 @@ internal static class SExpressionHelper
     }
 
     /// <summary>
+    /// Checks whether a node has a specific symbol in its values list.
+    /// </summary>
+    public static bool HasSymbol(SExpr node, string symbol)
+    {
+        foreach (var v in node.Values)
+        {
+            if (v is SExprSymbol s && s.Value == symbol)
+                return true;
+        }
+        return false;
+    }
+
+    /// <summary>
     /// Parses a UUID from a <c>(uuid ...)</c> child node.
     /// </summary>
     public static string? ParseUuid(SExpr parent)

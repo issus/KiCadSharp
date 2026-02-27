@@ -96,13 +96,15 @@ public static class FootprintReader
             component.Attributes = attrs;
         }
 
-        // Parse locked
+        // Parse locked and placed flags
         foreach (var v in node.Values)
         {
-            if (v is SExprSymbol s && s.Value == "locked")
+            if (v is SExprSymbol s)
             {
-                component.IsLocked = true;
-                break;
+                if (s.Value == "locked")
+                    component.IsLocked = true;
+                else if (s.Value == "placed")
+                    component.IsPlaced = true;
             }
         }
 
@@ -442,6 +444,7 @@ public static class FootprintReader
             FillType = fillType,
             FillColor = fillColor,
             LayerName = node.GetChild("layer")?.GetString(),
+            IsLocked = SExpressionHelper.HasSymbol(node, "locked"),
             Uuid = SExpressionHelper.ParseUuid(node)
         };
     }
@@ -468,6 +471,7 @@ public static class FootprintReader
             FillType = fillType,
             FillColor = fillColor,
             LayerName = node.GetChild("layer")?.GetString(),
+            IsLocked = SExpressionHelper.HasSymbol(node, "locked"),
             Uuid = SExpressionHelper.ParseUuid(node)
         };
     }
@@ -494,6 +498,7 @@ public static class FootprintReader
             FillType = fillType,
             FillColor = fillColor,
             LayerName = node.GetChild("layer")?.GetString(),
+            IsLocked = SExpressionHelper.HasSymbol(node, "locked"),
             Uuid = SExpressionHelper.ParseUuid(node)
         };
     }
@@ -527,6 +532,7 @@ public static class FootprintReader
             ArcStart = start,
             ArcMid = mid,
             ArcEnd = end,
+            IsLocked = SExpressionHelper.HasSymbol(node, "locked"),
             Uuid = SExpressionHelper.ParseUuid(node)
         };
     }
@@ -548,6 +554,7 @@ public static class FootprintReader
             FillType = fillType,
             FillColor = fillColor,
             LayerName = node.GetChild("layer")?.GetString(),
+            IsLocked = SExpressionHelper.HasSymbol(node, "locked"),
             Uuid = SExpressionHelper.ParseUuid(node)
         };
     }
@@ -566,6 +573,7 @@ public static class FootprintReader
             StrokeStyle = style,
             StrokeColor = color,
             LayerName = node.GetChild("layer")?.GetString(),
+            IsLocked = SExpressionHelper.HasSymbol(node, "locked"),
             Uuid = SExpressionHelper.ParseUuid(node)
         };
     }
