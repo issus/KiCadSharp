@@ -129,6 +129,65 @@ public static class SchWriter
             b.AddChild(eb.Build());
         }
 
+        // Graphical shapes
+        foreach (var poly in sch.Polylines)
+        {
+            b.AddChild(new SExpressionBuilder("polyline")
+                .AddChild(WriterHelper.BuildPoints(poly.Vertices))
+                .AddChild(WriterHelper.BuildStroke(poly.LineWidth, poly.LineStyle, poly.Color))
+                .AddChild(WriterHelper.BuildFill(SchFillType.None))
+                .Build());
+        }
+
+        foreach (var line in sch.Lines)
+        {
+            b.AddChild(new SExpressionBuilder("polyline")
+                .AddChild(WriterHelper.BuildPoints([line.Start, line.End]))
+                .AddChild(WriterHelper.BuildStroke(line.Width, line.LineStyle, line.Color))
+                .AddChild(WriterHelper.BuildFill(SchFillType.None))
+                .Build());
+        }
+
+        foreach (var circle in sch.Circles)
+        {
+            b.AddChild(new SExpressionBuilder("circle")
+                .AddChild("center", c => { c.AddValue(circle.Center.X.ToMm()); c.AddValue(circle.Center.Y.ToMm()); })
+                .AddChild("radius", r => r.AddValue(circle.Radius.ToMm()))
+                .AddChild(WriterHelper.BuildStroke(circle.LineWidth))
+                .AddChild(WriterHelper.BuildFill(circle.FillType, circle.FillColor))
+                .Build());
+        }
+
+        foreach (var rect in sch.Rectangles)
+        {
+            b.AddChild(new SExpressionBuilder("rectangle")
+                .AddChild("start", s => { s.AddValue(rect.Corner1.X.ToMm()); s.AddValue(rect.Corner1.Y.ToMm()); })
+                .AddChild("end", e => { e.AddValue(rect.Corner2.X.ToMm()); e.AddValue(rect.Corner2.Y.ToMm()); })
+                .AddChild(WriterHelper.BuildStroke(rect.LineWidth))
+                .AddChild(WriterHelper.BuildFill(rect.FillType, rect.FillColor))
+                .Build());
+        }
+
+        foreach (var arc in sch.Arcs)
+        {
+            b.AddChild(new SExpressionBuilder("arc")
+                .AddChild("start", s => { s.AddValue(arc.ArcStart.X.ToMm()); s.AddValue(arc.ArcStart.Y.ToMm()); })
+                .AddChild("mid", m => { m.AddValue(arc.ArcMid.X.ToMm()); m.AddValue(arc.ArcMid.Y.ToMm()); })
+                .AddChild("end", e => { e.AddValue(arc.ArcEnd.X.ToMm()); e.AddValue(arc.ArcEnd.Y.ToMm()); })
+                .AddChild(WriterHelper.BuildStroke(arc.LineWidth))
+                .AddChild(WriterHelper.BuildFill(SchFillType.None))
+                .Build());
+        }
+
+        foreach (var bezier in sch.Beziers)
+        {
+            b.AddChild(new SExpressionBuilder("bezier")
+                .AddChild(WriterHelper.BuildPoints(bezier.ControlPoints))
+                .AddChild(WriterHelper.BuildStroke(bezier.LineWidth))
+                .AddChild(WriterHelper.BuildFill(SchFillType.None))
+                .Build());
+        }
+
         // Sheets
         foreach (var sheet in sch.Sheets)
         {

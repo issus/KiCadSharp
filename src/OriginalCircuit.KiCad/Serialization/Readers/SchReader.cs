@@ -89,6 +89,12 @@ public static class SchReader
         var components = new List<KiCadSchComponent>();
         var sheets = new List<KiCadSchSheet>();
         var libSymbols = new List<KiCadSchComponent>();
+        var polylines = new List<KiCadSchPolyline>();
+        var lines = new List<KiCadSchLine>();
+        var circles = new List<KiCadSchCircle>();
+        var rectangles = new List<KiCadSchRectangle>();
+        var arcs = new List<KiCadSchArc>();
+        var beziers = new List<KiCadSchBezier>();
 
         // Parse lib_symbols section
         var libSymbolsNode = root.GetChild("lib_symbols");
@@ -151,6 +157,21 @@ public static class SchReader
                     case "power_port":
                         powerObjects.Add(ParsePowerPort(child));
                         break;
+                    case "polyline":
+                        ParseSchPolylineOrLine(child, lines, polylines);
+                        break;
+                    case "circle":
+                        circles.Add(ParseSchCircle(child));
+                        break;
+                    case "rectangle":
+                        rectangles.Add(ParseSchRectangle(child));
+                        break;
+                    case "arc":
+                        arcs.Add(ParseSchArc(child));
+                        break;
+                    case "bezier":
+                        beziers.Add(ParseSchBezier(child));
+                        break;
                     case "version":
                     case "generator":
                     case "generator_version":
@@ -186,6 +207,12 @@ public static class SchReader
         sch.ComponentList.AddRange(components);
         sch.SheetList.AddRange(sheets);
         sch.LibSymbolList.AddRange(libSymbols);
+        sch.PolylineList.AddRange(polylines);
+        sch.LineList.AddRange(lines);
+        sch.CircleList.AddRange(circles);
+        sch.RectangleList.AddRange(rectangles);
+        sch.ArcList.AddRange(arcs);
+        sch.BezierList.AddRange(beziers);
         sch.DiagnosticList.AddRange(diagnostics);
 
         return sch;
@@ -491,5 +518,114 @@ public static class SchReader
         component.PinList.AddRange(pins);
 
         return component;
+    }
+
+    private static void ParseSchPolylineOrLine(SExpr node, List<KiCadSchLine> lines, List<KiCadSchPolyline> polylines)
+    {
+        var pts = SExpressionHelper.ParsePoints(node);
+        var (width, lineStyle, color) = SExpressionHelper.ParseStroke(node);
+        var uuid = SExpressionHelper.ParseUuid(node);
+
+        if (pts.Count == 2)
+        {
+            lines.Add(new KiCadSchLine
+            {
+                Start = pts[0],
+                End = pts[1],
+                Color = color,
+                Width = width,
+                LineStyle = lineStyle
+            });
+        }
+        else
+        {
+            polylines.Add(new KiCadSchPolyline
+            {
+                Vertices = pts,
+                Color = color,
+                LineWidth = width,
+                LineStyle = lineStyle
+            });
+        }
+    }
+
+    private static KiCadSchCircle ParseSchCircle(SExpr node)
+    {
+        var centerNode = node.GetChild("center");
+        var center = centerNode is not null ? SExpressionHelper.ParseXY(centerNode) : CoordPoint.Zero;
+        var radius = Coord.FromMm(node.GetChild("radius")?.GetDouble() ?? 0);
+        var (width, _, color) = SExpressionHelper.ParseStroke(node);
+        var (fillType, isFilled, fillColor) = SExpressionHelper.ParseFill(node);
+
+        return new KiCadSchCircle
+        {
+            Center = center,
+            Radius = radius,
+            Color = color,
+            FillColor = fillColor,
+            LineWidth = width,
+            IsFilled = isFilled,
+            FillType = fillType
+        };
+    }
+
+    private static KiCadSchRectangle ParseSchRectangle(SExpr node)
+    {
+        var startNode = node.GetChild("start");
+        var endNode = node.GetChild("end");
+        var start = startNode is not null ? SExpressionHelper.ParseXY(startNode) : CoordPoint.Zero;
+        var end = endNode is not null ? SExpressionHelper.ParseXY(endNode) : CoordPoint.Zero;
+        var (width, _, color) = SExpressionHelper.ParseStroke(node);
+        var (fillType, isFilled, fillColor) = SExpressionHelper.ParseFill(node);
+
+        return new KiCadSchRectangle
+        {
+            Corner1 = start,
+            Corner2 = end,
+            Color = color,
+            FillColor = fillColor,
+            LineWidth = width,
+            IsFilled = isFilled,
+            FillType = fillType
+        };
+    }
+
+    private static KiCadSchArc ParseSchArc(SExpr node)
+    {
+        var startNode = node.GetChild("start");
+        var midNode = node.GetChild("mid");
+        var endNode = node.GetChild("end");
+        var start = startNode is not null ? SExpressionHelper.ParseXY(startNode) : CoordPoint.Zero;
+        var mid = midNode is not null ? SExpressionHelper.ParseXY(midNode) : CoordPoint.Zero;
+        var end = endNode is not null ? SExpressionHelper.ParseXY(endNode) : CoordPoint.Zero;
+        var (width, _, color) = SExpressionHelper.ParseStroke(node);
+
+        var (center, radius, startAngle, endAngle) = SExpressionHelper.ComputeArcFromThreePoints(start, mid, end);
+
+        return new KiCadSchArc
+        {
+            Center = center,
+            Radius = radius,
+            StartAngle = startAngle,
+            EndAngle = endAngle,
+            Color = color,
+            LineWidth = width,
+            ArcStart = start,
+            ArcMid = mid,
+            ArcEnd = end
+        };
+    }
+
+    private static KiCadSchBezier ParseSchBezier(SExpr node)
+    {
+        var pts = SExpressionHelper.ParsePoints(node);
+        var (width, _, color) = SExpressionHelper.ParseStroke(node);
+
+        return new KiCadSchBezier
+        {
+            ControlPoints = pts,
+            Color = color,
+            LineWidth = width
+        };
     }
 }
