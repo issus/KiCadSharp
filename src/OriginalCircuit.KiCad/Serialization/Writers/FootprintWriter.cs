@@ -120,19 +120,19 @@ public static class FootprintWriter
                 {
                     xyz.AddValue(component.Model3DOffset.X.ToMm());
                     xyz.AddValue(component.Model3DOffset.Y.ToMm());
-                    xyz.AddValue(0);
+                    xyz.AddValue(component.Model3DOffsetZ);
                 }));
                 m.AddChild("scale", s => s.AddChild("xyz", xyz =>
                 {
                     xyz.AddValue(component.Model3DScale.X.ToMm());
                     xyz.AddValue(component.Model3DScale.Y.ToMm());
-                    xyz.AddValue(1);
+                    xyz.AddValue(component.Model3DScaleZ);
                 }));
                 m.AddChild("rotate", r => r.AddChild("xyz", xyz =>
                 {
                     xyz.AddValue(component.Model3DRotation.X.ToMm());
                     xyz.AddValue(component.Model3DRotation.Y.ToMm());
-                    xyz.AddValue(0);
+                    xyz.AddValue(component.Model3DRotationZ);
                 }));
             });
         }
@@ -255,6 +255,18 @@ public static class FootprintWriter
             pb.AddChild("solder_mask_margin", c => c.AddValue(pad.SolderMaskExpansion.ToMm()));
         if (pad.Clearance != Coord.Zero)
             pb.AddChild("clearance", c => c.AddValue(pad.Clearance.ToMm()));
+        if (pad.SolderPasteMargin != Coord.Zero)
+            pb.AddChild("solder_paste_margin", c => c.AddValue(pad.SolderPasteMargin.ToMm()));
+        if (pad.SolderPasteRatio != 0)
+            pb.AddChild("solder_paste_margin_ratio", c => c.AddValue(pad.SolderPasteRatio));
+        if (pad.ThermalWidth != Coord.Zero)
+            pb.AddChild("thermal_width", c => c.AddValue(pad.ThermalWidth.ToMm()));
+        if (pad.ThermalGap != Coord.Zero)
+            pb.AddChild("thermal_gap", c => c.AddValue(pad.ThermalGap.ToMm()));
+        if (pad.ZoneConnect != ZoneConnectionType.Inherited)
+            pb.AddChild("zone_connect", c => c.AddValue((int)pad.ZoneConnect));
+        if (pad.DieLength != Coord.Zero)
+            pb.AddChild("die_length", c => c.AddValue(pad.DieLength.ToMm()));
 
         if (pad.Uuid is not null)
             pb.AddChild(WriterHelper.BuildUuid(pad.Uuid));

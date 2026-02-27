@@ -147,9 +147,14 @@ public sealed class KiCadPcbComponent : IPcbComponent
     public string? Model3D { get; set; }
 
     /// <summary>
-    /// Gets the 3D model offset (X, Y in mm; Z is not stored).
+    /// Gets the 3D model offset (X, Y in mm).
     /// </summary>
     public CoordPoint Model3DOffset { get; set; }
+
+    /// <summary>
+    /// Gets the 3D model Z offset in mm.
+    /// </summary>
+    public double Model3DOffsetZ { get; set; }
 
     /// <summary>
     /// Gets the 3D model scale (X, Y factors).
@@ -157,9 +162,19 @@ public sealed class KiCadPcbComponent : IPcbComponent
     public CoordPoint Model3DScale { get; set; } = new(Coord.FromMm(1), Coord.FromMm(1));
 
     /// <summary>
+    /// Gets the 3D model Z scale factor.
+    /// </summary>
+    public double Model3DScaleZ { get; set; } = 1.0;
+
+    /// <summary>
     /// Gets the 3D model rotation (X, Y angles in degrees).
     /// </summary>
     public CoordPoint Model3DRotation { get; set; }
+
+    /// <summary>
+    /// Gets the 3D model Z rotation in degrees.
+    /// </summary>
+    public double Model3DRotationZ { get; set; }
 
     /// <summary>
     /// Gets the UUID / tstamp.

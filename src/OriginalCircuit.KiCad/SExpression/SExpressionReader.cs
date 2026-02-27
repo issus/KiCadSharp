@@ -140,10 +140,15 @@ public static class SExpressionReader
         return new SExprNumber(value);
     }
 
+    /// <summary>
+    /// Returns a cached SExprSymbol if the value matches a known interned string.
+    /// Uses ReferenceEquals because all tokens from InternToken() are interned strings,
+    /// making reference comparison sufficient and faster than string comparison.
+    /// Non-interned strings will simply create a new SExprSymbol instance.
+    /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static SExprSymbol GetCachedSymbol(string value)
     {
-        // Since tokens are interned, we can use reference equality for the common case
         for (var i = 0; i < _cachedSymbolPairs.Length; i++)
         {
             if (ReferenceEquals(_cachedSymbolPairs[i].Key, value))

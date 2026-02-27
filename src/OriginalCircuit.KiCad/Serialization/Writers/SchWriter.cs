@@ -197,23 +197,8 @@ public static class SchWriter
 
         foreach (var pin in sheet.Pins.OfType<KiCadSchSheetPin>())
         {
-            var ioStr = pin.IoType switch
-            {
-                0 => "input",
-                1 => "output",
-                2 => "bidirectional",
-                3 => "tri_state",
-                4 => "passive",
-                _ => "bidirectional"
-            };
-            var angleFromSide = pin.Side switch
-            {
-                0 => 180.0,
-                1 => 0.0,
-                2 => 90.0,
-                3 => 270.0,
-                _ => 0.0
-            };
+            var ioStr = SExpressionHelper.SheetPinIoTypeToString(pin.IoType);
+            var angleFromSide = SExpressionHelper.SheetPinSideToAngle(pin.Side);
             var pb = new SExpressionBuilder("pin")
                 .AddValue(pin.Name)
                 .AddSymbol(ioStr)

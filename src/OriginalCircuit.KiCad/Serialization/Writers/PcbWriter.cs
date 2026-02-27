@@ -127,6 +127,13 @@ public static class PcbWriter
         if (via.IsLocked)
             vb.AddSymbol("locked");
 
+        if (via.IsFree)
+            vb.AddChild("free", _ => { });
+        if (via.RemoveUnusedLayers)
+            vb.AddChild("remove_unused_layers", _ => { });
+        if (via.KeepEndLayers)
+            vb.AddChild("keep_end_layers", _ => { });
+
         vb.AddChild(WriterHelper.BuildPosition(via.Location))
           .AddChild("size", s => s.AddValue(via.Diameter.ToMm()))
           .AddChild("drill", d => d.AddValue(via.HoleSize.ToMm()));
@@ -194,6 +201,9 @@ public static class PcbWriter
 
         if (region.LayerName is not null)
             zb.AddChild("layer", l => l.AddSymbol(region.LayerName));
+
+        if (region.Priority > 0)
+            zb.AddChild("priority", p => p.AddValue(region.Priority));
 
         if (region.Uuid is not null)
             zb.AddChild(WriterHelper.BuildUuid(region.Uuid));

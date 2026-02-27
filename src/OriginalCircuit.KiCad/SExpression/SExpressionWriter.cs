@@ -29,6 +29,8 @@ public static class SExpressionWriter
     /// <param name="ct">Cancellation token.</param>
     public static async ValueTask WriteAsync(SExpression expr, Stream stream, CancellationToken ct = default)
     {
+        // Note: entire tree is materialized as a string before streaming.
+        // For very large files (50MB+), consider implementing a node-by-node streaming writer.
         var text = Write(expr);
         var writer = new StreamWriter(stream, Encoding.UTF8, 65536, leaveOpen: true);
         await using (writer.ConfigureAwait(false))
@@ -153,7 +155,13 @@ public static class SExpressionWriter
             totalLen += 2 + child.Token.Length;
             foreach (var v in child.Values)
             {
-                totalLen += 1 + (v.ToString()?.Length ?? 0);
+                totalLen += 1 + v switch
+                {
+                    SExprString s => s.Value.Length + 2, // +2 for quotes
+                    SExprNumber n => SExprNumber.FormatNumber(n.Value).Length,
+                    SExprSymbol s => s.Value.Length,
+                    _ => 0
+                };
             }
         }
         return totalLen < 80;

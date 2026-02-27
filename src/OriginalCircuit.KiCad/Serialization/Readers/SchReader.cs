@@ -348,25 +348,10 @@ public static class SchReader
     {
         var name = node.GetString(0) ?? "";
         var ioTypeStr = node.GetString(1) ?? "bidirectional";
-        var ioType = ioTypeStr switch
-        {
-            "input" => 0,
-            "output" => 1,
-            "bidirectional" => 2,
-            "tri_state" => 3,
-            "passive" => 4,
-            _ => 2
-        };
+        var ioType = SExpressionHelper.StringToSheetPinIoType(ioTypeStr);
 
         var (loc, angle) = SExpressionHelper.ParsePosition(node);
-        var side = ((int)angle % 360) switch
-        {
-            0 => 1,    // right
-            90 => 2,   // top
-            180 => 0,  // left
-            270 => 3,  // bottom
-            _ => 0
-        };
+        var side = SExpressionHelper.AngleToSheetPinSide(angle);
 
         return new KiCadSchSheetPin
         {

@@ -142,10 +142,10 @@ internal static class SExpressionHelper
     {
         if (node is null) return default;
 
-        var r = (byte)(node.GetDouble(0) ?? 0);
-        var g = (byte)(node.GetDouble(1) ?? 0);
-        var b = (byte)(node.GetDouble(2) ?? 0);
-        var a = (byte)((node.GetDouble(3) ?? 1.0) * 255);
+        var r = (byte)Math.Clamp(node.GetDouble(0) ?? 0, 0, 255);
+        var g = (byte)Math.Clamp(node.GetDouble(1) ?? 0, 0, 255);
+        var b = (byte)Math.Clamp(node.GetDouble(2) ?? 0, 0, 255);
+        var a = (byte)Math.Clamp((node.GetDouble(3) ?? 1.0) * 255, 0, 255);
         return new EdaColor(r, g, b, a);
     }
 
@@ -457,4 +457,54 @@ internal static class SExpressionHelper
             _ => "none"
         };
     }
+
+    /// <summary>
+    /// Converts a sheet pin I/O type integer to its KiCad string representation.
+    /// </summary>
+    public static string SheetPinIoTypeToString(int ioType) => ioType switch
+    {
+        0 => "input",
+        1 => "output",
+        2 => "bidirectional",
+        3 => "tri_state",
+        4 => "passive",
+        _ => "bidirectional"
+    };
+
+    /// <summary>
+    /// Converts a KiCad sheet pin I/O type string to its integer representation.
+    /// </summary>
+    public static int StringToSheetPinIoType(string value) => value switch
+    {
+        "input" => 0,
+        "output" => 1,
+        "bidirectional" => 2,
+        "tri_state" => 3,
+        "passive" => 4,
+        _ => 2
+    };
+
+    /// <summary>
+    /// Converts a sheet pin side integer to angle in degrees.
+    /// </summary>
+    public static double SheetPinSideToAngle(int side) => side switch
+    {
+        0 => 180.0,
+        1 => 0.0,
+        2 => 90.0,
+        3 => 270.0,
+        _ => 0.0
+    };
+
+    /// <summary>
+    /// Converts an angle in degrees to a sheet pin side integer.
+    /// </summary>
+    public static int AngleToSheetPinSide(double angle) => ((int)angle % 360) switch
+    {
+        180 => 0,
+        0 => 1,
+        90 => 2,
+        270 => 3,
+        _ => 1
+    };
 }

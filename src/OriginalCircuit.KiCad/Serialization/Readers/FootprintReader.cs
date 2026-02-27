@@ -159,19 +159,28 @@ public static class FootprintReader
                         component.Model3D = child.GetString();
                         var offsetNode = child.GetChild("offset")?.GetChild("xyz");
                         if (offsetNode is not null)
+                        {
                             component.Model3DOffset = new CoordPoint(
                                 Coord.FromMm(offsetNode.GetDouble(0) ?? 0),
                                 Coord.FromMm(offsetNode.GetDouble(1) ?? 0));
+                            component.Model3DOffsetZ = offsetNode.GetDouble(2) ?? 0;
+                        }
                         var scaleNode = child.GetChild("scale")?.GetChild("xyz");
                         if (scaleNode is not null)
+                        {
                             component.Model3DScale = new CoordPoint(
                                 Coord.FromMm(scaleNode.GetDouble(0) ?? 1),
                                 Coord.FromMm(scaleNode.GetDouble(1) ?? 1));
+                            component.Model3DScaleZ = scaleNode.GetDouble(2) ?? 1;
+                        }
                         var rotateNode = child.GetChild("rotate")?.GetChild("xyz");
                         if (rotateNode is not null)
+                        {
                             component.Model3DRotation = new CoordPoint(
                                 Coord.FromMm(rotateNode.GetDouble(0) ?? 0),
                                 Coord.FromMm(rotateNode.GetDouble(1) ?? 0));
+                            component.Model3DRotationZ = rotateNode.GetDouble(2) ?? 0;
+                        }
                         break;
                     case "property":
                         properties.Add(SymLibReader.ParseProperty(child));
@@ -295,7 +304,10 @@ public static class FootprintReader
         var zcNode = node.GetChild("zone_connect");
         if (zcNode is not null)
         {
-            pad.ZoneConnect = (ZoneConnectionType)(zcNode.GetInt() ?? 0);
+            var zcVal = zcNode.GetInt() ?? 0;
+            pad.ZoneConnect = Enum.IsDefined(typeof(ZoneConnectionType), zcVal)
+                ? (ZoneConnectionType)zcVal
+                : ZoneConnectionType.Inherited;
         }
 
         pad.PinFunction = node.GetChild("pinfunction")?.GetString();
