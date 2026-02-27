@@ -410,6 +410,9 @@ public static class PcbReader
             graphic.LockedIsChildNode = true;
         }
 
+        var strokeNode = node.GetChild("stroke");
+        if (strokeNode is not null)
+            graphic.HasStroke = true;
         var (strokeWidth, strokeStyle, strokeColor) = SExpressionHelper.ParseStroke(node);
         graphic.StrokeWidth = strokeWidth;
         graphic.StrokeStyle = strokeStyle;
