@@ -174,13 +174,13 @@ public static class SymLibWriter
          {
              n.AddValue(pin.Name ?? "~");
              if (!pin.ShowName)
-                 n.AddChild(WriterHelper.BuildTextEffects(Coord.FromMm(1.27), Coord.FromMm(1.27), hide: true));
+                 n.AddChild(WriterHelper.BuildTextEffects(WriterHelper.DefaultTextSize, WriterHelper.DefaultTextSize, hide: true));
          })
          .AddChild("number", n =>
          {
              n.AddValue(pin.Designator ?? "~");
              if (!pin.ShowDesignator)
-                 n.AddChild(WriterHelper.BuildTextEffects(Coord.FromMm(1.27), Coord.FromMm(1.27), hide: true));
+                 n.AddChild(WriterHelper.BuildTextEffects(WriterHelper.DefaultTextSize, WriterHelper.DefaultTextSize, hide: true));
          });
 
         return b.Build();
@@ -249,7 +249,7 @@ public static class SymLibWriter
         return new SExpressionBuilder("text")
             .AddValue(label.Text)
             .AddChild(WriterHelper.BuildPosition(label.Location, label.Rotation))
-            .AddChild(WriterHelper.BuildTextEffects(Coord.FromMm(1.27), Coord.FromMm(1.27), label.Justification, label.IsHidden, label.IsMirrored))
+            .AddChild(WriterHelper.BuildTextEffects(WriterHelper.DefaultTextSize, WriterHelper.DefaultTextSize, label.Justification, label.IsHidden, label.IsMirrored))
             .Build();
     }
 }
