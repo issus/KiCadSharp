@@ -19,6 +19,9 @@ public sealed class KiCadPcbComponent : IPcbComponent
     private readonly List<KiCadPcbRegion> _regions = [];
     private readonly List<KiCadPcbRectangle> _rectangles = [];
     private readonly List<KiCadPcbCircle> _circles = [];
+    private readonly List<KiCadPcbPolygon> _polygons = [];
+    private readonly List<KiCadPcbCurve> _curves = [];
+    private readonly List<KiCadPcb3DModel> _models3D = [];
     private readonly List<KiCadSchParameter> _properties = [];
     private readonly List<KiCadDiagnostic> _diagnostics = [];
 
@@ -74,6 +77,18 @@ public sealed class KiCadPcbComponent : IPcbComponent
     /// </summary>
     public IReadOnlyList<KiCadPcbCircle> Circles => _circles;
     internal List<KiCadPcbCircle> CircleList => _circles;
+
+    /// <summary>
+    /// Gets the polygons (fp_poly) in this footprint.
+    /// </summary>
+    public IReadOnlyList<KiCadPcbPolygon> Polygons => _polygons;
+    internal List<KiCadPcbPolygon> PolygonList => _polygons;
+
+    /// <summary>
+    /// Gets the bezier curves (fp_curve) in this footprint.
+    /// </summary>
+    public IReadOnlyList<KiCadPcbCurve> Curves => _curves;
+    internal List<KiCadPcbCurve> CurveList => _curves;
 
     /// <summary>
     /// Gets the footprint location on the board.
@@ -156,6 +171,17 @@ public sealed class KiCadPcbComponent : IPcbComponent
     public Coord ThermalGap { get; set; }
 
     /// <summary>
+    /// Gets the tedit timestamp (legacy).
+    /// </summary>
+    public string? Tedit { get; set; }
+
+    /// <summary>
+    /// Gets the list of all 3D models associated with this footprint.
+    /// </summary>
+    public IReadOnlyList<KiCadPcb3DModel> Models3D => _models3D;
+    internal List<KiCadPcb3DModel> Model3DList => _models3D;
+
+    /// <summary>
     /// Gets the 3D model path.
     /// </summary>
     public string? Model3D { get; set; }
@@ -223,6 +249,8 @@ public sealed class KiCadPcbComponent : IPcbComponent
             foreach (var text in Texts) rect = rect.Union(text.Bounds);
             foreach (var r in Rectangles) rect = rect.Union(r.Bounds);
             foreach (var c in Circles) rect = rect.Union(c.Bounds);
+            foreach (var p in Polygons) rect = rect.Union(p.Bounds);
+            foreach (var cv in Curves) rect = rect.Union(cv.Bounds);
             return rect;
         }
     }

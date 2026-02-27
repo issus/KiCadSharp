@@ -131,14 +131,33 @@ public static class FootprintWriter
             b.AddChild(BuildFpArc(arc));
         }
 
+        // Polygons
+        foreach (var poly in component.Polygons)
+        {
+            b.AddChild(BuildFpPoly(poly));
+        }
+
+        // Bezier curves
+        foreach (var curve in component.Curves)
+        {
+            b.AddChild(BuildFpCurve(curve));
+        }
+
         // Pads
         foreach (var pad in component.Pads.OfType<KiCadPcbPad>())
         {
             b.AddChild(BuildPad(pad));
         }
 
-        // 3D model
-        if (component.Model3D is not null)
+        // 3D models (prefer the list, fall back to single model)
+        if (component.Models3D.Count > 0)
+        {
+            foreach (var model in component.Models3D)
+            {
+                b.AddChild(Build3DModel(model));
+            }
+        }
+        else if (component.Model3D is not null)
         {
             b.AddChild("model", m =>
             {
@@ -294,11 +313,20 @@ public static class FootprintWriter
                 {
                     d.AddSymbol("oval");
                     d.AddValue(pad.HoleSize.ToMm());
+                    if (pad.DrillSizeY != Coord.Zero)
+                        d.AddValue(pad.DrillSizeY.ToMm());
+                    if (pad.DrillOffset != CoordPoint.Zero)
+                        d.AddChild("offset", o => { o.AddValue(pad.DrillOffset.X.ToMm()); o.AddValue(pad.DrillOffset.Y.ToMm()); });
                 });
             }
             else
             {
-                pb.AddChild("drill", d => d.AddValue(pad.HoleSize.ToMm()));
+                pb.AddChild("drill", d =>
+                {
+                    d.AddValue(pad.HoleSize.ToMm());
+                    if (pad.DrillOffset != CoordPoint.Zero)
+                        d.AddChild("offset", o => { o.AddValue(pad.DrillOffset.X.ToMm()); o.AddValue(pad.DrillOffset.Y.ToMm()); });
+                });
             }
         }
 
@@ -344,10 +372,90 @@ public static class FootprintWriter
             pb.AddChild("zone_connect", c => c.AddValue((int)pad.ZoneConnect));
         if (pad.DieLength != Coord.Zero)
             pb.AddChild("die_length", c => c.AddValue(pad.DieLength.ToMm()));
+        if (pad.ThermalBridgeAngle != 0)
+            pb.AddChild("thermal_bridge_angle", c => c.AddValue(pad.ThermalBridgeAngle));
+
+        if (pad.RemoveUnusedLayers)
+            pb.AddChild("remove_unused_layers", _ => { });
+        if (pad.KeepEndLayers)
+            pb.AddChild("keep_end_layers", _ => { });
+
+        if (pad.ChamferRatio > 0)
+            pb.AddChild("chamfer_ratio", c => c.AddValue(pad.ChamferRatio));
+        if (pad.ChamferCorners.Length > 0)
+        {
+            pb.AddChild("chamfer", c =>
+            {
+                foreach (var corner in pad.ChamferCorners)
+                    c.AddSymbol(corner);
+            });
+        }
+
+        if (pad.PadProperty is not null)
+            pb.AddChild("property", p => p.AddValue(pad.PadProperty));
 
         if (pad.Uuid is not null)
             pb.AddChild(WriterHelper.BuildUuid(pad.Uuid));
 
         return pb.Build();
+    }
+
+    private static SExpr BuildFpPoly(KiCadPcbPolygon poly)
+    {
+        var pb = new SExpressionBuilder("fp_poly");
+
+        pb.AddChild(WriterHelper.BuildPoints(poly.Points));
+        pb.AddChild(WriterHelper.BuildStroke(poly.Width, poly.StrokeStyle, poly.StrokeColor));
+
+        if (poly.FillType != SchFillType.None)
+            pb.AddChild(WriterHelper.BuildFill(poly.FillType, poly.FillColor));
+
+        if (poly.LayerName is not null)
+            pb.AddChild("layer", l => l.AddSymbol(poly.LayerName));
+
+        if (poly.Uuid is not null)
+            pb.AddChild(WriterHelper.BuildUuid(poly.Uuid));
+
+        return pb.Build();
+    }
+
+    private static SExpr BuildFpCurve(KiCadPcbCurve curve)
+    {
+        var cb = new SExpressionBuilder("fp_curve");
+
+        cb.AddChild(WriterHelper.BuildPoints(curve.Points));
+        cb.AddChild(WriterHelper.BuildStroke(curve.Width, curve.StrokeStyle, curve.StrokeColor));
+
+        if (curve.LayerName is not null)
+            cb.AddChild("layer", l => l.AddSymbol(curve.LayerName));
+
+        if (curve.Uuid is not null)
+            cb.AddChild(WriterHelper.BuildUuid(curve.Uuid));
+
+        return cb.Build();
+    }
+
+    private static SExpr Build3DModel(KiCadPcb3DModel model)
+    {
+        var mb = new SExpressionBuilder("model").AddValue(model.Path);
+        mb.AddChild("offset", o => o.AddChild("xyz", xyz =>
+        {
+            xyz.AddValue(model.Offset.X.ToMm());
+            xyz.AddValue(model.Offset.Y.ToMm());
+            xyz.AddValue(model.OffsetZ);
+        }));
+        mb.AddChild("scale", s => s.AddChild("xyz", xyz =>
+        {
+            xyz.AddValue(model.Scale.X.ToMm());
+            xyz.AddValue(model.Scale.Y.ToMm());
+            xyz.AddValue(model.ScaleZ);
+        }));
+        mb.AddChild("rotate", r => r.AddChild("xyz", xyz =>
+        {
+            xyz.AddValue(model.Rotation.X.ToMm());
+            xyz.AddValue(model.Rotation.Y.ToMm());
+            xyz.AddValue(model.RotationZ);
+        }));
+        return mb.Build();
     }
 }
