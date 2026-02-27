@@ -2,6 +2,7 @@ using OriginalCircuit.Eda.Enums;
 using OriginalCircuit.Eda.Models;
 using OriginalCircuit.Eda.Models.Pcb;
 using OriginalCircuit.Eda.Primitives;
+using SExpr = OriginalCircuit.KiCad.SExpression.SExpression;
 
 namespace OriginalCircuit.KiCad.Models.Pcb;
 
@@ -80,6 +81,21 @@ public sealed class KiCadPcbText : IPcbText
     /// Gets whether this text is hidden.
     /// </summary>
     public bool IsHidden { get; set; }
+
+    /// <summary>
+    /// Gets the raw render_cache node for round-trip fidelity.
+    /// </summary>
+    public SExpr? RenderCache { get; set; }
+
+    /// <summary>
+    /// Gets whether this fp_text is unlocked (placement can differ from footprint).
+    /// </summary>
+    public bool IsUnlocked { get; set; }
+
+    /// <summary>
+    /// Gets whether this text uses knockout rendering.
+    /// </summary>
+    public bool IsKnockout { get; set; }
 
     /// <inheritdoc />
     public CoordRect Bounds

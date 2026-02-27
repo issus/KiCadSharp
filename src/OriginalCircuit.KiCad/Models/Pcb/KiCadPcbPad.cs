@@ -2,6 +2,7 @@ using OriginalCircuit.Eda.Enums;
 using OriginalCircuit.Eda.Models;
 using OriginalCircuit.Eda.Models.Pcb;
 using OriginalCircuit.Eda.Primitives;
+using SExpr = OriginalCircuit.KiCad.SExpression.SExpression;
 
 namespace OriginalCircuit.KiCad.Models.Pcb;
 
@@ -152,6 +153,16 @@ public sealed class KiCadPcbPad : IPcbPad
     /// Gets the UUID / tstamp.
     /// </summary>
     public string? Uuid { get; set; }
+
+    /// <summary>
+    /// Gets the raw primitives node for custom pad shapes, for round-trip fidelity.
+    /// </summary>
+    public SExpr? PrimitivesRaw { get; set; }
+
+    /// <summary>
+    /// Gets whether this pad is locked.
+    /// </summary>
+    public bool IsLocked { get; set; }
 
     /// <inheritdoc />
     public CoordRect Bounds => CoordRect.FromCenterAndSize(Location, Size.X, Size.Y);

@@ -172,6 +172,9 @@ public static class SchReader
                     case "bezier":
                         beziers.Add(ParseSchBezier(child));
                         break;
+                    case "image":
+                        sch.ImagesRaw.Add(child);
+                        break;
                     case "version":
                     case "generator":
                     case "generator_version":

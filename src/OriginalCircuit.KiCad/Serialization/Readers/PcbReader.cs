@@ -328,6 +328,16 @@ public static class PcbReader
         text.LayerName = node.GetChild("layer")?.GetString();
         text.Uuid = SExpressionHelper.ParseUuid(node);
 
+        // Check for knockout
+        foreach (var v in node.Values)
+        {
+            if (v is SExprSymbol s && s.Value == "knockout")
+            {
+                text.IsKnockout = true;
+                break;
+            }
+        }
+
         var (fontH, fontW, justification, isHidden, isMirrored, isBold, isItalic, fontFace, fontThickness, fontColor) = SExpressionHelper.ParseTextEffects(node);
         text.Height = fontH;
         text.FontWidth = fontW;
@@ -341,6 +351,11 @@ public static class PcbReader
 
         // Check for hide both from effects and as a top-level symbol on the gr_text node
         text.IsHidden = isHidden || node.Values.Any(v => v is SExprSymbol s && s.Value == "hide");
+
+        // Render cache (raw preservation)
+        var renderCache = node.GetChild("render_cache");
+        if (renderCache is not null)
+            text.RenderCache = renderCache;
 
         return text;
     }

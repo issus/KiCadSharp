@@ -156,6 +156,12 @@ public static class FootprintReader
                     case "fp_text":
                         texts.Add(ParseFpText(child));
                         break;
+                    case "fp_text_private":
+                        component.TextPrivateRaw.Add(child);
+                        break;
+                    case "fp_text_box":
+                        component.TextBoxesRaw.Add(child);
+                        break;
                     case "fp_line":
                         tracks.Add(ParseFpLine(child));
                         break;
@@ -206,6 +212,21 @@ public static class FootprintReader
                     case "property":
                         properties.Add(SymLibReader.ParseProperty(child));
                         break;
+                    case "teardrop":
+                        component.TeardropRaw = child;
+                        break;
+                    case "net_tie_pad_groups":
+                        component.NetTiePadGroupsRaw = child;
+                        break;
+                    case "private_layers":
+                        component.PrivateLayersRaw = child;
+                        break;
+                    case "zone":
+                        component.ZonesRaw.Add(child);
+                        break;
+                    case "group":
+                        component.GroupsRaw.Add(child);
+                        break;
                     case "layer":
                     case "descr":
                     case "tags":
@@ -224,7 +245,6 @@ public static class FootprintReader
                     case "zone_connect":
                     case "autoplace_cost90":
                     case "autoplace_cost180":
-                    case "fp_text_private":
                         // Known tokens handled elsewhere or intentionally skipped
                         break;
                     default:
@@ -369,6 +389,21 @@ public static class FootprintReader
         // Thermal bridge angle
         pad.ThermalBridgeAngle = node.GetChild("thermal_bridge_angle")?.GetDouble() ?? 0;
 
+        // Custom pad primitives
+        var primitivesNode = node.GetChild("primitives");
+        if (primitivesNode is not null)
+            pad.PrimitivesRaw = primitivesNode;
+
+        // Pad locked flag
+        foreach (var v in node.Values)
+        {
+            if (v is SExprSymbol s && s.Value == "locked")
+            {
+                pad.IsLocked = true;
+                break;
+            }
+        }
+
         // Remove unused layers and keep end layers
         pad.RemoveUnusedLayers = node.GetChild("remove_unused_layers") is not null;
         pad.KeepEndLayers = node.GetChild("keep_end_layers") is not null;
@@ -392,13 +427,16 @@ public static class FootprintReader
 
         text.LayerName = node.GetChild("layer")?.GetString();
 
-        // Check for hide
+        // Check for hide and unlocked symbols
         foreach (var v in node.Values)
         {
-            if (v is SExprSymbol s && s.Value == "hide")
+            if (v is SExprSymbol s)
             {
-                text.IsHidden = true;
-                break;
+                switch (s.Value)
+                {
+                    case "hide": text.IsHidden = true; break;
+                    case "unlocked": text.IsUnlocked = true; break;
+                }
             }
         }
 
@@ -412,6 +450,11 @@ public static class FootprintReader
         text.FontColor = fontColor;
         text.Justification = justification;
         text.IsMirrored = isMirrored;
+
+        // Render cache (raw preservation)
+        var renderCache = node.GetChild("render_cache");
+        if (renderCache is not null)
+            text.RenderCache = renderCache;
 
         text.Uuid = SExpressionHelper.ParseUuid(node);
 

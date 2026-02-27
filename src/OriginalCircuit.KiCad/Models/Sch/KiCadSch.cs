@@ -173,6 +173,11 @@ public sealed class KiCadSch : ISchDocument
     public IReadOnlyList<KiCadSchLine> Lines => _lines;
     internal List<KiCadSchLine> LineList => _lines;
 
+    /// <summary>
+    /// Gets the raw image nodes at schematic level for round-trip fidelity.
+    /// </summary>
+    public List<SExpr> ImagesRaw { get; } = [];
+
     /// <inheritdoc />
     /// <remarks>This property is computed on each access. Cache the result if accessing repeatedly.</remarks>
     public CoordRect Bounds

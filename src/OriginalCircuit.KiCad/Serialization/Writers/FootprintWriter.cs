@@ -106,10 +106,30 @@ public static class FootprintWriter
         if (component.AutoplaceCost180 != 0)
             b.AddChild("autoplace_cost180", c => c.AddValue(component.AutoplaceCost180));
 
+        // Private layers
+        if (component.PrivateLayersRaw is not null)
+            b.AddChild(component.PrivateLayersRaw);
+
+        // Net tie pad groups
+        if (component.NetTiePadGroupsRaw is not null)
+            b.AddChild(component.NetTiePadGroupsRaw);
+
         // Texts
         foreach (var text in component.Texts.OfType<KiCadPcbText>())
         {
             b.AddChild(BuildFpText(text));
+        }
+
+        // Text private (raw)
+        foreach (var tp in component.TextPrivateRaw)
+        {
+            b.AddChild(tp);
+        }
+
+        // Text boxes (raw)
+        foreach (var tb2 in component.TextBoxesRaw)
+        {
+            b.AddChild(tb2);
         }
 
         // Lines (stored as tracks in the model)
@@ -158,6 +178,22 @@ public static class FootprintWriter
         if (component.Uuid is not null)
             b.AddChild(WriterHelper.BuildUuid(component.Uuid));
 
+        // Teardrop (raw)
+        if (component.TeardropRaw is not null)
+            b.AddChild(component.TeardropRaw);
+
+        // Zones within footprint (raw)
+        foreach (var zone in component.ZonesRaw)
+        {
+            b.AddChild(zone);
+        }
+
+        // Groups within footprint (raw)
+        foreach (var group in component.GroupsRaw)
+        {
+            b.AddChild(group);
+        }
+
         // 3D models (prefer the list, fall back to single model)
         if (component.Models3D.Count > 0)
         {
@@ -204,10 +240,16 @@ public static class FootprintWriter
         if (text.IsHidden)
             tb.AddSymbol("hide");
 
+        if (text.IsUnlocked)
+            tb.AddSymbol("unlocked");
+
         tb.AddChild(WriterHelper.BuildPosition(text.Location, text.Rotation));
 
         if (text.LayerName is not null)
             tb.AddChild("layer", l => l.AddSymbol(text.LayerName));
+
+        if (text.IsKnockout)
+            tb.AddSymbol("knockout");
 
         var fontW = text.FontWidth != Coord.Zero ? text.FontWidth : text.Height;
         tb.AddChild(WriterHelper.BuildTextEffects(
@@ -222,6 +264,10 @@ public static class FootprintWriter
 
         if (text.Uuid is not null)
             tb.AddChild(WriterHelper.BuildUuid(text.Uuid));
+
+        // Render cache (raw)
+        if (text.RenderCache is not null)
+            tb.AddChild(text.RenderCache);
 
         return tb.Build();
     }
@@ -314,6 +360,9 @@ public static class FootprintWriter
             .AddValue(pad.Designator ?? "")
             .AddSymbol(SExpressionHelper.PadTypeToString(pad.PadType))
             .AddSymbol(SExpressionHelper.PadShapeToString(pad.Shape));
+
+        if (pad.IsLocked)
+            pb.AddSymbol("locked");
 
         pb.AddChild(WriterHelper.BuildPosition(pad.Location, pad.Rotation));
         pb.AddChild("size", s =>
@@ -410,6 +459,10 @@ public static class FootprintWriter
 
         if (pad.PadProperty is not null)
             pb.AddChild("property", p => p.AddValue(pad.PadProperty));
+
+        // Custom pad primitives (raw)
+        if (pad.PrimitivesRaw is not null)
+            pb.AddChild(pad.PrimitivesRaw);
 
         if (pad.Uuid is not null)
             pb.AddChild(WriterHelper.BuildUuid(pad.Uuid));

@@ -200,6 +200,12 @@ public static class SchWriter
             b.AddChild(BuildPowerPort(power));
         }
 
+        // Images (raw)
+        foreach (var image in sch.ImagesRaw)
+        {
+            b.AddChild(image);
+        }
+
         // Placed symbols
         foreach (var comp in sch.Components.OfType<KiCadSchComponent>())
         {

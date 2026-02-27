@@ -3,6 +3,7 @@ using OriginalCircuit.Eda.Models;
 using OriginalCircuit.Eda.Models.Pcb;
 using OriginalCircuit.Eda.Primitives;
 using OriginalCircuit.KiCad.Models.Sch;
+using SExpr = OriginalCircuit.KiCad.SExpression.SExpression;
 
 namespace OriginalCircuit.KiCad.Models.Pcb;
 
@@ -220,6 +221,41 @@ public sealed class KiCadPcbComponent : IPcbComponent
     /// Gets the UUID / tstamp.
     /// </summary>
     public string? Uuid { get; set; }
+
+    /// <summary>
+    /// Gets the raw fp_text_private nodes for round-trip fidelity.
+    /// </summary>
+    public List<SExpr> TextPrivateRaw { get; } = [];
+
+    /// <summary>
+    /// Gets the raw teardrop node for round-trip fidelity.
+    /// </summary>
+    public SExpr? TeardropRaw { get; set; }
+
+    /// <summary>
+    /// Gets the raw net_tie_pad_groups node for round-trip fidelity.
+    /// </summary>
+    public SExpr? NetTiePadGroupsRaw { get; set; }
+
+    /// <summary>
+    /// Gets the raw fp_text_box nodes for round-trip fidelity.
+    /// </summary>
+    public List<SExpr> TextBoxesRaw { get; } = [];
+
+    /// <summary>
+    /// Gets the raw private_layers node for round-trip fidelity.
+    /// </summary>
+    public SExpr? PrivateLayersRaw { get; set; }
+
+    /// <summary>
+    /// Gets the raw zone nodes within this footprint for round-trip fidelity.
+    /// </summary>
+    public List<SExpr> ZonesRaw { get; } = [];
+
+    /// <summary>
+    /// Gets the raw group nodes within this footprint for round-trip fidelity.
+    /// </summary>
+    public List<SExpr> GroupsRaw { get; } = [];
 
     /// <summary>
     /// Gets the properties of this footprint.
