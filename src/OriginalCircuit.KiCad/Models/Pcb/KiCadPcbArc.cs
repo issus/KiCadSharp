@@ -74,6 +74,11 @@ public sealed class KiCadPcbArc : IPcbArc
     /// </summary>
     public EdaColor StrokeColor { get; set; }
 
+    /// <summary>
+    /// Gets or sets the status flags.
+    /// </summary>
+    public int? Status { get; set; }
+
     /// <inheritdoc />
     public CoordRect Bounds => PointsBounds.Compute([ArcStart, ArcMid, ArcEnd]);
 }

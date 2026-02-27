@@ -10,4 +10,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\shared\OriginalCircuit.Eda.Abstractions\src\OriginalCircuit.Eda.Abstractions\OriginalCircuit.Eda.Abstractions.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="OriginalCircuit.KiCad.Tests" />
+  </ItemGroup>
 </Project>

@@ -20,8 +20,28 @@ public sealed class KiCadPcbText : IPcbText
     /// <inheritdoc />
     public Coord Height { get; set; }
 
+    /// <summary>
+    /// Gets or sets the font width (may differ from height).
+    /// </summary>
+    public Coord FontWidth { get; set; }
+
     /// <inheritdoc />
     public Coord StrokeWidth { get; set; }
+
+    /// <summary>
+    /// Gets or sets the font stroke thickness.
+    /// </summary>
+    public Coord FontThickness { get; set; }
+
+    /// <summary>
+    /// Gets or sets the text justification.
+    /// </summary>
+    public TextJustification Justification { get; set; } = TextJustification.MiddleCenter;
+
+    /// <summary>
+    /// Gets or sets the font color (if specified).
+    /// </summary>
+    public EdaColor FontColor { get; set; }
 
     /// <inheritdoc />
     public double Rotation { get; set; }

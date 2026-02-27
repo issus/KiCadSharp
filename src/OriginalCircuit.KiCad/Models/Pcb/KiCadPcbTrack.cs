@@ -62,6 +62,11 @@ public sealed class KiCadPcbTrack : IPcbTrack
     /// </summary>
     public EdaColor FillColor { get; set; }
 
+    /// <summary>
+    /// Gets or sets the status flags.
+    /// </summary>
+    public int? Status { get; set; }
+
     /// <inheritdoc />
     public CoordRect Bounds => new CoordRect(Start, End).Inflate(Width / 2);
 }

@@ -204,6 +204,23 @@ internal static class WriterHelper
     }
 
     /// <summary>
+    /// Builds a <c>(effects ...)</c> node with full PCB text details. Delegates to <see cref="BuildTextEffects"/>.
+    /// </summary>
+    public static SExpr BuildPcbTextEffects(
+        Coord fontH, Coord fontW,
+        TextJustification justification = TextJustification.MiddleCenter,
+        bool hide = false,
+        bool isMirrored = false,
+        bool isBold = false,
+        bool isItalic = false,
+        Coord thickness = default,
+        string? fontFace = null,
+        EdaColor fontColor = default)
+    {
+        return BuildTextEffects(fontH, fontW, justification, hide, isMirrored, isBold, isItalic, fontFace, thickness, fontColor);
+    }
+
+    /// <summary>
     /// Builds a <c>(uuid ...)</c> node.
     /// </summary>
     public static SExpr BuildUuid(string uuid)
