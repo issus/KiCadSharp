@@ -64,6 +64,7 @@ public static class SchReader
             Version = root.GetChild("version")?.GetInt() ?? 0,
             Generator = root.GetChild("generator")?.GetString(),
             GeneratorVersion = root.GetChild("generator_version")?.GetString(),
+            EmbeddedFonts = root.GetChild("embedded_fonts")?.GetBool() ?? false,
             Uuid = SExpressionHelper.ParseUuid(root),
             Paper = root.GetChild("paper")?.GetString(),
             TitleBlock = root.GetChild("title_block"),
@@ -175,9 +176,22 @@ public static class SchReader
                     case "image":
                         sch.ImagesRaw.Add(child);
                         break;
+                    case "table":
+                        sch.TablesRawList.Add(child);
+                        break;
+                    case "rule_area":
+                        sch.RuleAreasRawList.Add(child);
+                        break;
+                    case "netclass_flag":
+                        sch.NetclassFlagsRawList.Add(child);
+                        break;
+                    case "bus_alias":
+                        sch.BusAliasesRawList.Add(child);
+                        break;
                     case "version":
                     case "generator":
                     case "generator_version":
+                    case "embedded_fonts":
                     case "uuid":
                     case "lib_symbols":
                     case "paper":

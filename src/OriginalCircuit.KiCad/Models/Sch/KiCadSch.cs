@@ -39,6 +39,10 @@ public sealed class KiCadSch : ISchDocument
     private readonly List<KiCadSchBezier> _beziers = [];
     private readonly List<KiCadSchLine> _lines = [];
     private readonly List<KiCadDiagnostic> _diagnostics = [];
+    private readonly List<SExpr> _tablesRaw = [];
+    private readonly List<SExpr> _ruleAreasRaw = [];
+    private readonly List<SExpr> _netclassFlagsRaw = [];
+    private readonly List<SExpr> _busAliasesRaw = [];
 
     /// <summary>
     /// Gets the file format version number.
@@ -54,6 +58,11 @@ public sealed class KiCadSch : ISchDocument
     /// Gets the generator version.
     /// </summary>
     public string? GeneratorVersion { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether embedded fonts are used in this schematic (KiCad 8+).
+    /// </summary>
+    public bool EmbeddedFonts { get; set; }
 
     /// <summary>
     /// Gets the UUID of the document.
@@ -79,6 +88,30 @@ public sealed class KiCadSch : ISchDocument
     /// Gets or sets the raw symbol_instances S-expression subtree for round-trip fidelity.
     /// </summary>
     public SExpr? SymbolInstances { get; set; }
+
+    /// <summary>
+    /// Gets the raw S-expression storage for table elements (KiCad 8+).
+    /// </summary>
+    public IReadOnlyList<SExpr> TablesRaw => _tablesRaw;
+    internal List<SExpr> TablesRawList => _tablesRaw;
+
+    /// <summary>
+    /// Gets the raw S-expression storage for rule area definitions (KiCad 8+).
+    /// </summary>
+    public IReadOnlyList<SExpr> RuleAreasRaw => _ruleAreasRaw;
+    internal List<SExpr> RuleAreasRawList => _ruleAreasRaw;
+
+    /// <summary>
+    /// Gets the raw S-expression storage for net class flag elements (KiCad 8+).
+    /// </summary>
+    public IReadOnlyList<SExpr> NetclassFlagsRaw => _netclassFlagsRaw;
+    internal List<SExpr> NetclassFlagsRawList => _netclassFlagsRaw;
+
+    /// <summary>
+    /// Gets the raw S-expression storage for bus alias definitions.
+    /// </summary>
+    public IReadOnlyList<SExpr> BusAliasesRaw => _busAliasesRaw;
+    internal List<SExpr> BusAliasesRawList => _busAliasesRaw;
 
     /// <summary>
     /// Gets the diagnostics collected during parsing.

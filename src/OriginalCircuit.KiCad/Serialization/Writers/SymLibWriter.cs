@@ -60,26 +60,40 @@ public static class SymLibWriter
             b.AddChild("extends", e => e.AddValue(component.Extends));
         }
 
-        // pin_names
-        if (component.HidePinNames || component.PinNamesOffset != Coord.Zero)
+        // power (KiCad 8+)
+        if (component.IsPower)
         {
-            b.AddChild("pin_names", pn =>
-            {
-                if (component.PinNamesOffset != Coord.Zero)
-                    pn.AddChild("offset", o => o.AddValue(component.PinNamesOffset.ToMm()));
-                if (component.HidePinNames)
-                    pn.AddSymbol("hide");
-            });
+            b.AddChild("power", _ => { });
         }
 
-        // pin_numbers
+        // pin_names - always emit for round-trip fidelity
+        b.AddChild("pin_names", pn =>
+        {
+            if (component.PinNamesOffset != Coord.Zero)
+                pn.AddChild("offset", o => o.AddValue(component.PinNamesOffset.ToMm()));
+            if (component.HidePinNames)
+                pn.AddSymbol("hide");
+        });
+
+        // pin_numbers - always emit for round-trip fidelity
         if (component.HidePinNumbers)
         {
             b.AddChild("pin_numbers", pn => pn.AddSymbol("hide"));
         }
+        else
+        {
+            b.AddChild("pin_numbers", _ => { });
+        }
 
         b.AddChild("in_bom", v => v.AddBool(component.InBom));
         b.AddChild("on_board", v => v.AddBool(component.OnBoard));
+        b.AddChild("exclude_from_sim", v => v.AddBool(component.ExcludeFromSim));
+
+        // embedded_fonts (KiCad 8+)
+        if (component.EmbeddedFonts)
+        {
+            b.AddChild("embedded_fonts", v => v.AddBool(true));
+        }
 
         // Properties
         foreach (var param in component.Parameters.OfType<KiCadSchParameter>())

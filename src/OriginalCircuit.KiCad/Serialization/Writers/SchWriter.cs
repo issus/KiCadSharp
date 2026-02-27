@@ -43,6 +43,9 @@ public static class SchWriter
             .AddChild("generator", g => g.AddValue(sch.Generator ?? "kicadsharp"))
             .AddChild("generator_version", g => g.AddValue(sch.GeneratorVersion ?? "1.0"));
 
+        if (sch.EmbeddedFonts)
+            b.AddChild("embedded_fonts", v => v.AddBool(true));
+
         if (sch.Uuid is not null)
             b.AddChild(WriterHelper.BuildUuid(sch.Uuid));
 
@@ -204,6 +207,30 @@ public static class SchWriter
         foreach (var image in sch.ImagesRaw)
         {
             b.AddChild(image);
+        }
+
+        // Tables (raw S-expression, KiCad 8+)
+        foreach (var table in sch.TablesRaw)
+        {
+            b.AddChild(table);
+        }
+
+        // Rule areas (raw S-expression, KiCad 8+)
+        foreach (var ruleArea in sch.RuleAreasRaw)
+        {
+            b.AddChild(ruleArea);
+        }
+
+        // Netclass flags (raw S-expression, KiCad 8+)
+        foreach (var netclassFlag in sch.NetclassFlagsRaw)
+        {
+            b.AddChild(netclassFlag);
+        }
+
+        // Bus aliases (raw S-expression)
+        foreach (var busAlias in sch.BusAliasesRaw)
+        {
+            b.AddChild(busAlias);
         }
 
         // Placed symbols

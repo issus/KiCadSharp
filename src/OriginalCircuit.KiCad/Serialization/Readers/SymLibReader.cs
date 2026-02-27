@@ -119,6 +119,9 @@ public static class SymLibReader
 
         component.InBom = node.GetChild("in_bom")?.GetBool() ?? true;
         component.OnBoard = node.GetChild("on_board")?.GetBool() ?? true;
+        component.ExcludeFromSim = node.GetChild("exclude_from_sim")?.GetBool() ?? false;
+        component.EmbeddedFonts = node.GetChild("embedded_fonts")?.GetBool() ?? false;
+        component.IsPower = node.GetChild("power") is not null;
         component.Extends = node.GetChild("extends")?.GetString();
 
         // Parse properties
@@ -189,6 +192,9 @@ public static class SymLibReader
                 case "pin_numbers":
                 case "in_bom":
                 case "on_board":
+                case "exclude_from_sim":
+                case "embedded_fonts":
+                case "power":
                 case "extends":
                     // Known tokens handled elsewhere
                     break;

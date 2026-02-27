@@ -153,6 +153,21 @@ public sealed class KiCadSchComponent : ISchComponent
     public SExpression.SExpression? InstancesRaw { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the symbol should be excluded from simulation (KiCad 8+).
+    /// </summary>
+    public bool ExcludeFromSim { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether embedded fonts are used in this symbol (KiCad 8+).
+    /// </summary>
+    public bool EmbeddedFonts { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether this symbol is a power symbol (KiCad 8+).
+    /// </summary>
+    public bool IsPower { get; set; }
+
+    /// <summary>
     /// Gets the name of the symbol this one extends (derived/inherited symbols).
     /// </summary>
     public string? Extends { get; set; }
