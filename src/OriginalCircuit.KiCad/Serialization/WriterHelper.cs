@@ -51,12 +51,12 @@ internal static class WriterHelper
     /// <summary>
     /// Builds a <c>(stroke (width W) (type T))</c> node.
     /// </summary>
-    public static SExpr BuildStroke(Coord width, LineStyle style = LineStyle.Solid, EdaColor color = default)
+    public static SExpr BuildStroke(Coord width, LineStyle style = LineStyle.Solid, EdaColor color = default, bool emitColor = false)
     {
         var b = new SExpressionBuilder("stroke")
             .AddChild("width", w => w.AddValue(width.ToMm()))
             .AddChild("type", t => t.AddSymbol(SExpressionHelper.LineStyleToString(style)));
-        if (color != default)
+        if (color != default || emitColor)
             b.AddChild(BuildColor(color));
         return b.Build();
     }
@@ -71,6 +71,16 @@ internal static class WriterHelper
         if (color != default)
             b.AddChild(BuildColor(color));
         return b.Build();
+    }
+
+    /// <summary>
+    /// Builds a <c>(fill yes)</c> or <c>(fill no)</c> node using PCB fill format.
+    /// </summary>
+    public static SExpr BuildPcbFill(SchFillType fillType)
+    {
+        return new SExpressionBuilder("fill")
+            .AddBool(fillType != SchFillType.None)
+            .Build();
     }
 
     /// <summary>
@@ -132,7 +142,7 @@ internal static class WriterHelper
         }
 
         if (hide)
-            b.AddChild("hide", _ => { });
+            b.AddChild("hide", h => h.AddBool(true));
 
         return b.Build();
     }
@@ -153,6 +163,8 @@ internal static class WriterHelper
                     s.AddValue(param.FontSizeHeight.ToMm());
                     s.AddValue(param.FontSizeWidth.ToMm());
                 });
+                if (param.FontThickness != Coord.Zero)
+                    f.AddChild("thickness", t => t.AddValue(param.FontThickness.ToMm()));
                 if (param.IsBold) f.AddChild("bold", _ => { });
                 if (param.IsItalic) f.AddChild("italic", _ => { });
                 if (param.FontColor != default)
@@ -197,8 +209,16 @@ internal static class WriterHelper
             });
         }
 
-        if (!param.IsVisible)
-            b.AddChild("hide", _ => { });
+        // For KiCad 8 footprint properties, hide is emitted as a direct child
+        // of the property node, not inside effects. For symbol library properties
+        // (no LayerName/Uuid), hide goes inside effects.
+        if (!param.IsVisible && param.LayerName is null && param.Uuid is null)
+        {
+            if (param.HideIsSymbolValue)
+                b.AddSymbol("hide"); // KiCad 6 format: (effects ... hide)
+            else
+                b.AddChild("hide", h => h.AddBool(true)); // KiCad 8 format: (effects ... (hide yes))
+        }
 
         return b.Build();
     }

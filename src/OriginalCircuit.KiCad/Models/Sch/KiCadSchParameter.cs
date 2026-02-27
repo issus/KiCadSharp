@@ -74,6 +74,38 @@ public sealed class KiCadSchParameter : ISchParameter
     /// </summary>
     public bool IsItalic { get; set; }
 
+    /// <summary>
+    /// Gets the font thickness from text effects.
+    /// </summary>
+    public Coord FontThickness { get; set; }
+
+    /// <summary>
+    /// Gets the layer name for this property (KiCad 8 footprint properties).
+    /// </summary>
+    public string? LayerName { get; set; }
+
+    /// <summary>
+    /// Gets the UUID for this property (KiCad 8 footprint properties).
+    /// </summary>
+    public string? Uuid { get; set; }
+
+    /// <summary>
+    /// Gets whether this property is unlocked (KiCad 8 footprint properties).
+    /// </summary>
+    public bool IsUnlocked { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the hide in effects was a symbol value (KiCad 6 format: <c>(effects ... hide)</c>)
+    /// rather than a child node (KiCad 8 format: <c>(effects ... (hide yes))</c>).
+    /// </summary>
+    public bool HideIsSymbolValue { get; set; }
+
+    /// <summary>
+    /// Gets whether this is an inline property without position or text effects
+    /// (e.g., <c>(property ki_fp_filters "...")</c>).
+    /// </summary>
+    public bool IsInline { get; set; }
+
     /// <inheritdoc />
     public CoordRect Bounds
     {

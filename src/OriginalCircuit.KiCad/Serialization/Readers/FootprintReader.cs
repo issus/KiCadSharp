@@ -84,7 +84,9 @@ public static class FootprintReader
 
         // KiCad 8+ tokens
         component.EmbeddedFonts = node.GetChild("embedded_fonts") is { } efNode ? efNode.GetBool() : null;
-        component.DuplicatePadNumbersAreJumpers = node.GetChild("duplicate_pad_numbers_are_jumpers") is not null;
+        var dupPadNode = node.GetChild("duplicate_pad_numbers_are_jumpers");
+        if (dupPadNode is not null)
+            component.DuplicatePadNumbersAreJumpers = dupPadNode.GetBool() ?? true;
 
         // Parse attr
         var attrNode = node.GetChild("attr");
@@ -102,6 +104,8 @@ public static class FootprintReader
                         case "board_only": attrs |= FootprintAttribute.BoardOnly; break;
                         case "exclude_from_pos_files": attrs |= FootprintAttribute.ExcludeFromPosFiles; break;
                         case "exclude_from_bom": attrs |= FootprintAttribute.ExcludeFromBom; break;
+                        case "allow_missing_courtyard": attrs |= FootprintAttribute.AllowMissingCourtyard; break;
+                        case "dnp": attrs |= FootprintAttribute.Dnp; break;
                     }
                 }
             }
@@ -242,6 +246,12 @@ public static class FootprintReader
                     case "group":
                         component.GroupsRaw.Add(child);
                         break;
+                    case "sheetname":
+                        component.SheetName = child.GetString();
+                        break;
+                    case "sheetfile":
+                        component.SheetFile = child.GetString();
+                        break;
                     case "layer":
                     case "descr":
                     case "tags":
@@ -380,6 +390,7 @@ public static class FootprintReader
         var zcNode = node.GetChild("zone_connect");
         if (zcNode is not null)
         {
+            pad.HasZoneConnect = true;
             var zcVal = zcNode.GetInt() ?? 0;
             pad.ZoneConnect = Enum.IsDefined(typeof(ZoneConnectionType), zcVal)
                 ? (ZoneConnectionType)zcVal
@@ -408,12 +419,32 @@ public static class FootprintReader
         pad.PadProperty = node.GetChild("property")?.GetString();
 
         // Thermal bridge angle
-        pad.ThermalBridgeAngle = node.GetChild("thermal_bridge_angle")?.GetDouble() ?? 0;
+        var tbAngleNode = node.GetChild("thermal_bridge_angle");
+        if (tbAngleNode is not null)
+        {
+            pad.HasThermalBridgeAngle = true;
+            pad.ThermalBridgeAngle = tbAngleNode.GetDouble() ?? 0;
+        }
 
         // Custom pad primitives
         var primitivesNode = node.GetChild("primitives");
         if (primitivesNode is not null)
             pad.PrimitivesRaw = primitivesNode;
+
+        // Custom pad options (raw)
+        var optionsNode = node.GetChild("options");
+        if (optionsNode is not null)
+            pad.OptionsRaw = optionsNode;
+
+        // Per-pad teardrops (raw)
+        var teardropsNode = node.GetChild("teardrops");
+        if (teardropsNode is not null)
+            pad.TeardropsRaw = teardropsNode;
+
+        // Per-pad tenting (raw)
+        var tentingNode = node.GetChild("tenting");
+        if (tentingNode is not null)
+            pad.TentingRaw = tentingNode;
 
         // Pad locked flag
         foreach (var v in node.Values)
@@ -425,9 +456,24 @@ public static class FootprintReader
             }
         }
 
-        // Remove unused layers and keep end layers
-        pad.RemoveUnusedLayers = node.GetChild("remove_unused_layers") is not null;
-        pad.KeepEndLayers = node.GetChild("keep_end_layers") is not null;
+        // Remove unused layers and keep end layers (KiCad 8+ uses boolean value: yes/no)
+        var removeUnusedNode = node.GetChild("remove_unused_layers");
+        if (removeUnusedNode is not null)
+        {
+            pad.HasRemoveUnusedLayers = true;
+            pad.RemoveUnusedLayers = removeUnusedNode.GetBool() ?? true;
+        }
+        var keepEndNode = node.GetChild("keep_end_layers");
+        if (keepEndNode is not null)
+        {
+            pad.HasKeepEndLayers = true;
+            pad.KeepEndLayers = keepEndNode.GetBool() ?? true;
+        }
+
+        // rect_delta (raw)
+        var rectDeltaNode = node.GetChild("rect_delta");
+        if (rectDeltaNode is not null)
+            pad.RectDeltaRaw = rectDeltaNode;
 
         pad.Uuid = SExpressionHelper.ParseUuid(node);
 
@@ -496,7 +542,7 @@ public static class FootprintReader
             width = Coord.FromMm(node.GetChild("width")?.GetDouble() ?? 0);
         }
 
-        var (fillType, _, fillColor) = SExpressionHelper.ParseFill(node);
+        var (fillType, _, fillColor, usePcbFillFmt) = SExpressionHelper.ParseFillWithFormat(node);
 
         return new KiCadPcbTrack
         {
@@ -507,6 +553,7 @@ public static class FootprintReader
             StrokeColor = color,
             FillType = fillType,
             FillColor = fillColor,
+            UsePcbFillFormat = usePcbFillFmt,
             LayerName = node.GetChild("layer")?.GetString(),
             IsLocked = SExpressionHelper.HasSymbol(node, "locked"),
             Uuid = SExpressionHelper.ParseUuid(node)
@@ -523,7 +570,7 @@ public static class FootprintReader
         if (width == Coord.Zero)
             width = Coord.FromMm(node.GetChild("width")?.GetDouble() ?? 0);
 
-        var (fillType, _, fillColor) = SExpressionHelper.ParseFill(node);
+        var (fillType, _, fillColor, usePcbFillFmt) = SExpressionHelper.ParseFillWithFormat(node);
 
         return new KiCadPcbCircle
         {
@@ -534,6 +581,7 @@ public static class FootprintReader
             StrokeColor = color,
             FillType = fillType,
             FillColor = fillColor,
+            UsePcbFillFormat = usePcbFillFmt,
             LayerName = node.GetChild("layer")?.GetString(),
             IsLocked = SExpressionHelper.HasSymbol(node, "locked"),
             Uuid = SExpressionHelper.ParseUuid(node)
@@ -550,7 +598,7 @@ public static class FootprintReader
         if (width == Coord.Zero)
             width = Coord.FromMm(node.GetChild("width")?.GetDouble() ?? 0);
 
-        var (fillType, _, fillColor) = SExpressionHelper.ParseFill(node);
+        var (fillType, _, fillColor, usePcbFillFmt) = SExpressionHelper.ParseFillWithFormat(node);
 
         return new KiCadPcbRectangle
         {
@@ -561,6 +609,7 @@ public static class FootprintReader
             StrokeColor = color,
             FillType = fillType,
             FillColor = fillColor,
+            UsePcbFillFormat = usePcbFillFmt,
             LayerName = node.GetChild("layer")?.GetString(),
             IsLocked = SExpressionHelper.HasSymbol(node, "locked"),
             Uuid = SExpressionHelper.ParseUuid(node)
@@ -607,7 +656,7 @@ public static class FootprintReader
         var (width, style, color) = SExpressionHelper.ParseStroke(node);
         if (width == Coord.Zero)
             width = Coord.FromMm(node.GetChild("width")?.GetDouble() ?? 0);
-        var (fillType, _, fillColor) = SExpressionHelper.ParseFill(node);
+        var (fillType, _, fillColor, usePcbFillFmt) = SExpressionHelper.ParseFillWithFormat(node);
 
         return new KiCadPcbPolygon
         {
@@ -617,6 +666,7 @@ public static class FootprintReader
             StrokeColor = color,
             FillType = fillType,
             FillColor = fillColor,
+            UsePcbFillFormat = usePcbFillFmt,
             LayerName = node.GetChild("layer")?.GetString(),
             IsLocked = SExpressionHelper.HasSymbol(node, "locked"),
             Uuid = SExpressionHelper.ParseUuid(node)
@@ -648,6 +698,15 @@ public static class FootprintReader
         {
             Path = node.GetString() ?? ""
         };
+
+        // Parse hide flag
+        var hideNode = node.GetChild("hide");
+        if (hideNode is not null)
+        {
+            // (hide yes) or bare (hide)
+            var hideVal = hideNode.GetString();
+            model.IsHidden = hideVal is null || hideVal == "yes";
+        }
 
         var offsetNode = node.GetChild("offset")?.GetChild("xyz");
         if (offsetNode is not null)

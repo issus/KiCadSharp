@@ -57,14 +57,24 @@ internal static class SExpressionHelper
     /// </summary>
     public static (Coord Width, LineStyle Style, EdaColor Color) ParseStroke(SExpr parent)
     {
+        var (width, style, color, _) = ParseStrokeEx(parent);
+        return (width, style, color);
+    }
+
+    /// <summary>
+    /// Parses stroke properties including whether a color child node was present.
+    /// </summary>
+    public static (Coord Width, LineStyle Style, EdaColor Color, bool HasColor) ParseStrokeEx(SExpr parent)
+    {
         var stroke = parent.GetChild("stroke");
         if (stroke is null)
-            return (Coord.Zero, LineStyle.Solid, EdaColor.Black);
+            return (Coord.Zero, LineStyle.Solid, default, false);
 
         var width = Coord.FromMm(stroke.GetChild("width")?.GetDouble() ?? 0);
         var style = ParseLineStyle(stroke.GetChild("type")?.GetString());
-        var color = ParseColor(stroke.GetChild("color"));
-        return (width, style, color);
+        var colorNode = stroke.GetChild("color");
+        var color = ParseColor(colorNode);
+        return (width, style, color, colorNode is not null);
     }
 
     /// <summary>
@@ -72,9 +82,18 @@ internal static class SExpressionHelper
     /// </summary>
     public static (Coord FontHeight, Coord FontWidth, TextJustification Justification, bool IsHidden, bool IsMirrored, bool IsBold, bool IsItalic, string? FontFace, Coord FontThickness, EdaColor FontColor) ParseTextEffects(SExpr parent)
     {
+        var (fontH, fontW, justification, isHidden, isMirrored, isBold, isItalic, fontFace, fontThickness, fontColor, _) = ParseTextEffectsEx(parent);
+        return (fontH, fontW, justification, isHidden, isMirrored, isBold, isItalic, fontFace, fontThickness, fontColor);
+    }
+
+    /// <summary>
+    /// Parses text effects, also reporting whether the hide was a symbol value (KiCad 6) vs child node (KiCad 8).
+    /// </summary>
+    public static (Coord FontHeight, Coord FontWidth, TextJustification Justification, bool IsHidden, bool IsMirrored, bool IsBold, bool IsItalic, string? FontFace, Coord FontThickness, EdaColor FontColor, bool HideIsSymbolValue) ParseTextEffectsEx(SExpr parent)
+    {
         var effects = parent.GetChild("effects");
         if (effects is null)
-            return (Coord.FromMm(1.27), Coord.FromMm(1.27), TextJustification.MiddleCenter, false, false, false, false, null, Coord.Zero, default);
+            return (Coord.FromMm(1.27), Coord.FromMm(1.27), TextJustification.MiddleCenter, false, false, false, false, null, Coord.Zero, default, false);
 
         var font = effects.GetChild("font");
         var sizeNode = font?.GetChild("size");
@@ -115,23 +134,46 @@ internal static class SExpressionHelper
             isMirrored = justify.Values.Any(v => v is SExprSymbol s && s.Value == "mirror");
         }
 
-        var isHidden = effects.GetChild("hide") is not null ||
-                       effects.Values.Any(v => v is SExprSymbol s && s.Value == "hide");
+        var hideIsSymbolValue = effects.Values.Any(v => v is SExprSymbol s && s.Value == "hide");
+        var isHidden = effects.GetChild("hide") is not null || hideIsSymbolValue;
 
-        return (fontH, fontW, justification, isHidden, isMirrored, isBold, isItalic, fontFace, fontThickness, fontColor);
+        return (fontH, fontW, justification, isHidden, isMirrored, isBold, isItalic, fontFace, fontThickness, fontColor, hideIsSymbolValue);
     }
 
     /// <summary>
-    /// Parses fill type from a <c>(fill (type TYPE))</c> child node.
+    /// Parses fill type from a <c>(fill (type TYPE))</c> or <c>(fill yes/no/solid)</c> child node.
     /// </summary>
     public static (SchFillType FillType, bool IsFilled, EdaColor FillColor) ParseFill(SExpr parent)
     {
+        var (fillType, isFilled, fillColor, _) = ParseFillWithFormat(parent);
+        return (fillType, isFilled, fillColor);
+    }
+
+    /// <summary>
+    /// Parses fill type from a <c>(fill (type TYPE))</c> or <c>(fill yes/no/solid)</c> child node,
+    /// also returning whether the PCB fill format was used.
+    /// </summary>
+    public static (SchFillType FillType, bool IsFilled, EdaColor FillColor, bool UsePcbFormat) ParseFillWithFormat(SExpr parent)
+    {
         var fill = parent.GetChild("fill");
         if (fill is null)
-            return (SchFillType.None, false, EdaColor.Transparent);
+            return (SchFillType.None, false, EdaColor.Transparent, false);
 
+        // Check for KiCad 8 PCB format: (fill yes), (fill no), (fill solid)
+        var boolVal = fill.GetBool();
+        if (boolVal.HasValue)
+        {
+            var fillType = boolVal.Value ? SchFillType.Filled : SchFillType.None;
+            return (fillType, boolVal.Value, EdaColor.Transparent, true);
+        }
+
+        var symVal = fill.GetString();
+        if (symVal == "solid")
+            return (SchFillType.Filled, true, EdaColor.Transparent, true);
+
+        // Standard schematic format: (fill (type TYPE))
         var typeStr = fill.GetChild("type")?.GetString();
-        var fillType = typeStr switch
+        var fillType2 = typeStr switch
         {
             "none" => SchFillType.None,
             "outline" => SchFillType.Filled,
@@ -141,7 +183,7 @@ internal static class SExpressionHelper
         };
 
         var color = ParseColor(fill.GetChild("color"));
-        return (fillType, fillType != SchFillType.None, color);
+        return (fillType2, fillType2 != SchFillType.None, color, false);
     }
 
     /// <summary>

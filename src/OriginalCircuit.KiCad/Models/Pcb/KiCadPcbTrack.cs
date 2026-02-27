@@ -63,6 +63,12 @@ public sealed class KiCadPcbTrack : IPcbTrack
     public EdaColor FillColor { get; set; }
 
     /// <summary>
+    /// Gets whether the fill uses PCB format (yes/no/solid) vs schematic format (type none/outline/background).
+    /// When true, the writer emits <c>(fill yes)</c> / <c>(fill no)</c> instead of <c>(fill (type ...))</c>.
+    /// </summary>
+    public bool UsePcbFillFormat { get; set; }
+
+    /// <summary>
     /// Gets or sets the status flags.
     /// </summary>
     public int? Status { get; set; }

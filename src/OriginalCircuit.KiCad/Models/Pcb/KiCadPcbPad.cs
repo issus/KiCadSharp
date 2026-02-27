@@ -70,6 +70,11 @@ public sealed class KiCadPcbPad : IPcbPad
     public ZoneConnectionType ZoneConnect { get; set; }
 
     /// <summary>
+    /// Gets whether the zone_connect token was explicitly present in the source file.
+    /// </summary>
+    public bool HasZoneConnect { get; set; }
+
+    /// <summary>
     /// Gets the thermal relief width.
     /// </summary>
     public Coord ThermalWidth { get; set; }
@@ -100,9 +105,19 @@ public sealed class KiCadPcbPad : IPcbPad
     public bool RemoveUnusedLayers { get; set; }
 
     /// <summary>
+    /// Gets whether the remove_unused_layers token was explicitly present in the source file.
+    /// </summary>
+    public bool HasRemoveUnusedLayers { get; set; }
+
+    /// <summary>
     /// Gets whether to keep end layers on this pad.
     /// </summary>
     public bool KeepEndLayers { get; set; }
+
+    /// <summary>
+    /// Gets whether the keep_end_layers token was explicitly present in the source file.
+    /// </summary>
+    public bool HasKeepEndLayers { get; set; }
 
     /// <summary>
     /// Gets the solder paste margin.
@@ -150,6 +165,16 @@ public sealed class KiCadPcbPad : IPcbPad
     public double ThermalBridgeAngle { get; set; }
 
     /// <summary>
+    /// Gets whether the thermal_bridge_angle token was explicitly present in the source file.
+    /// </summary>
+    public bool HasThermalBridgeAngle { get; set; }
+
+    /// <summary>
+    /// Gets the raw rect_delta node for round-trip fidelity.
+    /// </summary>
+    public SExpr? RectDeltaRaw { get; set; }
+
+    /// <summary>
     /// Gets the UUID / tstamp.
     /// </summary>
     public string? Uuid { get; set; }
@@ -158,6 +183,21 @@ public sealed class KiCadPcbPad : IPcbPad
     /// Gets the raw primitives node for custom pad shapes, for round-trip fidelity.
     /// </summary>
     public SExpr? PrimitivesRaw { get; set; }
+
+    /// <summary>
+    /// Gets the raw options node for custom pad shapes, for round-trip fidelity.
+    /// </summary>
+    public SExpr? OptionsRaw { get; set; }
+
+    /// <summary>
+    /// Gets the raw teardrops node for pad-level teardrops, for round-trip fidelity.
+    /// </summary>
+    public SExpr? TeardropsRaw { get; set; }
+
+    /// <summary>
+    /// Gets the raw tenting node for pad-level tenting, for round-trip fidelity.
+    /// </summary>
+    public SExpr? TentingRaw { get; set; }
 
     /// <summary>
     /// Gets whether this pad is locked.

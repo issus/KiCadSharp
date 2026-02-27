@@ -73,24 +73,7 @@ public static class SymLibWriter
             // Determine if this is KiCad 8+ format (embedded_fonts presence is the indicator)
             bool isKiCad8 = component.EmbeddedFonts.HasValue;
 
-            // pin_names - emit when present in source file
-            if (component.PinNamesPresent)
-            {
-                b.AddChild("pin_names", pn =>
-                {
-                    // Always emit (offset N) — KiCad always does
-                    pn.AddChild("offset", o => o.AddValue(component.PinNamesOffset.ToMm()));
-                    if (component.HidePinNames)
-                    {
-                        if (isKiCad8)
-                            pn.AddChild("hide", h => h.AddBool(true));
-                        else
-                            pn.AddSymbol("hide");
-                    }
-                });
-            }
-
-            // pin_numbers - emit when present in source file
+            // pin_numbers - emit when present in source file (before pin_names for KiCad ordering)
             if (component.PinNumbersPresent)
             {
                 b.AddChild("pin_numbers", pn =>
@@ -105,12 +88,30 @@ public static class SymLibWriter
                 });
             }
 
-            b.AddChild("in_bom", v => v.AddBool(component.InBom));
-            b.AddChild("on_board", v => v.AddBool(component.OnBoard));
+            // pin_names - emit when present in source file
+            if (component.PinNamesPresent)
+            {
+                b.AddChild("pin_names", pn =>
+                {
+                    // Only emit (offset N) when it was explicitly present in the source file
+                    if (component.PinNamesHasOffset)
+                        pn.AddChild("offset", o => o.AddValue(component.PinNamesOffset.ToMm()));
+                    if (component.HidePinNames)
+                    {
+                        if (isKiCad8)
+                            pn.AddChild("hide", h => h.AddBool(true));
+                        else
+                            pn.AddSymbol("hide");
+                    }
+                });
+            }
 
-            // exclude_from_sim - emit when it was present in the source
+            // exclude_from_sim - emit when it was present in the source (before in_bom for KiCad 8 ordering)
             if (component.ExcludeFromSimPresent)
                 b.AddChild("exclude_from_sim", v => v.AddBool(component.ExcludeFromSim));
+
+            b.AddChild("in_bom", v => v.AddBool(component.InBom));
+            b.AddChild("on_board", v => v.AddBool(component.OnBoard));
 
             // Properties
             foreach (var param in component.Parameters.OfType<KiCadSchParameter>())
@@ -142,13 +143,13 @@ public static class SymLibWriter
         foreach (var line in component.Lines.OfType<KiCadSchLine>())
         {
             if (component.SubSymbols.Count == 0)
-                b.AddChild(BuildPolyline([line.Start, line.End], line.Width, line.LineStyle, line.Color));
+                b.AddChild(BuildPolyline([line.Start, line.End], line.Width, line.LineStyle, line.Color, emitColor: line.HasStrokeColor));
         }
 
         foreach (var poly in component.Polylines.OfType<KiCadSchPolyline>())
         {
             if (component.SubSymbols.Count == 0)
-                b.AddChild(BuildPolyline(poly.Vertices, poly.LineWidth, poly.LineStyle, poly.Color, poly.FillType, poly.FillColor));
+                b.AddChild(BuildPolyline(poly.Vertices, poly.LineWidth, poly.LineStyle, poly.Color, poly.FillType, poly.FillColor, emitColor: poly.HasStrokeColor));
         }
 
         foreach (var poly in component.Polygons.OfType<KiCadSchPolygon>())
@@ -192,15 +193,41 @@ public static class SymLibWriter
 
     internal static SExpr BuildProperty(KiCadSchParameter param)
     {
-        var b = new SExpressionBuilder("property")
-            .AddValue(param.Name)
+        var b = new SExpressionBuilder("property");
+
+        // Inline properties (e.g., ki_fp_filters) use bare symbol names
+        if (param.IsInline)
+        {
+            b.AddSymbol(param.Name);
+            b.AddValue(param.Value);
+            return b.Build();
+        }
+
+        b.AddValue(param.Name)
             .AddValue(param.Value);
 
         if (param.Id.HasValue)
             b.AddChild("id", id => id.AddValue(param.Id.Value));
 
-        b.AddChild(WriterHelper.BuildPosition(param.Location, param.Orientation))
-         .AddChild(WriterHelper.BuildPropertyTextEffects(param));
+        b.AddChild(WriterHelper.BuildPosition(param.Location, param.Orientation));
+
+        // KiCad 8 footprint property attributes
+        if (param.IsUnlocked)
+            b.AddChild("unlocked", u => u.AddBool(true));
+
+        if (param.LayerName is not null)
+            b.AddChild("layer", l => l.AddValue(param.LayerName));
+
+        if (!param.IsVisible && (param.LayerName is not null || param.Uuid is not null))
+        {
+            // Use KiCad 8 (hide yes) format for footprint properties
+            b.AddChild("hide", h => h.AddBool(true));
+        }
+
+        if (param.Uuid is not null)
+            b.AddChild(WriterHelper.BuildUuid(param.Uuid));
+
+        b.AddChild(WriterHelper.BuildPropertyTextEffects(param));
         return b.Build();
     }
 
@@ -212,6 +239,10 @@ public static class SymLibWriter
 
         b.AddChild(WriterHelper.BuildPosition(pin.Location, SExpressionHelper.PinOrientationToAngle(pin.Orientation)))
          .AddChild("length", l => l.AddValue(pin.Length.ToMm()));
+
+        // Hide attribute - emit before name/number as KiCad does
+        if (pin.IsHidden)
+            b.AddChild("hide", h => h.AddBool(true));
 
         // Name with font size
         var nameFontH = pin.NameFontSizeHeight != Coord.Zero ? pin.NameFontSizeHeight : WriterHelper.DefaultTextSize;
@@ -250,16 +281,16 @@ public static class SymLibWriter
         return new SExpressionBuilder("rectangle")
             .AddChild("start", s => { s.AddValue(rect.Corner1.X.ToMm()); s.AddValue(rect.Corner1.Y.ToMm()); })
             .AddChild("end", e => { e.AddValue(rect.Corner2.X.ToMm()); e.AddValue(rect.Corner2.Y.ToMm()); })
-            .AddChild(WriterHelper.BuildStroke(rect.LineWidth, rect.LineStyle, rect.Color))
+            .AddChild(WriterHelper.BuildStroke(rect.LineWidth, rect.LineStyle, rect.Color, emitColor: rect.HasStrokeColor))
             .AddChild(WriterHelper.BuildFill(rect.FillType, rect.FillColor))
             .Build();
     }
 
-    private static SExpr BuildPolyline(IReadOnlyList<CoordPoint> vertices, Coord width, LineStyle style, EdaColor color = default, SchFillType fillType = SchFillType.None, EdaColor fillColor = default)
+    private static SExpr BuildPolyline(IReadOnlyList<CoordPoint> vertices, Coord width, LineStyle style, EdaColor color = default, SchFillType fillType = SchFillType.None, EdaColor fillColor = default, bool emitColor = false)
     {
         return new SExpressionBuilder("polyline")
             .AddChild(WriterHelper.BuildPoints(vertices))
-            .AddChild(WriterHelper.BuildStroke(width, style, color))
+            .AddChild(WriterHelper.BuildStroke(width, style, color, emitColor: emitColor))
             .AddChild(WriterHelper.BuildFill(fillType, fillColor))
             .Build();
     }
@@ -268,7 +299,7 @@ public static class SymLibWriter
     {
         return new SExpressionBuilder("polyline")
             .AddChild(WriterHelper.BuildPoints(poly.Vertices))
-            .AddChild(WriterHelper.BuildStroke(poly.LineWidth, poly.LineStyle, poly.Color))
+            .AddChild(WriterHelper.BuildStroke(poly.LineWidth, poly.LineStyle, poly.Color, emitColor: poly.HasStrokeColor))
             .AddChild(WriterHelper.BuildFill(poly.FillType, poly.FillColor))
             .Build();
     }
@@ -279,7 +310,7 @@ public static class SymLibWriter
             .AddChild("start", s => { s.AddValue(arc.ArcStart.X.ToMm()); s.AddValue(arc.ArcStart.Y.ToMm()); })
             .AddChild("mid", m => { m.AddValue(arc.ArcMid.X.ToMm()); m.AddValue(arc.ArcMid.Y.ToMm()); })
             .AddChild("end", e => { e.AddValue(arc.ArcEnd.X.ToMm()); e.AddValue(arc.ArcEnd.Y.ToMm()); })
-            .AddChild(WriterHelper.BuildStroke(arc.LineWidth, arc.LineStyle, arc.Color))
+            .AddChild(WriterHelper.BuildStroke(arc.LineWidth, arc.LineStyle, arc.Color, emitColor: arc.HasStrokeColor))
             .AddChild(WriterHelper.BuildFill(arc.FillType, arc.FillColor))
             .Build();
     }
@@ -289,7 +320,7 @@ public static class SymLibWriter
         return new SExpressionBuilder("circle")
             .AddChild("center", c => { c.AddValue(circle.Center.X.ToMm()); c.AddValue(circle.Center.Y.ToMm()); })
             .AddChild("radius", r => r.AddValue(circle.Radius.ToMm()))
-            .AddChild(WriterHelper.BuildStroke(circle.LineWidth, circle.LineStyle, circle.Color))
+            .AddChild(WriterHelper.BuildStroke(circle.LineWidth, circle.LineStyle, circle.Color, emitColor: circle.HasStrokeColor))
             .AddChild(WriterHelper.BuildFill(circle.FillType, circle.FillColor))
             .Build();
     }
@@ -298,7 +329,7 @@ public static class SymLibWriter
     {
         return new SExpressionBuilder("bezier")
             .AddChild(WriterHelper.BuildPoints(bezier.ControlPoints))
-            .AddChild(WriterHelper.BuildStroke(bezier.LineWidth, bezier.LineStyle, bezier.Color))
+            .AddChild(WriterHelper.BuildStroke(bezier.LineWidth, bezier.LineStyle, bezier.Color, emitColor: bezier.HasStrokeColor))
             .AddChild(WriterHelper.BuildFill(bezier.FillType, bezier.FillColor))
             .Build();
     }
@@ -311,11 +342,11 @@ public static class SymLibWriter
             .AddValue(label.Text)
             .AddChild(WriterHelper.BuildPosition(label.Location, label.Rotation));
 
-        // Write stroke if present
-        if (label.StrokeWidth != Coord.Zero || label.StrokeColor != default)
+        // Write stroke only if it was present in the source file
+        if (label.HasStroke)
             b.AddChild(WriterHelper.BuildStroke(label.StrokeWidth, label.StrokeLineStyle, label.StrokeColor));
 
-        b.AddChild(WriterHelper.BuildTextEffects(fontH, fontW, label.Justification, label.IsHidden, label.IsMirrored, label.IsBold, label.IsItalic));
+        b.AddChild(WriterHelper.BuildTextEffects(fontH, fontW, label.Justification, label.IsHidden, label.IsMirrored, label.IsBold, label.IsItalic, fontThickness: label.FontThickness));
         return b.Build();
     }
 }

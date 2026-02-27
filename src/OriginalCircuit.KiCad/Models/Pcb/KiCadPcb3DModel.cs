@@ -41,4 +41,9 @@ public sealed class KiCadPcb3DModel
     /// Gets the 3D model Z rotation in degrees.
     /// </summary>
     public double RotationZ { get; set; }
+
+    /// <summary>
+    /// Gets whether this 3D model is hidden.
+    /// </summary>
+    public bool IsHidden { get; set; }
 }
