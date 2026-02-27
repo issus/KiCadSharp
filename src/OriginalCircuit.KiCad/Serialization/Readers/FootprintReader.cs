@@ -96,13 +96,15 @@ public static class FootprintReader
             component.Attributes = attrs;
         }
 
-        // Parse locked
+        // Parse locked and placed flags
         foreach (var v in node.Values)
         {
-            if (v is SExprSymbol s && s.Value == "locked")
+            if (v is SExprSymbol s)
             {
-                component.IsLocked = true;
-                break;
+                if (s.Value == "locked")
+                    component.IsLocked = true;
+                else if (s.Value == "placed")
+                    component.IsPlaced = true;
             }
         }
 
@@ -124,11 +126,22 @@ public static class FootprintReader
                 : ZoneConnectionType.Inherited;
         }
 
+        // Parse autoplace cost
+        component.AutoplaceCost90 = node.GetChild("autoplace_cost90")?.GetInt() ?? 0;
+        component.AutoplaceCost180 = node.GetChild("autoplace_cost180")?.GetInt() ?? 0;
+
+        // Parse tedit
+        component.Tedit = node.GetChild("tedit")?.GetString();
+
         var diagnostics = new List<KiCadDiagnostic>();
         var pads = new List<KiCadPcbPad>();
         var texts = new List<KiCadPcbText>();
         var tracks = new List<KiCadPcbTrack>();
         var arcs = new List<KiCadPcbArc>();
+        var rectangles = new List<KiCadPcbRectangle>();
+        var circles = new List<KiCadPcbCircle>();
+        var polygons = new List<KiCadPcbPolygon>();
+        var curves = new List<KiCadPcbCurve>();
         var properties = new List<KiCadSchParameter>();
 
         foreach (var child in node.Children)
@@ -150,12 +163,20 @@ public static class FootprintReader
                         arcs.Add(ParseFpArc(child));
                         break;
                     case "fp_circle":
-                        arcs.Add(ParseFpCircle(child));
+                        circles.Add(ParseFpCircle(child));
                         break;
                     case "fp_rect":
-                        tracks.AddRange(ParseFpRect(child));
+                        rectangles.Add(ParseFpRect(child));
+                        break;
+                    case "fp_poly":
+                        polygons.Add(ParseFpPoly(child));
+                        break;
+                    case "fp_curve":
+                        curves.Add(ParseFpCurve(child));
                         break;
                     case "model":
+                        component.Model3DList.Add(Parse3DModel(child));
+                        // Also update legacy single-model properties for backward compatibility
                         component.Model3D = child.GetString();
                         var offsetNode = child.GetChild("offset")?.GetChild("xyz");
                         if (offsetNode is not null)
@@ -185,16 +206,13 @@ public static class FootprintReader
                     case "property":
                         properties.Add(SymLibReader.ParseProperty(child));
                         break;
-                    case "fp_poly":
-                        diagnostics.Add(new KiCadDiagnostic(DiagnosticSeverity.Warning,
-                            "Footprint polygon (fp_poly) parsing not yet implemented", child.Token));
-                        break;
                     case "layer":
                     case "descr":
                     case "tags":
                     case "path":
                     case "uuid":
                     case "tstamp":
+                    case "tedit":
                     case "at":
                     case "attr":
                     case "clearance":
@@ -204,6 +222,8 @@ public static class FootprintReader
                     case "thermal_width":
                     case "thermal_gap":
                     case "zone_connect":
+                    case "autoplace_cost90":
+                    case "autoplace_cost180":
                     case "fp_text_private":
                         // Known tokens handled elsewhere or intentionally skipped
                         break;
@@ -224,6 +244,10 @@ public static class FootprintReader
         component.TextList.AddRange(texts);
         component.TrackList.AddRange(tracks);
         component.ArcList.AddRange(arcs);
+        component.RectangleList.AddRange(rectangles);
+        component.CircleList.AddRange(circles);
+        component.PolygonList.AddRange(polygons);
+        component.CurveList.AddRange(curves);
         component.PropertyList.AddRange(properties);
         component.DiagnosticList.AddRange(diagnostics);
 
@@ -262,10 +286,21 @@ public static class FootprintReader
             {
                 pad.HoleType = PadHoleType.Slot;
                 pad.HoleSize = Coord.FromMm(drillNode.GetDouble(1) ?? 0);
+                // Second diameter for oval
+                pad.DrillSizeY = Coord.FromMm(drillNode.GetDouble(2) ?? pad.HoleSize.ToMm());
             }
             else
             {
                 pad.HoleSize = Coord.FromMm(drillNode.GetDouble(0) ?? 0);
+            }
+
+            // Drill offset
+            var drillOffsetNode = drillNode.GetChild("offset");
+            if (drillOffsetNode is not null)
+            {
+                pad.DrillOffset = new CoordPoint(
+                    Coord.FromMm(drillOffsetNode.GetDouble(0) ?? 0),
+                    Coord.FromMm(drillOffsetNode.GetDouble(1) ?? 0));
             }
         }
 
@@ -314,6 +349,30 @@ public static class FootprintReader
         pad.PinType = node.GetChild("pintype")?.GetString();
         pad.DieLength = Coord.FromMm(node.GetChild("die_length")?.GetDouble() ?? 0);
 
+        // Chamfer
+        pad.ChamferRatio = node.GetChild("chamfer_ratio")?.GetDouble() ?? 0;
+        var chamferNode = node.GetChild("chamfer");
+        if (chamferNode is not null)
+        {
+            var corners = new List<string>();
+            foreach (var v in chamferNode.Values)
+            {
+                if (v is SExprSymbol sym)
+                    corners.Add(sym.Value);
+            }
+            pad.ChamferCorners = corners.ToArray();
+        }
+
+        // Pad property
+        pad.PadProperty = node.GetChild("property")?.GetString();
+
+        // Thermal bridge angle
+        pad.ThermalBridgeAngle = node.GetChild("thermal_bridge_angle")?.GetDouble() ?? 0;
+
+        // Remove unused layers and keep end layers
+        pad.RemoveUnusedLayers = node.GetChild("remove_unused_layers") is not null;
+        pad.KeepEndLayers = node.GetChild("keep_end_layers") is not null;
+
         pad.Uuid = SExpressionHelper.ParseUuid(node);
 
         return pad;
@@ -343,10 +402,16 @@ public static class FootprintReader
             }
         }
 
-        var (fontH, _, _, _, _, isBold, isItalic) = SExpressionHelper.ParseTextEffects(node);
+        var (fontH, fontW, justification, _, isMirrored, isBold, isItalic, fontFace, fontThickness, fontColor) = SExpressionHelper.ParseTextEffects(node);
         text.Height = fontH;
+        text.FontWidth = fontW;
         text.FontBold = isBold;
         text.FontItalic = isItalic;
+        text.FontName = fontFace;
+        text.FontThickness = fontThickness;
+        text.FontColor = fontColor;
+        text.Justification = justification;
+        text.IsMirrored = isMirrored;
 
         text.Uuid = SExpressionHelper.ParseUuid(node);
 
@@ -359,7 +424,7 @@ public static class FootprintReader
         var endNode = node.GetChild("end");
         var start = startNode is not null ? SExpressionHelper.ParseXY(startNode) : CoordPoint.Zero;
         var end = endNode is not null ? SExpressionHelper.ParseXY(endNode) : CoordPoint.Zero;
-        var (width, _, _) = SExpressionHelper.ParseStroke(node);
+        var (width, style, color) = SExpressionHelper.ParseStroke(node);
 
         // If no stroke, try legacy width
         if (width == Coord.Zero)
@@ -367,80 +432,75 @@ public static class FootprintReader
             width = Coord.FromMm(node.GetChild("width")?.GetDouble() ?? 0);
         }
 
+        var (fillType, _, fillColor) = SExpressionHelper.ParseFill(node);
+
         return new KiCadPcbTrack
         {
             Start = start,
             End = end,
             Width = width,
+            StrokeStyle = style,
+            StrokeColor = color,
+            FillType = fillType,
+            FillColor = fillColor,
             LayerName = node.GetChild("layer")?.GetString(),
+            IsLocked = SExpressionHelper.HasSymbol(node, "locked"),
             Uuid = SExpressionHelper.ParseUuid(node)
         };
     }
 
-    private static KiCadPcbArc ParseFpCircle(SExpr node)
+    private static KiCadPcbCircle ParseFpCircle(SExpr node)
     {
         var centerNode = node.GetChild("center");
         var endNode = node.GetChild("end");
         var center = centerNode is not null ? SExpressionHelper.ParseXY(centerNode) : CoordPoint.Zero;
         var end = endNode is not null ? SExpressionHelper.ParseXY(endNode) : CoordPoint.Zero;
-        var (width, _, _) = SExpressionHelper.ParseStroke(node);
+        var (width, style, color) = SExpressionHelper.ParseStroke(node);
         if (width == Coord.Zero)
             width = Coord.FromMm(node.GetChild("width")?.GetDouble() ?? 0);
 
-        var dx = end.X.ToMm() - center.X.ToMm();
-        var dy = end.Y.ToMm() - center.Y.ToMm();
-        var radius = Coord.FromMm(Math.Sqrt(dx * dx + dy * dy));
+        var (fillType, _, fillColor) = SExpressionHelper.ParseFill(node);
 
-        // Create a 360-degree arc using the end point as start, a diametrically opposite point as mid
-        var midPoint = new CoordPoint(
-            Coord.FromMm(2 * center.X.ToMm() - end.X.ToMm()),
-            Coord.FromMm(2 * center.Y.ToMm() - end.Y.ToMm()));
-
-        // Use a point 90 degrees around as mid for better three-point representation
-        var midX = center.X.ToMm() - dy;
-        var midY = center.Y.ToMm() + dx;
-        midPoint = new CoordPoint(Coord.FromMm(midX), Coord.FromMm(midY));
-
-        return new KiCadPcbArc
+        return new KiCadPcbCircle
         {
             Center = center,
-            Radius = radius,
-            StartAngle = 0,
-            EndAngle = 360,
+            End = end,
             Width = width,
+            StrokeStyle = style,
+            StrokeColor = color,
+            FillType = fillType,
+            FillColor = fillColor,
             LayerName = node.GetChild("layer")?.GetString(),
-            ArcStart = end,
-            ArcMid = midPoint,
-            ArcEnd = end,
+            IsLocked = SExpressionHelper.HasSymbol(node, "locked"),
             Uuid = SExpressionHelper.ParseUuid(node)
         };
     }
 
-    private static List<KiCadPcbTrack> ParseFpRect(SExpr node)
+    private static KiCadPcbRectangle ParseFpRect(SExpr node)
     {
         var startNode = node.GetChild("start");
         var endNode = node.GetChild("end");
         var start = startNode is not null ? SExpressionHelper.ParseXY(startNode) : CoordPoint.Zero;
         var end = endNode is not null ? SExpressionHelper.ParseXY(endNode) : CoordPoint.Zero;
-        var (width, _, _) = SExpressionHelper.ParseStroke(node);
+        var (width, style, color) = SExpressionHelper.ParseStroke(node);
         if (width == Coord.Zero)
             width = Coord.FromMm(node.GetChild("width")?.GetDouble() ?? 0);
 
-        var layer = node.GetChild("layer")?.GetString();
-        var uuid = SExpressionHelper.ParseUuid(node);
+        var (fillType, _, fillColor) = SExpressionHelper.ParseFill(node);
 
-        var topLeft = start;
-        var topRight = new CoordPoint(end.X, start.Y);
-        var bottomRight = end;
-        var bottomLeft = new CoordPoint(start.X, end.Y);
-
-        return
-        [
-            new KiCadPcbTrack { Start = topLeft, End = topRight, Width = width, LayerName = layer, Uuid = uuid },
-            new KiCadPcbTrack { Start = topRight, End = bottomRight, Width = width, LayerName = layer },
-            new KiCadPcbTrack { Start = bottomRight, End = bottomLeft, Width = width, LayerName = layer },
-            new KiCadPcbTrack { Start = bottomLeft, End = topLeft, Width = width, LayerName = layer },
-        ];
+        return new KiCadPcbRectangle
+        {
+            Start = start,
+            End = end,
+            Width = width,
+            StrokeStyle = style,
+            StrokeColor = color,
+            FillType = fillType,
+            FillColor = fillColor,
+            LayerName = node.GetChild("layer")?.GetString(),
+            IsLocked = SExpressionHelper.HasSymbol(node, "locked"),
+            Uuid = SExpressionHelper.ParseUuid(node)
+        };
     }
 
     private static KiCadPcbArc ParseFpArc(SExpr node)
@@ -451,7 +511,7 @@ public static class FootprintReader
         var start = startNode is not null ? SExpressionHelper.ParseXY(startNode) : CoordPoint.Zero;
         var mid = midNode is not null ? SExpressionHelper.ParseXY(midNode) : CoordPoint.Zero;
         var end = endNode is not null ? SExpressionHelper.ParseXY(endNode) : CoordPoint.Zero;
-        var (width, _, _) = SExpressionHelper.ParseStroke(node);
+        var (width, style, color) = SExpressionHelper.ParseStroke(node);
         if (width == Coord.Zero)
         {
             width = Coord.FromMm(node.GetChild("width")?.GetDouble() ?? 0);
@@ -466,11 +526,92 @@ public static class FootprintReader
             StartAngle = startAngle,
             EndAngle = endAngle,
             Width = width,
+            StrokeStyle = style,
+            StrokeColor = color,
             LayerName = node.GetChild("layer")?.GetString(),
             ArcStart = start,
             ArcMid = mid,
             ArcEnd = end,
+            IsLocked = SExpressionHelper.HasSymbol(node, "locked"),
             Uuid = SExpressionHelper.ParseUuid(node)
         };
+    }
+
+    private static KiCadPcbPolygon ParseFpPoly(SExpr node)
+    {
+        var points = SExpressionHelper.ParsePoints(node);
+        var (width, style, color) = SExpressionHelper.ParseStroke(node);
+        if (width == Coord.Zero)
+            width = Coord.FromMm(node.GetChild("width")?.GetDouble() ?? 0);
+        var (fillType, _, fillColor) = SExpressionHelper.ParseFill(node);
+
+        return new KiCadPcbPolygon
+        {
+            Points = points,
+            Width = width,
+            StrokeStyle = style,
+            StrokeColor = color,
+            FillType = fillType,
+            FillColor = fillColor,
+            LayerName = node.GetChild("layer")?.GetString(),
+            IsLocked = SExpressionHelper.HasSymbol(node, "locked"),
+            Uuid = SExpressionHelper.ParseUuid(node)
+        };
+    }
+
+    private static KiCadPcbCurve ParseFpCurve(SExpr node)
+    {
+        var points = SExpressionHelper.ParsePoints(node);
+        var (width, style, color) = SExpressionHelper.ParseStroke(node);
+        if (width == Coord.Zero)
+            width = Coord.FromMm(node.GetChild("width")?.GetDouble() ?? 0);
+
+        return new KiCadPcbCurve
+        {
+            Points = points,
+            Width = width,
+            StrokeStyle = style,
+            StrokeColor = color,
+            LayerName = node.GetChild("layer")?.GetString(),
+            IsLocked = SExpressionHelper.HasSymbol(node, "locked"),
+            Uuid = SExpressionHelper.ParseUuid(node)
+        };
+    }
+
+    private static KiCadPcb3DModel Parse3DModel(SExpr node)
+    {
+        var model = new KiCadPcb3DModel
+        {
+            Path = node.GetString() ?? ""
+        };
+
+        var offsetNode = node.GetChild("offset")?.GetChild("xyz");
+        if (offsetNode is not null)
+        {
+            model.Offset = new CoordPoint(
+                Coord.FromMm(offsetNode.GetDouble(0) ?? 0),
+                Coord.FromMm(offsetNode.GetDouble(1) ?? 0));
+            model.OffsetZ = offsetNode.GetDouble(2) ?? 0;
+        }
+
+        var scaleNode = node.GetChild("scale")?.GetChild("xyz");
+        if (scaleNode is not null)
+        {
+            model.Scale = new CoordPoint(
+                Coord.FromMm(scaleNode.GetDouble(0) ?? 1),
+                Coord.FromMm(scaleNode.GetDouble(1) ?? 1));
+            model.ScaleZ = scaleNode.GetDouble(2) ?? 1;
+        }
+
+        var rotateNode = node.GetChild("rotate")?.GetChild("xyz");
+        if (rotateNode is not null)
+        {
+            model.Rotation = new CoordPoint(
+                Coord.FromMm(rotateNode.GetDouble(0) ?? 0),
+                Coord.FromMm(rotateNode.GetDouble(1) ?? 0));
+            model.RotationZ = rotateNode.GetDouble(2) ?? 0;
+        }
+
+        return model;
     }
 }

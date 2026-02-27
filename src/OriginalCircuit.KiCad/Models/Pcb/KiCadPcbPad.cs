@@ -119,6 +119,36 @@ public sealed class KiCadPcbPad : IPcbPad
     public Coord Clearance { get; set; }
 
     /// <summary>
+    /// Gets the second drill diameter for oval drill holes.
+    /// </summary>
+    public Coord DrillSizeY { get; set; }
+
+    /// <summary>
+    /// Gets the drill offset from pad center.
+    /// </summary>
+    public CoordPoint DrillOffset { get; set; }
+
+    /// <summary>
+    /// Gets the chamfer ratio (0.0 to 1.0) for chamfered rectangular pads.
+    /// </summary>
+    public double ChamferRatio { get; set; }
+
+    /// <summary>
+    /// Gets which corners are chamfered (bitmask: top_left, top_right, bottom_left, bottom_right).
+    /// </summary>
+    public string[] ChamferCorners { get; set; } = [];
+
+    /// <summary>
+    /// Gets the pad property (e.g., pad_prop_bga, pad_prop_fiducial_glob, etc.).
+    /// </summary>
+    public string? PadProperty { get; set; }
+
+    /// <summary>
+    /// Gets the thermal bridge angle for this pad.
+    /// </summary>
+    public double ThermalBridgeAngle { get; set; }
+
+    /// <summary>
     /// Gets the UUID / tstamp.
     /// </summary>
     public string? Uuid { get; set; }
