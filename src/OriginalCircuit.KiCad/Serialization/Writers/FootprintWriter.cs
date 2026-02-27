@@ -169,7 +169,16 @@ public static class FootprintWriter
         if (text.LayerName is not null)
             tb.AddChild("layer", l => l.AddSymbol(text.LayerName));
 
-        tb.AddChild(WriterHelper.BuildTextEffects(text.Height, text.Height, isBold: text.FontBold, isItalic: text.FontItalic));
+        var fontW = text.FontWidth != Coord.Zero ? text.FontWidth : text.Height;
+        tb.AddChild(WriterHelper.BuildTextEffects(
+            text.Height, fontW,
+            justification: text.Justification,
+            isMirrored: text.IsMirrored,
+            isBold: text.FontBold,
+            isItalic: text.FontItalic,
+            fontFace: text.FontName,
+            fontThickness: text.FontThickness,
+            fontColor: text.FontColor));
 
         if (text.Uuid is not null)
             tb.AddChild(WriterHelper.BuildUuid(text.Uuid));

@@ -292,7 +292,7 @@ public static class SymLibReader
         param.Location = loc;
         param.Orientation = (int)angle;
 
-        var (fontH, fontW, justification, isHidden, isMirrored, _, _) = SExpressionHelper.ParseTextEffects(node);
+        var (fontH, fontW, justification, isHidden, isMirrored, _, _, _, _, _) = SExpressionHelper.ParseTextEffects(node);
         param.FontSizeHeight = fontH;
         param.FontSizeWidth = fontW;
         param.Justification = justification;
@@ -427,7 +427,7 @@ public static class SymLibReader
     private static KiCadSchLabel ParseTextLabel(SExpr node)
     {
         var (loc, angle) = SExpressionHelper.ParsePosition(node);
-        var (_, _, justification, isHidden, isMirrored, _, _) = SExpressionHelper.ParseTextEffects(node);
+        var (_, _, justification, isHidden, isMirrored, _, _, _, _, _) = SExpressionHelper.ParseTextEffects(node);
 
         return new KiCadSchLabel
         {

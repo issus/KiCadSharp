@@ -349,10 +349,16 @@ public static class FootprintReader
             }
         }
 
-        var (fontH, _, _, _, _, isBold, isItalic) = SExpressionHelper.ParseTextEffects(node);
+        var (fontH, fontW, justification, _, isMirrored, isBold, isItalic, fontFace, fontThickness, fontColor) = SExpressionHelper.ParseTextEffects(node);
         text.Height = fontH;
+        text.FontWidth = fontW;
         text.FontBold = isBold;
         text.FontItalic = isItalic;
+        text.FontName = fontFace;
+        text.FontThickness = fontThickness;
+        text.FontColor = fontColor;
+        text.Justification = justification;
+        text.IsMirrored = isMirrored;
 
         text.Uuid = SExpressionHelper.ParseUuid(node);
 

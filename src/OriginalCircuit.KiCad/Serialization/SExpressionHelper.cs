@@ -70,11 +70,11 @@ internal static class SExpressionHelper
     /// <summary>
     /// Parses text effects from an <c>(effects (font (size H W) ...) (justify ...))</c> child node.
     /// </summary>
-    public static (Coord FontHeight, Coord FontWidth, TextJustification Justification, bool IsHidden, bool IsMirrored, bool IsBold, bool IsItalic) ParseTextEffects(SExpr parent)
+    public static (Coord FontHeight, Coord FontWidth, TextJustification Justification, bool IsHidden, bool IsMirrored, bool IsBold, bool IsItalic, string? FontFace, Coord FontThickness, EdaColor FontColor) ParseTextEffects(SExpr parent)
     {
         var effects = parent.GetChild("effects");
         if (effects is null)
-            return (Coord.FromMm(1.27), Coord.FromMm(1.27), TextJustification.MiddleCenter, false, false, false, false);
+            return (Coord.FromMm(1.27), Coord.FromMm(1.27), TextJustification.MiddleCenter, false, false, false, false, null, Coord.Zero, default);
 
         var font = effects.GetChild("font");
         var sizeNode = font?.GetChild("size");
@@ -84,6 +84,15 @@ internal static class SExpressionHelper
         // or as symbol values within the font node (font bold italic)
         var isBold = font?.GetChild("bold") is not null;
         var isItalic = font?.GetChild("italic") is not null;
+
+        // Font face
+        var fontFace = font?.GetChild("face")?.GetString();
+
+        // Font thickness
+        var fontThickness = Coord.FromMm(font?.GetChild("thickness")?.GetDouble() ?? 0);
+
+        // Font color
+        var fontColor = ParseColor(font?.GetChild("color"));
 
         if (font is not null)
         {
@@ -109,7 +118,7 @@ internal static class SExpressionHelper
         var isHidden = effects.GetChild("hide") is not null ||
                        effects.Values.Any(v => v is SExprSymbol s && s.Value == "hide");
 
-        return (fontH, fontW, justification, isHidden, isMirrored, isBold, isItalic);
+        return (fontH, fontW, justification, isHidden, isMirrored, isBold, isItalic, fontFace, fontThickness, fontColor);
     }
 
     /// <summary>

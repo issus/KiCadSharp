@@ -74,20 +74,26 @@ internal static class WriterHelper
     }
 
     /// <summary>
-    /// Builds a <c>(effects (font (size H W)))</c> node.
+    /// Builds an <c>(effects (font (size H W)))</c> node.
     /// </summary>
-    public static SExpr BuildTextEffects(Coord fontH, Coord fontW, TextJustification justification = TextJustification.MiddleCenter, bool hide = false, bool isMirrored = false, bool isBold = false, bool isItalic = false)
+    public static SExpr BuildTextEffects(Coord fontH, Coord fontW, TextJustification justification = TextJustification.MiddleCenter, bool hide = false, bool isMirrored = false, bool isBold = false, bool isItalic = false, string? fontFace = null, Coord fontThickness = default, EdaColor fontColor = default)
     {
         var b = new SExpressionBuilder("effects")
             .AddChild("font", f =>
             {
+                if (fontFace is not null)
+                    f.AddChild("face", fc => fc.AddValue(fontFace));
                 f.AddChild("size", s =>
                 {
                     s.AddValue(fontH.ToMm());
                     s.AddValue(fontW.ToMm());
                 });
+                if (fontThickness != Coord.Zero)
+                    f.AddChild("thickness", t => t.AddValue(fontThickness.ToMm()));
                 if (isBold) f.AddChild("bold", _ => { });
                 if (isItalic) f.AddChild("italic", _ => { });
+                if (fontColor != default)
+                    f.AddChild(BuildColor(fontColor));
             });
 
         if (justification != TextJustification.MiddleCenter || isMirrored)

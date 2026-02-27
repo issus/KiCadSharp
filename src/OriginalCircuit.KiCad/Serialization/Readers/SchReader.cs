@@ -220,7 +220,7 @@ public static class SchReader
     private static KiCadSchNetLabel ParseNetLabel(SExpr node, NetLabelType labelType)
     {
         var (loc, angle) = SExpressionHelper.ParsePosition(node);
-        var (_, _, justification, _, _, _, _) = SExpressionHelper.ParseTextEffects(node);
+        var (_, _, justification, _, _, _, _, _, _, _) = SExpressionHelper.ParseTextEffects(node);
 
         return new KiCadSchNetLabel
         {
@@ -236,7 +236,7 @@ public static class SchReader
     private static KiCadSchLabel ParseTextLabel(SExpr node)
     {
         var (loc, angle) = SExpressionHelper.ParsePosition(node);
-        var (_, _, justification, isHidden, isMirrored, _, _) = SExpressionHelper.ParseTextEffects(node);
+        var (_, _, justification, isHidden, isMirrored, _, _, _, _, _) = SExpressionHelper.ParseTextEffects(node);
 
         return new KiCadSchLabel
         {
