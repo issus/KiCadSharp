@@ -280,7 +280,10 @@ public static class SchWriter
 
         sb.AddChild(WriterHelper.BuildPosition(comp.Location, comp.Rotation));
 
-        if (comp.IsMirroredX)
+        // Mirror - support "x", "y", and "xy"
+        if (comp.IsMirroredX && comp.IsMirroredY)
+            sb.AddChild("mirror", m => m.AddSymbol("xy"));
+        else if (comp.IsMirroredX)
             sb.AddChild("mirror", m => m.AddSymbol("x"));
         else if (comp.IsMirroredY)
             sb.AddChild("mirror", m => m.AddSymbol("y"));
@@ -288,14 +291,48 @@ public static class SchWriter
         if (comp.Unit > 0)
             sb.AddChild("unit", u => u.AddValue(comp.Unit));
 
+        // in_bom / on_board
+        sb.AddChild("in_bom", v => v.AddBool(comp.InBom));
+        sb.AddChild("on_board", v => v.AddBool(comp.OnBoard));
+
+        // convert / body_style
+        if (comp.BodyStyle > 0)
+            sb.AddChild("convert", c => c.AddValue(comp.BodyStyle));
+
+        if (comp.FieldsAutoplaced)
+            sb.AddChild("fields_autoplaced", f => f.AddBool(true));
+
+        // lib_name
+        if (comp.LibName is not null)
+            sb.AddChild("lib_name", l => l.AddValue(comp.LibName));
+
         foreach (var param in comp.Parameters.OfType<KiCadSchParameter>())
         {
             sb.AddChild(SymLibWriter.BuildProperty(param));
         }
 
+        // Write pins
+        foreach (var pin in comp.Pins.OfType<KiCadSchPin>())
+        {
+            sb.AddChild(BuildPlacedPin(pin));
+        }
+
+        // Instances
+        if (comp.InstancesRaw is not null)
+            sb.AddChild(comp.InstancesRaw);
+
         if (comp.Uuid is not null)
             sb.AddChild(WriterHelper.BuildUuid(comp.Uuid));
 
         return sb.Build();
+    }
+
+    private static SExpr BuildPlacedPin(KiCadSchPin pin)
+    {
+        var pb = new SExpressionBuilder("pin")
+            .AddValue(pin.Name ?? "~");
+        if (pin.Uuid is not null)
+            pb.AddChild(WriterHelper.BuildUuid(pin.Uuid));
+        return pb.Build();
     }
 }

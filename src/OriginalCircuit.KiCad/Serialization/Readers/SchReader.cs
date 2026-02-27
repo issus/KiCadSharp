@@ -416,19 +416,53 @@ public static class SchReader
         component.Rotation = angle;
         component.Uuid = SExpressionHelper.ParseUuid(node);
 
-        // Parse mirror
+        // Parse mirror - support "x", "y", and "xy"
         var mirror = node.GetChild("mirror");
         if (mirror is not null)
         {
             var mirrorVal = mirror.GetString();
-            component.IsMirroredX = mirrorVal == "x";
-            component.IsMirroredY = mirrorVal == "y";
+            if (mirrorVal == "xy" || mirrorVal == "yx")
+            {
+                component.IsMirroredX = true;
+                component.IsMirroredY = true;
+            }
+            else
+            {
+                component.IsMirroredX = mirrorVal == "x";
+                component.IsMirroredY = mirrorVal == "y";
+            }
         }
 
         // Parse unit
         var unitNode = node.GetChild("unit");
         if (unitNode is not null)
             component.Unit = unitNode.GetInt() ?? 1;
+
+        // Parse in_bom / on_board for placed symbols
+        var inBomNode = node.GetChild("in_bom");
+        if (inBomNode is not null)
+            component.InBom = inBomNode.GetBool() ?? true;
+
+        var onBoardNode = node.GetChild("on_board");
+        if (onBoardNode is not null)
+            component.OnBoard = onBoardNode.GetBool() ?? true;
+
+        // Parse convert / body_style
+        var convertNode = node.GetChild("convert");
+        if (convertNode is not null)
+            component.BodyStyle = convertNode.GetInt() ?? 0;
+        var bodyStyleNode = node.GetChild("body_style");
+        if (bodyStyleNode is not null)
+            component.BodyStyle = bodyStyleNode.GetInt() ?? 0;
+
+        // Parse fields_autoplaced
+        component.FieldsAutoplaced = node.GetChild("fields_autoplaced")?.GetBool() ?? false;
+
+        // Parse lib_name
+        component.LibName = node.GetChild("lib_name")?.GetString();
+
+        // Parse instances
+        component.InstancesRaw = node.GetChild("instances");
 
         // Parse properties
         var parameters = new List<KiCadSchParameter>();
@@ -439,10 +473,16 @@ public static class SchReader
         component.ParameterList.AddRange(parameters);
 
         // Parse pins from the placed symbol
+        // Placed symbol pins have simplified format: (pin "name" (uuid "..."))
         var pins = new List<KiCadSchPin>();
         foreach (var pinNode in node.GetChildren("pin"))
         {
-            pins.Add(SymLibReader.ParsePin(pinNode));
+            var pin = new KiCadSchPin
+            {
+                Name = pinNode.GetString(0),
+                Uuid = SExpressionHelper.ParseUuid(pinNode)
+            };
+            pins.Add(pin);
         }
         component.PinList.AddRange(pins);
 

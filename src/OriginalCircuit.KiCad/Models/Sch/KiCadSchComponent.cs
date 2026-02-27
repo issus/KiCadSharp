@@ -133,6 +133,26 @@ public sealed class KiCadSchComponent : ISchComponent
     public bool OnBoard { get; set; } = true;
 
     /// <summary>
+    /// Gets or sets the convert/body_style value.
+    /// </summary>
+    public int BodyStyle { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the placed symbol's fields are auto-placed.
+    /// </summary>
+    public bool FieldsAutoplaced { get; set; }
+
+    /// <summary>
+    /// Gets or sets the lib_name for placed symbols.
+    /// </summary>
+    public string? LibName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the raw instances S-expression subtree for round-trip fidelity.
+    /// </summary>
+    public SExpression.SExpression? InstancesRaw { get; set; }
+
+    /// <summary>
     /// Gets the name of the symbol this one extends (derived/inherited symbols).
     /// </summary>
     public string? Extends { get; set; }
