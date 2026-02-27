@@ -2,6 +2,7 @@ using OriginalCircuit.Eda.Enums;
 using OriginalCircuit.Eda.Models;
 using OriginalCircuit.Eda.Models.Sch;
 using OriginalCircuit.Eda.Primitives;
+using SExpr = OriginalCircuit.KiCad.SExpression.SExpression;
 
 namespace OriginalCircuit.KiCad.Models.Sch;
 
@@ -35,6 +36,11 @@ public sealed class KiCadSchPowerObject : ISchPowerObject
     /// Gets the UUID of the power object.
     /// </summary>
     public string? Uuid { get; set; }
+
+    /// <summary>
+    /// Gets or sets the raw S-expression node for round-trip fidelity.
+    /// </summary>
+    public SExpr? RawNode { get; set; }
 
     /// <inheritdoc />
     public CoordRect Bounds => new(Location, Location);

@@ -330,7 +330,8 @@ public static class SchReader
             Location = loc,
             Text = node.GetString(),
             Rotation = angle,
-            Uuid = SExpressionHelper.ParseUuid(node)
+            Uuid = SExpressionHelper.ParseUuid(node),
+            RawNode = node
         };
     }
 

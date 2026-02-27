@@ -127,6 +127,12 @@ public static class SchWriter
             b.AddChild(BuildSheet(sheet));
         }
 
+        // Power ports
+        foreach (var power in sch.PowerObjects.OfType<KiCadSchPowerObject>())
+        {
+            b.AddChild(BuildPowerPort(power));
+        }
+
         // Placed symbols
         foreach (var comp in sch.Components.OfType<KiCadSchComponent>())
         {
@@ -250,6 +256,21 @@ public static class SchWriter
 
         if (sheet.Uuid is not null) sb.AddChild(WriterHelper.BuildUuid(sheet.Uuid));
         return sb.Build();
+    }
+
+    private static SExpr BuildPowerPort(KiCadSchPowerObject power)
+    {
+        // If we have the raw S-expression node, re-emit it verbatim for perfect round-trip
+        if (power.RawNode is not null)
+            return power.RawNode;
+
+        // Otherwise build from model properties
+        var pb = new SExpressionBuilder("power_port")
+            .AddValue(power.Text ?? "");
+        pb.AddChild(WriterHelper.BuildPosition(power.Location, power.Rotation));
+        pb.AddChild(WriterHelper.BuildTextEffects(WriterHelper.DefaultTextSize, WriterHelper.DefaultTextSize));
+        if (power.Uuid is not null) pb.AddChild(WriterHelper.BuildUuid(power.Uuid));
+        return pb.Build();
     }
 
     private static SExpr BuildPlacedSymbol(KiCadSchComponent comp)
