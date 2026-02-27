@@ -199,7 +199,7 @@ public class SExpressionWriterTests
     }
 
     [Fact]
-    public void Write_NegativeZero_EmitsZero()
+    public void Write_NegativeZero_PreservesNegativeZero()
     {
         var expr = new SExpressionBuilder("val")
             .AddValue(-0.0)
@@ -207,7 +207,7 @@ public class SExpressionWriterTests
 
         var result = SExpressionWriter.Write(expr);
 
-        result.Should().Be("(val 0)");
+        result.Should().Be("(val -0)");
     }
 
     [Fact]

@@ -44,12 +44,6 @@ public sealed record SExprNumber(double Value) : ISExpressionValue
             result = result.TrimEnd('0').TrimEnd('.');
         }
 
-        // Handle negative zero
-        if (result == "-0")
-        {
-            result = "0";
-        }
-
         return result;
     }
 }

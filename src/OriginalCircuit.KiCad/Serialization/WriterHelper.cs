@@ -20,9 +20,8 @@ internal static class WriterHelper
     {
         var b = new SExpressionBuilder("at")
             .AddValue(location.X.ToMm())
-            .AddValue(location.Y.ToMm());
-        if (angle != 0)
-            b.AddValue(angle);
+            .AddValue(location.Y.ToMm())
+            .AddValue(angle);
         return b.Build();
     }
 
@@ -136,7 +135,7 @@ internal static class WriterHelper
     /// </summary>
     public static SExpr BuildUuid(string uuid)
     {
-        return new SExpressionBuilder("uuid").AddValue(uuid).Build();
+        return new SExpressionBuilder("uuid").AddSymbol(uuid).Build();
     }
 
     /// <summary>

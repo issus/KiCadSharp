@@ -230,7 +230,7 @@ public static class FootprintWriter
             pb.AddChild("layers", l =>
             {
                 foreach (var layer in pad.Layers)
-                    l.AddValue(layer);
+                    l.AddSymbol(layer);
             });
         }
 

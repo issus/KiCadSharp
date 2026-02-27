@@ -38,7 +38,7 @@ public static class PcbWriter
     private static SExpr Build(KiCadPcb pcb)
     {
         var b = new SExpressionBuilder("kicad_pcb")
-            .AddChild("version", v => v.AddValue(pcb.Version == 0 ? 20231014 : pcb.Version))
+            .AddChild("version", v => v.AddValue(pcb.Version == 0 ? 20231120 : pcb.Version))
             .AddChild("generator", g => g.AddValue(pcb.Generator ?? "kicadsharp"))
             .AddChild("generator_version", g => g.AddValue(pcb.GeneratorVersion ?? "1.0"));
 
@@ -142,8 +142,8 @@ public static class PcbWriter
         {
             vb.AddChild("layers", l =>
             {
-                l.AddValue(via.StartLayerName);
-                l.AddValue(via.EndLayerName);
+                l.AddSymbol(via.StartLayerName);
+                l.AddSymbol(via.EndLayerName);
             });
         }
 
