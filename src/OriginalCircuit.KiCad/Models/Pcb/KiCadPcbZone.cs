@@ -119,6 +119,12 @@ public sealed class KiCadPcbZone
     public IReadOnlyList<CoordPoint> Outline { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the raw <c>(polygon ...)</c> S-expression subtree for round-trip fidelity.
+    /// Used when the polygon contains arcs or other non-xy elements that cannot be represented as simple CoordPoints.
+    /// </summary>
+    public SExpr? PolygonRaw { get; set; }
+
+    /// <summary>
     /// Gets or sets raw filled polygon S-expression subtrees for round-trip fidelity.
     /// These are large auto-generated data from KiCad's fill algorithm.
     /// </summary>
@@ -153,4 +159,9 @@ public sealed class KiCadPcbZone
     /// Gets or sets the raw <c>(attr ...)</c> S-expression value for the zone.
     /// </summary>
     public SExpr? AttrRaw { get; set; }
+
+    /// <summary>
+    /// Gets or sets the raw <c>(placement ...)</c> S-expression subtree for round-trip fidelity.
+    /// </summary>
+    public SExpr? PlacementRaw { get; set; }
 }

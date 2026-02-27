@@ -254,7 +254,7 @@ public static class PcbReader
         var start = startNode is not null ? SExpressionHelper.ParseXY(startNode) : CoordPoint.Zero;
         var end = endNode is not null ? SExpressionHelper.ParseXY(endNode) : CoordPoint.Zero;
 
-        return new KiCadPcbTrack
+        var track = new KiCadPcbTrack
         {
             Start = start,
             End = end,
@@ -265,6 +265,16 @@ public static class PcbReader
             IsLocked = node.Values.Any(v => v is SExprSymbol s && s.Value == "locked"),
             Status = node.GetChild("status")?.GetInt()
         };
+
+        // Also check for (locked yes) child node format (KiCad 9+)
+        var lockedChild = node.GetChild("locked");
+        if (lockedChild is not null)
+        {
+            track.IsLocked = lockedChild.GetBool() ?? true;
+            track.LockedIsChildNode = true;
+        }
+
+        return track;
     }
 
     private static KiCadPcbVia ParseVia(SExpr node)
@@ -294,6 +304,14 @@ public static class PcbReader
             }
         }
 
+        // Also check for (locked yes) child node format (KiCad 9+)
+        var lockedChild = node.GetChild("locked");
+        if (lockedChild is not null)
+        {
+            via.IsLocked = lockedChild.GetBool() ?? true;
+            via.LockedIsChildNode = true;
+        }
+
         // Parse layers
         var layersNode = node.GetChild("layers");
         if (layersNode is not null && layersNode.Values.Count >= 2)
@@ -303,8 +321,14 @@ public static class PcbReader
         }
 
         via.IsFree = node.GetChild("free")?.GetBool() ?? false;
-        via.RemoveUnusedLayers = node.GetChild("remove_unused_layers") is not null;
-        via.KeepEndLayers = node.GetChild("keep_end_layers") is not null;
+
+        var removeUnusedNode = node.GetChild("remove_unused_layers");
+        if (removeUnusedNode is not null)
+            via.RemoveUnusedLayers = removeUnusedNode.GetBool() ?? true;
+
+        var keepEndNode = node.GetChild("keep_end_layers");
+        if (keepEndNode is not null)
+            via.KeepEndLayers = keepEndNode.GetBool() ?? true;
         via.Status = node.GetChild("status")?.GetInt();
 
         // Parse teardrop (store raw for round-trip)
@@ -315,6 +339,14 @@ public static class PcbReader
             via.TeardropRaw = teardropNode;
             via.TeardropEnabled = true;
         }
+
+        // KiCad 9+ via tenting/covering/plugging/filling/capping (store raw for round-trip)
+        via.TentingRaw = node.GetChild("tenting");
+        via.CappingRaw = node.GetChild("capping");
+        via.CoveringRaw = node.GetChild("covering");
+        via.PluggingRaw = node.GetChild("plugging");
+        via.FillingRaw = node.GetChild("filling");
+        via.ZoneLayerConnectionsRaw = node.GetChild("zone_layer_connections");
 
         return via;
     }
@@ -358,16 +390,33 @@ public static class PcbReader
         var (loc, angle) = SExpressionHelper.ParsePosition(node);
         text.Location = loc;
         text.Rotation = angle;
-        text.LayerName = node.GetChild("layer")?.GetString();
+        var layerNode = node.GetChild("layer");
+        text.LayerName = layerNode?.GetString();
         text.Uuid = SExpressionHelper.ParseUuid(node);
 
-        // Check for knockout
-        foreach (var v in node.Values)
+        // Check for knockout on layer node: (layer "F.SilkS" knockout)
+        if (layerNode is not null)
         {
-            if (v is SExprSymbol s && s.Value == "knockout")
+            foreach (var v in layerNode.Values)
             {
-                text.IsKnockout = true;
-                break;
+                if (v is SExprSymbol s && s.Value == "knockout")
+                {
+                    text.IsKnockout = true;
+                    break;
+                }
+            }
+        }
+
+        // Also check for knockout as bare symbol on text node (legacy format)
+        if (!text.IsKnockout)
+        {
+            foreach (var v in node.Values)
+            {
+                if (v is SExprSymbol s && s.Value == "knockout")
+                {
+                    text.IsKnockout = true;
+                    break;
+                }
             }
         }
 
@@ -555,6 +604,9 @@ public static class PcbReader
         // attr (store raw for round-trip)
         zone.AttrRaw = node.GetChild("attr");
 
+        // placement (store raw for round-trip)
+        zone.PlacementRaw = node.GetChild("placement");
+
         // Fill settings (store raw for round-trip)
         var fillNode = node.GetChild("fill");
         zone.FillRaw = fillNode;
@@ -580,7 +632,16 @@ public static class PcbReader
         var polygon = node.GetChild("polygon");
         if (polygon is not null)
         {
-            zone.Outline = SExpressionHelper.ParsePoints(polygon);
+            var pts = SExpressionHelper.ParsePoints(polygon);
+            if (pts.Count > 0)
+            {
+                zone.Outline = pts;
+            }
+            else
+            {
+                // Polygon contains arcs or other non-xy elements; store raw for round-trip
+                zone.PolygonRaw = polygon;
+            }
         }
 
         // Filled polygons (store raw for round-trip)

@@ -60,14 +60,21 @@ public sealed class KiCadPcbVia : IPcbVia
     public bool IsLocked { get; set; }
 
     /// <summary>
-    /// Gets whether to remove unused layers.
+    /// Gets whether the locked flag uses child node format <c>(locked yes)</c> instead of bare symbol.
     /// </summary>
-    public bool RemoveUnusedLayers { get; set; }
+    public bool LockedIsChildNode { get; set; }
+
+    /// <summary>
+    /// Gets whether to remove unused layers.
+    /// <c>null</c> means the node is not present; <c>true</c>/<c>false</c> means <c>(remove_unused_layers yes/no)</c>.
+    /// </summary>
+    public bool? RemoveUnusedLayers { get; set; }
 
     /// <summary>
     /// Gets whether to keep end layers.
+    /// <c>null</c> means the node is not present; <c>true</c>/<c>false</c> means <c>(keep_end_layers yes/no)</c>.
     /// </summary>
-    public bool KeepEndLayers { get; set; }
+    public bool? KeepEndLayers { get; set; }
 
     /// <summary>
     /// Gets or sets the status flags.
@@ -83,6 +90,36 @@ public sealed class KiCadPcbVia : IPcbVia
     /// Gets or sets the raw teardrop S-expression subtree for round-trip fidelity.
     /// </summary>
     public SExpression.SExpression? TeardropRaw { get; set; }
+
+    /// <summary>
+    /// Gets or sets the raw tenting S-expression subtree for round-trip fidelity (KiCad 9+).
+    /// </summary>
+    public SExpression.SExpression? TentingRaw { get; set; }
+
+    /// <summary>
+    /// Gets or sets the raw capping S-expression subtree for round-trip fidelity (KiCad 9+).
+    /// </summary>
+    public SExpression.SExpression? CappingRaw { get; set; }
+
+    /// <summary>
+    /// Gets or sets the raw covering S-expression subtree for round-trip fidelity (KiCad 9+).
+    /// </summary>
+    public SExpression.SExpression? CoveringRaw { get; set; }
+
+    /// <summary>
+    /// Gets or sets the raw plugging S-expression subtree for round-trip fidelity (KiCad 9+).
+    /// </summary>
+    public SExpression.SExpression? PluggingRaw { get; set; }
+
+    /// <summary>
+    /// Gets or sets the raw filling S-expression subtree for round-trip fidelity (KiCad 9+).
+    /// </summary>
+    public SExpression.SExpression? FillingRaw { get; set; }
+
+    /// <summary>
+    /// Gets or sets the raw zone_layer_connections S-expression subtree for round-trip fidelity (KiCad 9+).
+    /// </summary>
+    public SExpression.SExpression? ZoneLayerConnectionsRaw { get; set; }
 
     /// <inheritdoc />
     public CoordRect Bounds

@@ -291,13 +291,15 @@ public static class FootprintWriter
             tb.AddChild("unlocked", u => u.AddBool(true));
 
         if (text.LayerName is not null)
-            tb.AddChild("layer", l => l.AddValue(text.LayerName));
+            tb.AddChild("layer", l =>
+            {
+                l.AddValue(text.LayerName);
+                if (text.IsKnockout)
+                    l.AddSymbol("knockout");
+            });
 
         if (text.IsHidden && text.HideIsChildNode)
             tb.AddChild("hide", h => h.AddBool(true));
-
-        if (text.IsKnockout)
-            tb.AddSymbol("knockout");
 
         if (text.Uuid is not null)
             tb.AddChild(WriterHelper.BuildUuid(text.Uuid));

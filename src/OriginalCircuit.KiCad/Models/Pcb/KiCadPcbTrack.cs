@@ -43,6 +43,11 @@ public sealed class KiCadPcbTrack : IPcbTrack
     public bool IsLocked { get; set; }
 
     /// <summary>
+    /// Gets whether the locked flag uses child node format <c>(locked yes)</c> instead of bare symbol.
+    /// </summary>
+    public bool LockedIsChildNode { get; set; }
+
+    /// <summary>
     /// Gets the stroke line style.
     /// </summary>
     public LineStyle StrokeStyle { get; set; } = LineStyle.Solid;

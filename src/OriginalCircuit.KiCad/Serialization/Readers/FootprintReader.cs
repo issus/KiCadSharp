@@ -535,7 +535,21 @@ public static class FootprintReader
         text.Location = loc;
         text.Rotation = angle;
 
-        text.LayerName = node.GetChild("layer")?.GetString();
+        var layerNode = node.GetChild("layer");
+        text.LayerName = layerNode?.GetString();
+
+        // Check for knockout on layer node: (layer "F.SilkS" knockout)
+        if (layerNode is not null)
+        {
+            foreach (var v in layerNode.Values)
+            {
+                if (v is SExprSymbol sym && sym.Value == "knockout")
+                {
+                    text.IsKnockout = true;
+                    break;
+                }
+            }
+        }
 
         // Check for hide and unlocked symbols
         foreach (var v in node.Values)

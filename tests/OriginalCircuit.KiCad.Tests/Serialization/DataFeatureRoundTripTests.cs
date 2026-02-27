@@ -363,7 +363,7 @@ public class DataFeatureRoundTripTests
     public async Task Pcb_GrTextKnockout_RoundTrips()
     {
         var sexpr = @"(kicad_pcb (version 20231014) (generator ""test"")
-            (gr_text ""Board Title"" knockout (at 100 50) (layer ""F.SilkS"")
+            (gr_text ""Board Title"" (at 100 50) (layer ""F.SilkS"" knockout)
                 (effects (font (size 1.5 1.5) (thickness 0.3))))
         )";
         var pcb = await ReadPcbFromString(sexpr);

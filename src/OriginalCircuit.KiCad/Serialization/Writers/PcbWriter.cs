@@ -153,15 +153,15 @@ public static class PcbWriter
                 b.AddChild(gen);
         }
 
+        // Embedded fonts (KiCad 8+) — emit before embedded_files to match KiCad ordering
+        if (pcb.EmbeddedFonts.HasValue)
+            b.AddChild("embedded_fonts", ef => ef.AddBool(pcb.EmbeddedFonts.Value));
+
         // Embedded files (raw S-expression pass-through)
         if (pcb.EmbeddedFilesRaw is not null)
         {
             b.AddChild(pcb.EmbeddedFilesRaw);
         }
-
-        // Embedded fonts (KiCad 8+) — emit at end of file to match KiCad ordering
-        if (pcb.EmbeddedFonts.HasValue)
-            b.AddChild("embedded_fonts", ef => ef.AddBool(pcb.EmbeddedFonts.Value));
 
         return b.Build();
     }
@@ -170,12 +170,15 @@ public static class PcbWriter
     {
         var sb = new SExpressionBuilder("segment");
 
-        if (track.IsLocked)
+        if (track.IsLocked && !track.LockedIsChildNode)
             sb.AddSymbol("locked");
 
         sb.AddChild("start", s => { s.AddMm(track.Start.X); s.AddMm(track.Start.Y); })
           .AddChild("end", e => { e.AddMm(track.End.X); e.AddMm(track.End.Y); })
           .AddChild("width", w => w.AddMm(track.Width));
+
+        if (track.IsLocked && track.LockedIsChildNode)
+            sb.AddChild("locked", l => l.AddBool(true));
 
         if (track.LayerName is not null)
             sb.AddChild("layer", l => l.AddValue(track.LayerName));
@@ -200,15 +203,8 @@ public static class PcbWriter
         else if (via.ViaType == ViaType.Micro)
             vb.AddSymbol("micro");
 
-        if (via.IsLocked)
+        if (via.IsLocked && !via.LockedIsChildNode)
             vb.AddSymbol("locked");
-
-        if (via.IsFree)
-            vb.AddChild("free", _ => { });
-        if (via.RemoveUnusedLayers)
-            vb.AddChild("remove_unused_layers", _ => { });
-        if (via.KeepEndLayers)
-            vb.AddChild("keep_end_layers", _ => { });
 
         vb.AddChild(WriterHelper.BuildPositionCompact(via.Location))
           .AddChild("size", s => s.AddMm(via.Diameter))
@@ -218,10 +214,31 @@ public static class PcbWriter
         {
             vb.AddChild("layers", l =>
             {
-                l.AddSymbol(via.StartLayerName);
-                l.AddSymbol(via.EndLayerName);
+                l.AddValue(via.StartLayerName);
+                l.AddValue(via.EndLayerName);
             });
         }
+
+        if (via.RemoveUnusedLayers is not null)
+            vb.AddChild("remove_unused_layers", r => r.AddBool(via.RemoveUnusedLayers.Value));
+        if (via.KeepEndLayers is not null)
+            vb.AddChild("keep_end_layers", k => k.AddBool(via.KeepEndLayers.Value));
+        if (via.IsLocked && via.LockedIsChildNode)
+            vb.AddChild("locked", l => l.AddBool(true));
+        if (via.IsFree)
+            vb.AddChild("free", f => f.AddBool(true));
+
+        // KiCad 9+ via tenting/covering/plugging/filling/capping (raw)
+        if (via.TentingRaw is not null) vb.AddChild(via.TentingRaw);
+        if (via.CappingRaw is not null) vb.AddChild(via.CappingRaw);
+        if (via.CoveringRaw is not null) vb.AddChild(via.CoveringRaw);
+        if (via.PluggingRaw is not null) vb.AddChild(via.PluggingRaw);
+        if (via.FillingRaw is not null) vb.AddChild(via.FillingRaw);
+        if (via.ZoneLayerConnectionsRaw is not null) vb.AddChild(via.ZoneLayerConnectionsRaw);
+
+        // Teardrops come before net/uuid in KiCad format
+        if (via.TeardropRaw is not null)
+            vb.AddChild(via.TeardropRaw);
 
         vb.AddChild("net", n => n.AddValue(via.Net));
 
@@ -230,9 +247,6 @@ public static class PcbWriter
 
         if (via.Status.HasValue)
             vb.AddChild("status", s => s.AddValue(via.Status.Value));
-
-        if (via.TeardropRaw is not null)
-            vb.AddChild(via.TeardropRaw);
 
         return vb.Build();
     }
@@ -268,16 +282,18 @@ public static class PcbWriter
         var tb = new SExpressionBuilder("gr_text")
             .AddValue(text.Text);
 
-        if (text.IsKnockout)
-            tb.AddSymbol("knockout");
-
         tb.AddChild(WriterHelper.BuildPosition(text.Location, text.Rotation));
 
         if (text.IsHidden)
             tb.AddSymbol("hide");
 
         if (text.LayerName is not null)
-            tb.AddChild("layer", l => l.AddValue(text.LayerName));
+            tb.AddChild("layer", l =>
+            {
+                l.AddValue(text.LayerName);
+                if (text.IsKnockout)
+                    l.AddSymbol("knockout");
+            });
 
         if (text.Uuid is not null)
             tb.AddChild(WriterHelper.BuildUuid(text.Uuid));
@@ -501,12 +517,20 @@ public static class PcbWriter
         if (zone.KeepoutRaw is not null)
             zb.AddChild(zone.KeepoutRaw);
 
+        // Placement (raw, between keepout and fill)
+        if (zone.PlacementRaw is not null)
+            zb.AddChild(zone.PlacementRaw);
+
         // Fill (prefer raw)
         if (zone.FillRaw is not null)
             zb.AddChild(zone.FillRaw);
 
-        // Outline polygon
-        if (zone.Outline.Count > 0)
+        // Outline polygon (prefer raw for arcs/complex polygons)
+        if (zone.PolygonRaw is not null)
+        {
+            zb.AddChild(zone.PolygonRaw);
+        }
+        else if (zone.Outline.Count > 0)
         {
             zb.AddChild("polygon", p =>
             {
