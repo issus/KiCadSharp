@@ -1,3 +1,4 @@
+using OriginalCircuit.Eda.Enums;
 using OriginalCircuit.Eda.Models.Pcb;
 using OriginalCircuit.Eda.Primitives;
 using OriginalCircuit.KiCad.Models.Pcb;
@@ -42,11 +43,30 @@ public static class PcbWriter
             .AddChild("generator", g => g.AddValue(pcb.Generator ?? "kicadsharp"))
             .AddChild("generator_version", g => g.AddValue(pcb.GeneratorVersion ?? "1.0"));
 
-        // General
-        b.AddChild("general", gen =>
-        {
-            gen.AddChild("thickness", t => t.AddValue(pcb.BoardThickness.ToMm()));
-        });
+        // General (prefer raw subtree for round-trip, fallback to constructed)
+        if (pcb.GeneralRaw is not null)
+            b.AddChild(pcb.GeneralRaw);
+        else
+            b.AddChild("general", gen =>
+            {
+                gen.AddChild("thickness", t => t.AddValue(pcb.BoardThickness.ToMm()));
+            });
+
+        // Paper (raw)
+        if (pcb.PaperRaw is not null)
+            b.AddChild(pcb.PaperRaw);
+
+        // Title block (raw)
+        if (pcb.TitleBlockRaw is not null)
+            b.AddChild(pcb.TitleBlockRaw);
+
+        // Layers (raw)
+        if (pcb.LayersRaw is not null)
+            b.AddChild(pcb.LayersRaw);
+
+        // Setup (raw)
+        if (pcb.SetupRaw is not null)
+            b.AddChild(pcb.SetupRaw);
 
         // Nets
         foreach (var (num, name) in pcb.Nets)
@@ -58,10 +78,58 @@ public static class PcbWriter
             });
         }
 
+        // Net classes
+        foreach (var nc in pcb.NetClasses)
+        {
+            b.AddChild(BuildNetClass(nc));
+        }
+
         // Footprints
         foreach (var comp in pcb.Components.OfType<KiCadPcbComponent>())
         {
             b.AddChild(FootprintWriter.BuildFootprint(comp));
+        }
+
+        // Graphic lines
+        foreach (var line in pcb.GraphicLines)
+        {
+            b.AddChild(BuildGrLine(line));
+        }
+
+        // Graphic arcs
+        foreach (var arc in pcb.GraphicArcs)
+        {
+            b.AddChild(BuildGrArc(arc));
+        }
+
+        // Graphic circles
+        foreach (var circle in pcb.GraphicCircles)
+        {
+            b.AddChild(BuildGrCircle(circle));
+        }
+
+        // Graphic rectangles
+        foreach (var rect in pcb.GraphicRects)
+        {
+            b.AddChild(BuildGrRect(rect));
+        }
+
+        // Graphic polygons
+        foreach (var poly in pcb.GraphicPolys)
+        {
+            b.AddChild(BuildGrPoly(poly));
+        }
+
+        // Graphic bezier curves
+        foreach (var bezier in pcb.GraphicBeziers)
+        {
+            b.AddChild(BuildGrBezier(bezier));
+        }
+
+        // Texts
+        foreach (var text in pcb.Texts.OfType<KiCadPcbText>())
+        {
+            b.AddChild(BuildGrText(text));
         }
 
         // Tracks
@@ -82,16 +150,22 @@ public static class PcbWriter
             b.AddChild(BuildArc(arc));
         }
 
-        // Texts
-        foreach (var text in pcb.Texts.OfType<KiCadPcbText>())
+        // Zones (structured)
+        foreach (var zone in pcb.Zones)
         {
-            b.AddChild(BuildGrText(text));
+            b.AddChild(BuildZoneStructured(zone));
         }
 
-        // Zones (from regions)
+        // Zones (from legacy regions)
         foreach (var region in pcb.Regions.OfType<KiCadPcbRegion>())
         {
-            b.AddChild(BuildZone(region));
+            b.AddChild(BuildZoneLegacy(region));
+        }
+
+        // Raw elements (dimensions, targets, groups)
+        foreach (var raw in pcb.RawElementList)
+        {
+            b.AddChild(raw);
         }
 
         return b.Build();
@@ -211,7 +285,7 @@ public static class PcbWriter
         return tb.Build();
     }
 
-    private static SExpr BuildZone(KiCadPcbRegion region)
+    private static SExpr BuildZoneLegacy(KiCadPcbRegion region)
     {
         var zb = new SExpressionBuilder("zone")
             .AddChild("net", n => n.AddValue(region.Net));
@@ -232,6 +306,196 @@ public static class PcbWriter
         {
             p.AddChild(WriterHelper.BuildPoints(region.Outline));
         });
+
+        return zb.Build();
+    }
+
+    // -- Board-level graphic builders --
+
+    private static void AddGraphicCommon(SExpressionBuilder gb, KiCadPcbGraphic graphic)
+    {
+        if (graphic.LayerName is not null)
+            gb.AddChild("layer", l => l.AddSymbol(graphic.LayerName));
+
+        if (graphic.StrokeWidth != Coord.Zero || graphic.StrokeStyle != LineStyle.Solid)
+            gb.AddChild(WriterHelper.BuildStroke(graphic.StrokeWidth, graphic.StrokeStyle, graphic.StrokeColor));
+
+        if (graphic.FillType != SchFillType.None)
+            gb.AddChild(WriterHelper.BuildFill(graphic.FillType, graphic.FillColor));
+
+        if (graphic.Uuid is not null)
+            gb.AddChild(WriterHelper.BuildUuid(graphic.Uuid));
+    }
+
+    private static SExpr BuildGrLine(KiCadPcbGraphicLine line)
+    {
+        var gb = new SExpressionBuilder("gr_line");
+        if (line.IsLocked) gb.AddSymbol("locked");
+        gb.AddChild("start", s => { s.AddValue(line.Start.X.ToMm()); s.AddValue(line.Start.Y.ToMm()); })
+          .AddChild("end", e => { e.AddValue(line.End.X.ToMm()); e.AddValue(line.End.Y.ToMm()); });
+        AddGraphicCommon(gb, line);
+        return gb.Build();
+    }
+
+    private static SExpr BuildGrArc(KiCadPcbGraphicArc arc)
+    {
+        var gb = new SExpressionBuilder("gr_arc");
+        if (arc.IsLocked) gb.AddSymbol("locked");
+        gb.AddChild("start", s => { s.AddValue(arc.Start.X.ToMm()); s.AddValue(arc.Start.Y.ToMm()); })
+          .AddChild("mid", m => { m.AddValue(arc.Mid.X.ToMm()); m.AddValue(arc.Mid.Y.ToMm()); })
+          .AddChild("end", e => { e.AddValue(arc.End.X.ToMm()); e.AddValue(arc.End.Y.ToMm()); });
+        AddGraphicCommon(gb, arc);
+        return gb.Build();
+    }
+
+    private static SExpr BuildGrCircle(KiCadPcbGraphicCircle circle)
+    {
+        var gb = new SExpressionBuilder("gr_circle");
+        if (circle.IsLocked) gb.AddSymbol("locked");
+        gb.AddChild("center", c => { c.AddValue(circle.Center.X.ToMm()); c.AddValue(circle.Center.Y.ToMm()); })
+          .AddChild("end", e => { e.AddValue(circle.End.X.ToMm()); e.AddValue(circle.End.Y.ToMm()); });
+        AddGraphicCommon(gb, circle);
+        return gb.Build();
+    }
+
+    private static SExpr BuildGrRect(KiCadPcbGraphicRect rect)
+    {
+        var gb = new SExpressionBuilder("gr_rect");
+        if (rect.IsLocked) gb.AddSymbol("locked");
+        gb.AddChild("start", s => { s.AddValue(rect.Start.X.ToMm()); s.AddValue(rect.Start.Y.ToMm()); })
+          .AddChild("end", e => { e.AddValue(rect.End.X.ToMm()); e.AddValue(rect.End.Y.ToMm()); });
+        AddGraphicCommon(gb, rect);
+        return gb.Build();
+    }
+
+    private static SExpr BuildGrPoly(KiCadPcbGraphicPoly poly)
+    {
+        var gb = new SExpressionBuilder("gr_poly");
+        if (poly.IsLocked) gb.AddSymbol("locked");
+        gb.AddChild(WriterHelper.BuildPoints(poly.Points));
+        AddGraphicCommon(gb, poly);
+        return gb.Build();
+    }
+
+    private static SExpr BuildGrBezier(KiCadPcbGraphicBezier bezier)
+    {
+        var gb = new SExpressionBuilder("gr_curve");
+        if (bezier.IsLocked) gb.AddSymbol("locked");
+        gb.AddChild(WriterHelper.BuildPoints(bezier.Points));
+        AddGraphicCommon(gb, bezier);
+        return gb.Build();
+    }
+
+    // -- Net class builder --
+
+    private static SExpr BuildNetClass(KiCadPcbNetClass nc)
+    {
+        var nb = new SExpressionBuilder("net_class")
+            .AddValue(nc.Name)
+            .AddValue(nc.Description);
+
+        if (nc.Clearance != Coord.Zero)
+            nb.AddChild("clearance", c => c.AddValue(nc.Clearance.ToMm()));
+        if (nc.TraceWidth != Coord.Zero)
+            nb.AddChild("trace_width", c => c.AddValue(nc.TraceWidth.ToMm()));
+        if (nc.ViaDia != Coord.Zero)
+            nb.AddChild("via_dia", c => c.AddValue(nc.ViaDia.ToMm()));
+        if (nc.ViaDrill != Coord.Zero)
+            nb.AddChild("via_drill", c => c.AddValue(nc.ViaDrill.ToMm()));
+        if (nc.UViaDia != Coord.Zero)
+            nb.AddChild("uvia_dia", c => c.AddValue(nc.UViaDia.ToMm()));
+        if (nc.UViaDrill != Coord.Zero)
+            nb.AddChild("uvia_drill", c => c.AddValue(nc.UViaDrill.ToMm()));
+
+        foreach (var netName in nc.NetNames)
+        {
+            nb.AddChild("add_net", n => n.AddValue(netName));
+        }
+
+        return nb.Build();
+    }
+
+    // -- Zone structured builder --
+
+    private static SExpr BuildZoneStructured(KiCadPcbZone zone)
+    {
+        var zb = new SExpressionBuilder("zone");
+
+        if (zone.IsLocked)
+            zb.AddSymbol("locked");
+
+        zb.AddChild("net", n => n.AddValue(zone.Net));
+
+        if (zone.NetName is not null)
+            zb.AddChild("net_name", n => n.AddValue(zone.NetName));
+
+        if (zone.LayerNames is not null && zone.LayerNames.Count > 0)
+        {
+            zb.AddChild("layers", l =>
+            {
+                foreach (var layer in zone.LayerNames)
+                    l.AddValue(layer);
+            });
+        }
+        else if (zone.LayerName is not null)
+        {
+            zb.AddChild("layer", l => l.AddSymbol(zone.LayerName));
+        }
+
+        if (zone.Uuid is not null)
+            zb.AddChild(WriterHelper.BuildUuid(zone.Uuid));
+
+        if (zone.Name is not null)
+            zb.AddChild("name", n => n.AddValue(zone.Name));
+
+        // Hatch
+        if (zone.HatchStyle is not null)
+        {
+            zb.AddChild("hatch", h =>
+            {
+                h.AddSymbol(zone.HatchStyle);
+                h.AddValue(zone.HatchPitch);
+            });
+        }
+
+        if (zone.Priority > 0)
+            zb.AddChild("priority", p => p.AddValue(zone.Priority));
+
+        // Connect pads (prefer raw)
+        if (zone.ConnectPadsRaw is not null)
+            zb.AddChild(zone.ConnectPadsRaw);
+
+        if (zone.MinThickness != Coord.Zero)
+            zb.AddChild("min_thickness", m => m.AddValue(zone.MinThickness.ToMm()));
+
+        // Keepout (prefer raw)
+        if (zone.KeepoutRaw is not null)
+            zb.AddChild(zone.KeepoutRaw);
+
+        // Fill (prefer raw)
+        if (zone.FillRaw is not null)
+            zb.AddChild(zone.FillRaw);
+
+        // Outline polygon
+        if (zone.Outline.Count > 0)
+        {
+            zb.AddChild("polygon", p =>
+            {
+                p.AddChild(WriterHelper.BuildPoints(zone.Outline));
+            });
+        }
+
+        // Filled polygons (raw)
+        foreach (var fp in zone.FilledPolygonsRaw)
+        {
+            zb.AddChild(fp);
+        }
+
+        // Fill segments (raw)
+        foreach (var fs in zone.FillSegmentsRaw)
+        {
+            zb.AddChild(fs);
+        }
 
         return zb.Build();
     }

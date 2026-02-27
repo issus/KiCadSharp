@@ -3,6 +3,7 @@ using OriginalCircuit.Eda.Models;
 using OriginalCircuit.Eda.Models.Pcb;
 using OriginalCircuit.Eda.Primitives;
 using OriginalCircuit.KiCad.Serialization;
+using SExpr = OriginalCircuit.KiCad.SExpression.SExpression;
 
 namespace OriginalCircuit.KiCad.Models.Pcb;
 
@@ -20,6 +21,15 @@ public sealed class KiCadPcb : IPcbDocument
     private readonly List<KiCadPcbRegion> _regions = [];
     private readonly List<(int Number, string Name)> _nets = [];
     private readonly List<KiCadDiagnostic> _diagnostics = [];
+    private readonly List<KiCadPcbGraphicLine> _graphicLines = [];
+    private readonly List<KiCadPcbGraphicArc> _graphicArcs = [];
+    private readonly List<KiCadPcbGraphicCircle> _graphicCircles = [];
+    private readonly List<KiCadPcbGraphicRect> _graphicRects = [];
+    private readonly List<KiCadPcbGraphicPoly> _graphicPolys = [];
+    private readonly List<KiCadPcbGraphicBezier> _graphicBeziers = [];
+    private readonly List<KiCadPcbZone> _zones = [];
+    private readonly List<KiCadPcbNetClass> _netClasses = [];
+    private readonly List<SExpr> _rawElements = [];
 
     /// <summary>
     /// Gets the file format version number.
@@ -78,6 +88,84 @@ public sealed class KiCadPcb : IPcbDocument
     /// </summary>
     public IReadOnlyList<(int Number, string Name)> Nets => _nets;
     internal List<(int Number, string Name)> NetList => _nets;
+
+    /// <summary>
+    /// Gets the board-level graphic lines.
+    /// </summary>
+    public IReadOnlyList<KiCadPcbGraphicLine> GraphicLines => _graphicLines;
+    internal List<KiCadPcbGraphicLine> GraphicLineList => _graphicLines;
+
+    /// <summary>
+    /// Gets the board-level graphic arcs.
+    /// </summary>
+    public IReadOnlyList<KiCadPcbGraphicArc> GraphicArcs => _graphicArcs;
+    internal List<KiCadPcbGraphicArc> GraphicArcList => _graphicArcs;
+
+    /// <summary>
+    /// Gets the board-level graphic circles.
+    /// </summary>
+    public IReadOnlyList<KiCadPcbGraphicCircle> GraphicCircles => _graphicCircles;
+    internal List<KiCadPcbGraphicCircle> GraphicCircleList => _graphicCircles;
+
+    /// <summary>
+    /// Gets the board-level graphic rectangles.
+    /// </summary>
+    public IReadOnlyList<KiCadPcbGraphicRect> GraphicRects => _graphicRects;
+    internal List<KiCadPcbGraphicRect> GraphicRectList => _graphicRects;
+
+    /// <summary>
+    /// Gets the board-level graphic polygons.
+    /// </summary>
+    public IReadOnlyList<KiCadPcbGraphicPoly> GraphicPolys => _graphicPolys;
+    internal List<KiCadPcbGraphicPoly> GraphicPolyList => _graphicPolys;
+
+    /// <summary>
+    /// Gets the board-level graphic bezier curves.
+    /// </summary>
+    public IReadOnlyList<KiCadPcbGraphicBezier> GraphicBeziers => _graphicBeziers;
+    internal List<KiCadPcbGraphicBezier> GraphicBezierList => _graphicBeziers;
+
+    /// <summary>
+    /// Gets the zone definitions.
+    /// </summary>
+    public IReadOnlyList<KiCadPcbZone> Zones => _zones;
+    internal List<KiCadPcbZone> ZoneList => _zones;
+
+    /// <summary>
+    /// Gets the net class definitions.
+    /// </summary>
+    public IReadOnlyList<KiCadPcbNetClass> NetClasses => _netClasses;
+    internal List<KiCadPcbNetClass> NetClassList => _netClasses;
+
+    /// <summary>
+    /// Gets raw S-expression elements that are stored verbatim for round-trip fidelity.
+    /// </summary>
+    internal List<SExpr> RawElementList => _rawElements;
+
+    /// <summary>
+    /// Gets the raw <c>(setup ...)</c> S-expression subtree, stored verbatim for round-trip.
+    /// </summary>
+    public SExpr? SetupRaw { get; internal set; }
+
+    /// <summary>
+    /// Gets the raw <c>(layers ...)</c> S-expression subtree, stored verbatim for round-trip.
+    /// </summary>
+    public SExpr? LayersRaw { get; internal set; }
+
+    /// <summary>
+    /// Gets the raw <c>(paper ...)</c> S-expression subtree, stored verbatim for round-trip.
+    /// </summary>
+    public SExpr? PaperRaw { get; internal set; }
+
+    /// <summary>
+    /// Gets the raw <c>(title_block ...)</c> S-expression subtree, stored verbatim for round-trip.
+    /// </summary>
+    public SExpr? TitleBlockRaw { get; internal set; }
+
+    /// <summary>
+    /// Gets the raw <c>(general ...)</c> S-expression subtree, stored verbatim for round-trip.
+    /// </summary>
+    public SExpr? GeneralRaw { get; internal set; }
 
     /// <summary>
     /// Gets the board thickness.
