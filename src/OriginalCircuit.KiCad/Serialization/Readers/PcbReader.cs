@@ -228,7 +228,8 @@ public static class PcbReader
             LayerName = node.GetChild("layer")?.GetString(),
             Net = node.GetChild("net")?.GetInt() ?? 0,
             Uuid = SExpressionHelper.ParseUuid(node),
-            IsLocked = node.Values.Any(v => v is SExprSymbol s && s.Value == "locked")
+            IsLocked = node.Values.Any(v => v is SExprSymbol s && s.Value == "locked"),
+            Status = node.GetChild("status")?.GetInt()
         };
     }
 
@@ -270,6 +271,16 @@ public static class PcbReader
         via.IsFree = node.GetChild("free")?.GetBool() ?? false;
         via.RemoveUnusedLayers = node.GetChild("remove_unused_layers") is not null;
         via.KeepEndLayers = node.GetChild("keep_end_layers") is not null;
+        via.Status = node.GetChild("status")?.GetInt();
+
+        // Parse teardrop (store raw for round-trip)
+        var teardropNode = node.GetChild("teardrops");
+        if (teardropNode is null) teardropNode = node.GetChild("teardrop");
+        if (teardropNode is not null)
+        {
+            via.TeardropRaw = teardropNode;
+            via.TeardropEnabled = true;
+        }
 
         return via;
     }
@@ -298,7 +309,8 @@ public static class PcbReader
             ArcMid = mid,
             ArcEnd = end,
             Uuid = SExpressionHelper.ParseUuid(node),
-            IsLocked = node.Values.Any(v => v is SExprSymbol s && s.Value == "locked")
+            IsLocked = node.Values.Any(v => v is SExprSymbol s && s.Value == "locked"),
+            Status = node.GetChild("status")?.GetInt()
         };
     }
 

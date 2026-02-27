@@ -190,6 +190,9 @@ public static class PcbWriter
         if (track.Uuid is not null)
             sb.AddChild(WriterHelper.BuildUuid(track.Uuid));
 
+        if (track.Status.HasValue)
+            sb.AddChild("status", s => s.AddValue(track.Status.Value));
+
         return sb.Build();
     }
 
@@ -230,6 +233,12 @@ public static class PcbWriter
         if (via.Uuid is not null)
             vb.AddChild(WriterHelper.BuildUuid(via.Uuid));
 
+        if (via.Status.HasValue)
+            vb.AddChild("status", s => s.AddValue(via.Status.Value));
+
+        if (via.TeardropRaw is not null)
+            vb.AddChild(via.TeardropRaw);
+
         return vb.Build();
     }
 
@@ -252,6 +261,9 @@ public static class PcbWriter
 
         if (arc.Uuid is not null)
             ab.AddChild(WriterHelper.BuildUuid(arc.Uuid));
+
+        if (arc.Status.HasValue)
+            ab.AddChild("status", s => s.AddValue(arc.Status.Value));
 
         return ab.Build();
     }

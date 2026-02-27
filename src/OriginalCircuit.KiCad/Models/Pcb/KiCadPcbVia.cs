@@ -69,6 +69,21 @@ public sealed class KiCadPcbVia : IPcbVia
     /// </summary>
     public bool KeepEndLayers { get; set; }
 
+    /// <summary>
+    /// Gets or sets the status flags.
+    /// </summary>
+    public int? Status { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether teardrops are enabled on this via.
+    /// </summary>
+    public bool TeardropEnabled { get; set; }
+
+    /// <summary>
+    /// Gets or sets the raw teardrop S-expression subtree for round-trip fidelity.
+    /// </summary>
+    public SExpression.SExpression? TeardropRaw { get; set; }
+
     /// <inheritdoc />
     public CoordRect Bounds
     {
