@@ -340,17 +340,20 @@ public static class SchReader
         var sizeNode = node.GetChild("size");
         var w = Coord.FromMm(sizeNode?.GetDouble(0) ?? 0);
         var h = Coord.FromMm(sizeNode?.GetDouble(1) ?? 0);
-        var (strokeWidth, _, strokeColor) = SExpressionHelper.ParseStroke(node);
-        var (_, _, fillColor) = SExpressionHelper.ParseFill(node);
+        var (strokeWidth, strokeStyle, strokeColor) = SExpressionHelper.ParseStroke(node);
+        var (fillType, _, fillColor) = SExpressionHelper.ParseFill(node);
 
         var sheetName = "";
         var fileName = "";
+        var sheetProperties = new List<KiCadSchParameter>();
         foreach (var propNode in node.GetChildren("property"))
         {
+            var prop = SymLibReader.ParseProperty(propNode);
+            sheetProperties.Add(prop);
+
             var key = propNode.GetString(0);
-            var val = propNode.GetString(1) ?? "";
-            if (key == "Sheetname" || key == "Sheet name") sheetName = val;
-            else if (key == "Sheetfile" || key == "Sheet file") fileName = val;
+            if (key == "Sheetname" || key == "Sheet name") sheetName = prop.Value;
+            else if (key == "Sheetfile" || key == "Sheet file") fileName = prop.Value;
         }
 
         var pins = new List<KiCadSchSheetPin>();
@@ -358,6 +361,9 @@ public static class SchReader
         {
             pins.Add(ParseSheetPin(pinNode));
         }
+
+        var fieldsAutoplaced = node.GetChild("fields_autoplaced")?.GetBool() ?? false;
+        var instances = node.GetChild("instances");
 
         return new KiCadSchSheet
         {
@@ -369,6 +375,11 @@ public static class SchReader
             Color = strokeColor,
             FillColor = fillColor,
             LineWidth = strokeWidth,
+            LineStyle = strokeStyle,
+            FillType = fillType,
+            FieldsAutoplaced = fieldsAutoplaced,
+            SheetProperties = sheetProperties,
+            Instances = instances,
             Uuid = SExpressionHelper.ParseUuid(node)
         };
     }

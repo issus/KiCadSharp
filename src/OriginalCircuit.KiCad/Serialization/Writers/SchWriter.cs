@@ -197,24 +197,39 @@ public static class SchWriter
             {
                 s.AddValue(sheet.Size.X.ToMm());
                 s.AddValue(sheet.Size.Y.ToMm());
-            })
-            .AddChild(WriterHelper.BuildStroke(sheet.LineWidth));
+            });
 
-        // Properties
-        sb.AddChild("property", p =>
+        if (sheet.FieldsAutoplaced)
+            sb.AddChild("fields_autoplaced", f => f.AddBool(true));
+
+        sb.AddChild(WriterHelper.BuildStroke(sheet.LineWidth, sheet.LineStyle, sheet.Color));
+        sb.AddChild(WriterHelper.BuildFill(sheet.FillType, sheet.FillColor));
+
+        // Properties - use stored per-property data if available, otherwise fall back to defaults
+        if (sheet.SheetProperties.Count > 0)
         {
-            p.AddValue("Sheetname");
-            p.AddValue(sheet.SheetName);
-            p.AddChild(WriterHelper.BuildPosition(sheet.Location));
-            p.AddChild(WriterHelper.BuildTextEffects(WriterHelper.DefaultTextSize, WriterHelper.DefaultTextSize));
-        });
-        sb.AddChild("property", p =>
+            foreach (var prop in sheet.SheetProperties)
+            {
+                sb.AddChild(SymLibWriter.BuildProperty(prop));
+            }
+        }
+        else
         {
-            p.AddValue("Sheetfile");
-            p.AddValue(sheet.FileName);
-            p.AddChild(WriterHelper.BuildPosition(sheet.Location));
-            p.AddChild(WriterHelper.BuildTextEffects(WriterHelper.DefaultTextSize, WriterHelper.DefaultTextSize));
-        });
+            sb.AddChild("property", p =>
+            {
+                p.AddValue("Sheetname");
+                p.AddValue(sheet.SheetName);
+                p.AddChild(WriterHelper.BuildPosition(sheet.Location));
+                p.AddChild(WriterHelper.BuildTextEffects(WriterHelper.DefaultTextSize, WriterHelper.DefaultTextSize));
+            });
+            sb.AddChild("property", p =>
+            {
+                p.AddValue("Sheetfile");
+                p.AddValue(sheet.FileName);
+                p.AddChild(WriterHelper.BuildPosition(sheet.Location));
+                p.AddChild(WriterHelper.BuildTextEffects(WriterHelper.DefaultTextSize, WriterHelper.DefaultTextSize));
+            });
+        }
 
         foreach (var pin in sheet.Pins.OfType<KiCadSchSheetPin>())
         {
@@ -228,6 +243,10 @@ public static class SchWriter
             if (pin.Uuid is not null) pb.AddChild(WriterHelper.BuildUuid(pin.Uuid));
             sb.AddChild(pb.Build());
         }
+
+        // Instances
+        if (sheet.Instances is not null)
+            sb.AddChild(sheet.Instances);
 
         if (sheet.Uuid is not null) sb.AddChild(WriterHelper.BuildUuid(sheet.Uuid));
         return sb.Build();
