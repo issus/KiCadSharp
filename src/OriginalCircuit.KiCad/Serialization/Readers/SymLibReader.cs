@@ -259,7 +259,8 @@ public static class SymLibReader
                 if (h == 0 && w == 0)
                     pin.ShowName = false;
             }
-            if (nameEffects.Values.Any(v => v is SExprSymbol s && s.Value == "hide"))
+            if (nameEffects.GetChild("hide") is not null ||
+                nameEffects.Values.Any(v => v is SExprSymbol s && s.Value == "hide"))
                 pin.ShowName = false;
         }
 
@@ -278,7 +279,8 @@ public static class SymLibReader
                 if (h == 0 && w == 0)
                     pin.ShowDesignator = false;
             }
-            if (numEffects.Values.Any(v => v is SExprSymbol s && s.Value == "hide"))
+            if (numEffects.GetChild("hide") is not null ||
+                numEffects.Values.Any(v => v is SExprSymbol s && s.Value == "hide"))
                 pin.ShowDesignator = false;
         }
 
