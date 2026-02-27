@@ -1,4 +1,5 @@
 using OriginalCircuit.Eda.Enums;
+using OriginalCircuit.Eda.Models;
 using OriginalCircuit.Eda.Primitives;
 using OriginalCircuit.KiCad.Models.Pcb;
 using OriginalCircuit.KiCad.Models.Sch;
@@ -49,11 +50,17 @@ public static class FootprintWriter
         if (component.Location != CoordPoint.Zero || component.Rotation != 0)
             b.AddChild(WriterHelper.BuildPosition(component.Location, component.Rotation));
 
+        if (component.Uuid is not null)
+            b.AddChild(WriterHelper.BuildUuid(component.Uuid));
+
         if (component.Description is not null)
             b.AddChild("descr", d => d.AddValue(component.Description));
 
         if (component.Tags is not null)
             b.AddChild("tags", t => t.AddValue(component.Tags));
+
+        if (component.Path is not null)
+            b.AddChild("path", p => p.AddValue(component.Path));
 
         // Attributes
         if (component.Attributes != FootprintAttribute.None)
@@ -81,10 +88,18 @@ public static class FootprintWriter
             b.AddChild("solder_mask_margin", c => c.AddValue(component.SolderMaskMargin.ToMm()));
         if (component.SolderPasteMargin != Coord.Zero)
             b.AddChild("solder_paste_margin", c => c.AddValue(component.SolderPasteMargin.ToMm()));
+        if (component.SolderPasteRatio != 0)
+            b.AddChild("solder_paste_ratio", c => c.AddValue(component.SolderPasteRatio));
         if (component.ThermalWidth != Coord.Zero)
             b.AddChild("thermal_width", c => c.AddValue(component.ThermalWidth.ToMm()));
         if (component.ThermalGap != Coord.Zero)
             b.AddChild("thermal_gap", c => c.AddValue(component.ThermalGap.ToMm()));
+        if (component.ZoneConnect != ZoneConnectionType.Inherited)
+            b.AddChild("zone_connect", c => c.AddValue((int)component.ZoneConnect));
+        if (component.AutoplaceCost90 != 0)
+            b.AddChild("autoplace_cost90", c => c.AddValue(component.AutoplaceCost90));
+        if (component.AutoplaceCost180 != 0)
+            b.AddChild("autoplace_cost180", c => c.AddValue(component.AutoplaceCost180));
 
         // Texts
         foreach (var text in component.Texts.OfType<KiCadPcbText>())

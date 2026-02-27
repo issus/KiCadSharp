@@ -124,6 +124,10 @@ public static class FootprintReader
                 : ZoneConnectionType.Inherited;
         }
 
+        // Parse autoplace cost
+        component.AutoplaceCost90 = node.GetChild("autoplace_cost90")?.GetInt() ?? 0;
+        component.AutoplaceCost180 = node.GetChild("autoplace_cost180")?.GetInt() ?? 0;
+
         var diagnostics = new List<KiCadDiagnostic>();
         var pads = new List<KiCadPcbPad>();
         var texts = new List<KiCadPcbText>();
@@ -204,6 +208,8 @@ public static class FootprintReader
                     case "thermal_width":
                     case "thermal_gap":
                     case "zone_connect":
+                    case "autoplace_cost90":
+                    case "autoplace_cost180":
                     case "fp_text_private":
                         // Known tokens handled elsewhere or intentionally skipped
                         break;
