@@ -32,22 +32,22 @@ public sealed class KiCadSchLabel : ISchLabel
     public bool IsHidden { get; set; }
 
     /// <summary>
-    /// Gets the font size height.
+    /// Gets or sets the font size height.
     /// </summary>
     public Coord FontSizeHeight { get; set; }
 
     /// <summary>
-    /// Gets the font size width.
+    /// Gets or sets the font size width.
     /// </summary>
     public Coord FontSizeWidth { get; set; }
 
     /// <summary>
-    /// Gets whether the text is bold.
+    /// Gets or sets whether the text is bold.
     /// </summary>
     public bool IsBold { get; set; }
 
     /// <summary>
-    /// Gets whether the text is italic.
+    /// Gets or sets whether the text is italic.
     /// </summary>
     public bool IsItalic { get; set; }
 
@@ -65,6 +65,11 @@ public sealed class KiCadSchLabel : ISchLabel
     /// Gets the stroke color for the text label.
     /// </summary>
     public EdaColor StrokeColor { get; set; }
+
+    /// <summary>
+    /// Gets the UUID of the text label.
+    /// </summary>
+    public string? Uuid { get; set; }
 
     /// <inheritdoc />
     public CoordRect Bounds

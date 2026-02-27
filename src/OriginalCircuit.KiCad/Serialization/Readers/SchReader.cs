@@ -64,7 +64,11 @@ public static class SchReader
             Version = root.GetChild("version")?.GetInt() ?? 0,
             Generator = root.GetChild("generator")?.GetString(),
             GeneratorVersion = root.GetChild("generator_version")?.GetString(),
-            Uuid = SExpressionHelper.ParseUuid(root)
+            Uuid = SExpressionHelper.ParseUuid(root),
+            Paper = root.GetChild("paper")?.GetString(),
+            TitleBlock = root.GetChild("title_block"),
+            SheetInstances = root.GetChild("sheet_instances"),
+            SymbolInstances = root.GetChild("symbol_instances")
         };
 
         var diagnostics = new List<KiCadDiagnostic>();
@@ -85,6 +89,12 @@ public static class SchReader
         var components = new List<KiCadSchComponent>();
         var sheets = new List<KiCadSchSheet>();
         var libSymbols = new List<KiCadSchComponent>();
+        var polylines = new List<KiCadSchPolyline>();
+        var lines = new List<KiCadSchLine>();
+        var circles = new List<KiCadSchCircle>();
+        var rectangles = new List<KiCadSchRectangle>();
+        var arcs = new List<KiCadSchArc>();
+        var beziers = new List<KiCadSchBezier>();
 
         // Parse lib_symbols section
         var libSymbolsNode = root.GetChild("lib_symbols");
@@ -147,6 +157,21 @@ public static class SchReader
                     case "power_port":
                         powerObjects.Add(ParsePowerPort(child));
                         break;
+                    case "polyline":
+                        ParseSchPolylineOrLine(child, lines, polylines);
+                        break;
+                    case "circle":
+                        circles.Add(ParseSchCircle(child));
+                        break;
+                    case "rectangle":
+                        rectangles.Add(ParseSchRectangle(child));
+                        break;
+                    case "arc":
+                        arcs.Add(ParseSchArc(child));
+                        break;
+                    case "bezier":
+                        beziers.Add(ParseSchBezier(child));
+                        break;
                     case "version":
                     case "generator":
                     case "generator_version":
@@ -182,6 +207,12 @@ public static class SchReader
         sch.ComponentList.AddRange(components);
         sch.SheetList.AddRange(sheets);
         sch.LibSymbolList.AddRange(libSymbols);
+        sch.PolylineList.AddRange(polylines);
+        sch.LineList.AddRange(lines);
+        sch.CircleList.AddRange(circles);
+        sch.RectangleList.AddRange(rectangles);
+        sch.ArcList.AddRange(arcs);
+        sch.BezierList.AddRange(beziers);
         sch.DiagnosticList.AddRange(diagnostics);
 
         return sch;
@@ -190,12 +221,13 @@ public static class SchReader
     private static KiCadSchWire ParseWire(SExpr node)
     {
         var pts = SExpressionHelper.ParsePoints(node);
-        var (width, _, color) = SExpressionHelper.ParseStroke(node);
+        var (width, style, color) = SExpressionHelper.ParseStroke(node);
 
         return new KiCadSchWire
         {
             Vertices = pts,
             LineWidth = width,
+            LineStyle = style,
             Color = color,
             Uuid = SExpressionHelper.ParseUuid(node)
         };
@@ -220,7 +252,20 @@ public static class SchReader
     private static KiCadSchNetLabel ParseNetLabel(SExpr node, NetLabelType labelType)
     {
         var (loc, angle) = SExpressionHelper.ParsePosition(node);
-        var (_, _, justification, _, _, _, _) = SExpressionHelper.ParseTextEffects(node);
+        var (fontH, fontW, justification, _, isMirrored, isBold, isItalic) = SExpressionHelper.ParseTextEffects(node);
+
+        // Parse shape for global/hierarchical labels
+        var shape = node.GetChild("shape")?.GetString();
+
+        // Parse fields_autoplaced
+        var fieldsAutoplaced = node.GetChild("fields_autoplaced")?.GetBool() ?? false;
+
+        // Parse properties (for global/hierarchical labels)
+        var properties = new List<KiCadSchParameter>();
+        foreach (var propNode in node.GetChildren("property"))
+        {
+            properties.Add(SymLibReader.ParseProperty(propNode));
+        }
 
         return new KiCadSchNetLabel
         {
@@ -229,6 +274,14 @@ public static class SchReader
             Orientation = (int)angle,
             Justification = justification,
             LabelType = labelType,
+            FontSizeHeight = fontH,
+            FontSizeWidth = fontW,
+            IsBold = isBold,
+            IsItalic = isItalic,
+            IsMirrored = isMirrored,
+            Shape = shape,
+            FieldsAutoplaced = fieldsAutoplaced,
+            Properties = properties,
             Uuid = SExpressionHelper.ParseUuid(node)
         };
     }
@@ -236,7 +289,7 @@ public static class SchReader
     private static KiCadSchLabel ParseTextLabel(SExpr node)
     {
         var (loc, angle) = SExpressionHelper.ParsePosition(node);
-        var (_, _, justification, isHidden, isMirrored, _, _) = SExpressionHelper.ParseTextEffects(node);
+        var (fontH, fontW, justification, isHidden, isMirrored, isBold, isItalic) = SExpressionHelper.ParseTextEffects(node);
 
         return new KiCadSchLabel
         {
@@ -245,7 +298,12 @@ public static class SchReader
             Rotation = angle,
             Justification = justification,
             IsHidden = isHidden,
-            IsMirrored = isMirrored
+            IsMirrored = isMirrored,
+            FontSizeHeight = fontH,
+            FontSizeWidth = fontW,
+            IsBold = isBold,
+            IsItalic = isItalic,
+            Uuid = SExpressionHelper.ParseUuid(node)
         };
     }
 
@@ -263,12 +321,13 @@ public static class SchReader
     private static KiCadSchBus ParseBus(SExpr node)
     {
         var pts = SExpressionHelper.ParsePoints(node);
-        var (width, _, color) = SExpressionHelper.ParseStroke(node);
+        var (width, style, color) = SExpressionHelper.ParseStroke(node);
 
         return new KiCadSchBus
         {
             Vertices = pts,
             LineWidth = width,
+            LineStyle = style,
             Color = color,
             Uuid = SExpressionHelper.ParseUuid(node)
         };
@@ -280,13 +339,14 @@ public static class SchReader
         var sizeNode = node.GetChild("size");
         var sx = Coord.FromMm(sizeNode?.GetDouble(0) ?? 0);
         var sy = Coord.FromMm(sizeNode?.GetDouble(1) ?? 0);
-        var (width, _, color) = SExpressionHelper.ParseStroke(node);
+        var (width, style, color) = SExpressionHelper.ParseStroke(node);
 
         return new KiCadSchBusEntry
         {
             Location = loc,
             Corner = new CoordPoint(loc.X + sx, loc.Y + sy),
             LineWidth = width,
+            LineStyle = style,
             Color = color,
             Uuid = SExpressionHelper.ParseUuid(node)
         };
@@ -301,7 +361,8 @@ public static class SchReader
             Location = loc,
             Text = node.GetString(),
             Rotation = angle,
-            Uuid = SExpressionHelper.ParseUuid(node)
+            Uuid = SExpressionHelper.ParseUuid(node),
+            RawNode = node
         };
     }
 
@@ -311,17 +372,20 @@ public static class SchReader
         var sizeNode = node.GetChild("size");
         var w = Coord.FromMm(sizeNode?.GetDouble(0) ?? 0);
         var h = Coord.FromMm(sizeNode?.GetDouble(1) ?? 0);
-        var (strokeWidth, _, strokeColor) = SExpressionHelper.ParseStroke(node);
-        var (_, _, fillColor) = SExpressionHelper.ParseFill(node);
+        var (strokeWidth, strokeStyle, strokeColor) = SExpressionHelper.ParseStroke(node);
+        var (fillType, _, fillColor) = SExpressionHelper.ParseFill(node);
 
         var sheetName = "";
         var fileName = "";
+        var sheetProperties = new List<KiCadSchParameter>();
         foreach (var propNode in node.GetChildren("property"))
         {
+            var prop = SymLibReader.ParseProperty(propNode);
+            sheetProperties.Add(prop);
+
             var key = propNode.GetString(0);
-            var val = propNode.GetString(1) ?? "";
-            if (key == "Sheetname" || key == "Sheet name") sheetName = val;
-            else if (key == "Sheetfile" || key == "Sheet file") fileName = val;
+            if (key == "Sheetname" || key == "Sheet name") sheetName = prop.Value;
+            else if (key == "Sheetfile" || key == "Sheet file") fileName = prop.Value;
         }
 
         var pins = new List<KiCadSchSheetPin>();
@@ -329,6 +393,9 @@ public static class SchReader
         {
             pins.Add(ParseSheetPin(pinNode));
         }
+
+        var fieldsAutoplaced = node.GetChild("fields_autoplaced")?.GetBool() ?? false;
+        var instances = node.GetChild("instances");
 
         return new KiCadSchSheet
         {
@@ -340,6 +407,11 @@ public static class SchReader
             Color = strokeColor,
             FillColor = fillColor,
             LineWidth = strokeWidth,
+            LineStyle = strokeStyle,
+            FillType = fillType,
+            FieldsAutoplaced = fieldsAutoplaced,
+            SheetProperties = sheetProperties,
+            Instances = instances,
             Uuid = SExpressionHelper.ParseUuid(node)
         };
     }
@@ -375,19 +447,53 @@ public static class SchReader
         component.Rotation = angle;
         component.Uuid = SExpressionHelper.ParseUuid(node);
 
-        // Parse mirror
+        // Parse mirror - support "x", "y", and "xy"
         var mirror = node.GetChild("mirror");
         if (mirror is not null)
         {
             var mirrorVal = mirror.GetString();
-            component.IsMirroredX = mirrorVal == "x";
-            component.IsMirroredY = mirrorVal == "y";
+            if (mirrorVal == "xy" || mirrorVal == "yx")
+            {
+                component.IsMirroredX = true;
+                component.IsMirroredY = true;
+            }
+            else
+            {
+                component.IsMirroredX = mirrorVal == "x";
+                component.IsMirroredY = mirrorVal == "y";
+            }
         }
 
         // Parse unit
         var unitNode = node.GetChild("unit");
         if (unitNode is not null)
             component.Unit = unitNode.GetInt() ?? 1;
+
+        // Parse in_bom / on_board for placed symbols
+        var inBomNode = node.GetChild("in_bom");
+        if (inBomNode is not null)
+            component.InBom = inBomNode.GetBool() ?? true;
+
+        var onBoardNode = node.GetChild("on_board");
+        if (onBoardNode is not null)
+            component.OnBoard = onBoardNode.GetBool() ?? true;
+
+        // Parse convert / body_style
+        var convertNode = node.GetChild("convert");
+        if (convertNode is not null)
+            component.BodyStyle = convertNode.GetInt() ?? 0;
+        var bodyStyleNode = node.GetChild("body_style");
+        if (bodyStyleNode is not null)
+            component.BodyStyle = bodyStyleNode.GetInt() ?? 0;
+
+        // Parse fields_autoplaced
+        component.FieldsAutoplaced = node.GetChild("fields_autoplaced")?.GetBool() ?? false;
+
+        // Parse lib_name
+        component.LibName = node.GetChild("lib_name")?.GetString();
+
+        // Parse instances
+        component.InstancesRaw = node.GetChild("instances");
 
         // Parse properties
         var parameters = new List<KiCadSchParameter>();
@@ -398,13 +504,128 @@ public static class SchReader
         component.ParameterList.AddRange(parameters);
 
         // Parse pins from the placed symbol
+        // Placed symbol pins have simplified format: (pin "name" (uuid "..."))
         var pins = new List<KiCadSchPin>();
         foreach (var pinNode in node.GetChildren("pin"))
         {
-            pins.Add(SymLibReader.ParsePin(pinNode));
+            var pin = new KiCadSchPin
+            {
+                Name = pinNode.GetString(0),
+                Uuid = SExpressionHelper.ParseUuid(pinNode)
+            };
+            pins.Add(pin);
         }
         component.PinList.AddRange(pins);
 
         return component;
+    }
+
+    private static void ParseSchPolylineOrLine(SExpr node, List<KiCadSchLine> lines, List<KiCadSchPolyline> polylines)
+    {
+        var pts = SExpressionHelper.ParsePoints(node);
+        var (width, lineStyle, color) = SExpressionHelper.ParseStroke(node);
+        var uuid = SExpressionHelper.ParseUuid(node);
+
+        if (pts.Count == 2)
+        {
+            lines.Add(new KiCadSchLine
+            {
+                Start = pts[0],
+                End = pts[1],
+                Color = color,
+                Width = width,
+                LineStyle = lineStyle
+            });
+        }
+        else
+        {
+            polylines.Add(new KiCadSchPolyline
+            {
+                Vertices = pts,
+                Color = color,
+                LineWidth = width,
+                LineStyle = lineStyle
+            });
+        }
+    }
+
+    private static KiCadSchCircle ParseSchCircle(SExpr node)
+    {
+        var centerNode = node.GetChild("center");
+        var center = centerNode is not null ? SExpressionHelper.ParseXY(centerNode) : CoordPoint.Zero;
+        var radius = Coord.FromMm(node.GetChild("radius")?.GetDouble() ?? 0);
+        var (width, _, color) = SExpressionHelper.ParseStroke(node);
+        var (fillType, isFilled, fillColor) = SExpressionHelper.ParseFill(node);
+
+        return new KiCadSchCircle
+        {
+            Center = center,
+            Radius = radius,
+            Color = color,
+            FillColor = fillColor,
+            LineWidth = width,
+            IsFilled = isFilled,
+            FillType = fillType
+        };
+    }
+
+    private static KiCadSchRectangle ParseSchRectangle(SExpr node)
+    {
+        var startNode = node.GetChild("start");
+        var endNode = node.GetChild("end");
+        var start = startNode is not null ? SExpressionHelper.ParseXY(startNode) : CoordPoint.Zero;
+        var end = endNode is not null ? SExpressionHelper.ParseXY(endNode) : CoordPoint.Zero;
+        var (width, _, color) = SExpressionHelper.ParseStroke(node);
+        var (fillType, isFilled, fillColor) = SExpressionHelper.ParseFill(node);
+
+        return new KiCadSchRectangle
+        {
+            Corner1 = start,
+            Corner2 = end,
+            Color = color,
+            FillColor = fillColor,
+            LineWidth = width,
+            IsFilled = isFilled,
+            FillType = fillType
+        };
+    }
+
+    private static KiCadSchArc ParseSchArc(SExpr node)
+    {
+        var startNode = node.GetChild("start");
+        var midNode = node.GetChild("mid");
+        var endNode = node.GetChild("end");
+        var start = startNode is not null ? SExpressionHelper.ParseXY(startNode) : CoordPoint.Zero;
+        var mid = midNode is not null ? SExpressionHelper.ParseXY(midNode) : CoordPoint.Zero;
+        var end = endNode is not null ? SExpressionHelper.ParseXY(endNode) : CoordPoint.Zero;
+        var (width, _, color) = SExpressionHelper.ParseStroke(node);
+
+        var (center, radius, startAngle, endAngle) = SExpressionHelper.ComputeArcFromThreePoints(start, mid, end);
+
+        return new KiCadSchArc
+        {
+            Center = center,
+            Radius = radius,
+            StartAngle = startAngle,
+            EndAngle = endAngle,
+            Color = color,
+            LineWidth = width,
+            ArcStart = start,
+            ArcMid = mid,
+            ArcEnd = end
+        };
+    }
+
+    private static KiCadSchBezier ParseSchBezier(SExpr node)
+    {
+        var pts = SExpressionHelper.ParsePoints(node);
+        var (width, _, color) = SExpressionHelper.ParseStroke(node);
+
+        return new KiCadSchBezier
+        {
+            ControlPoints = pts,
+            Color = color,
+            LineWidth = width
+        };
     }
 }

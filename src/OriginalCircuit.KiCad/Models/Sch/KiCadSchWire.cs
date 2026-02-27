@@ -1,3 +1,4 @@
+using OriginalCircuit.Eda.Enums;
 using OriginalCircuit.Eda.Models;
 using OriginalCircuit.Eda.Models.Sch;
 using OriginalCircuit.Eda.Primitives;
@@ -17,6 +18,11 @@ public sealed class KiCadSchWire : ISchWire
 
     /// <inheritdoc />
     public Coord LineWidth { get; set; }
+
+    /// <summary>
+    /// Gets or sets the line dash style.
+    /// </summary>
+    public LineStyle LineStyle { get; set; }
 
     /// <summary>
     /// Gets the UUID of the wire.

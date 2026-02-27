@@ -67,6 +67,11 @@ public sealed class KiCadSchPin : ISchPin
     /// </summary>
     public List<KiCadSchPinAlternate> Alternates { get; set; } = [];
 
+    /// <summary>
+    /// Gets or sets the UUID of the pin (used in placed symbols).
+    /// </summary>
+    public string? Uuid { get; set; }
+
     /// <inheritdoc />
     public CoordRect Bounds
     {

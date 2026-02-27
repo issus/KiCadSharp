@@ -46,6 +46,14 @@ public static class SchWriter
         if (sch.Uuid is not null)
             b.AddChild(WriterHelper.BuildUuid(sch.Uuid));
 
+        // Paper size
+        if (sch.Paper is not null)
+            b.AddChild("paper", p => p.AddValue(sch.Paper));
+
+        // Title block
+        if (sch.TitleBlock is not null)
+            b.AddChild(sch.TitleBlock);
+
         // Lib symbols
         if (sch.LibSymbols.Count > 0)
         {
@@ -77,10 +85,13 @@ public static class SchWriter
         // Text labels
         foreach (var label in sch.Labels.OfType<KiCadSchLabel>())
         {
+            var fontH = label.FontSizeHeight != Coord.Zero ? label.FontSizeHeight : WriterHelper.DefaultTextSize;
+            var fontW = label.FontSizeWidth != Coord.Zero ? label.FontSizeWidth : WriterHelper.DefaultTextSize;
             var tb = new SExpressionBuilder("text")
                 .AddValue(label.Text)
                 .AddChild(WriterHelper.BuildPosition(label.Location, label.Rotation))
-                .AddChild(WriterHelper.BuildTextEffects(WriterHelper.DefaultTextSize, WriterHelper.DefaultTextSize, label.Justification, label.IsHidden, label.IsMirrored));
+                .AddChild(WriterHelper.BuildTextEffects(fontH, fontW, label.Justification, label.IsHidden, label.IsMirrored, label.IsBold, label.IsItalic));
+            if (label.Uuid is not null) tb.AddChild(WriterHelper.BuildUuid(label.Uuid));
             b.AddChild(tb.Build());
         }
 
@@ -98,7 +109,7 @@ public static class SchWriter
         {
             var bb = new SExpressionBuilder("bus")
                 .AddChild(WriterHelper.BuildPoints(bus.Vertices))
-                .AddChild(WriterHelper.BuildStroke(bus.LineWidth));
+                .AddChild(WriterHelper.BuildStroke(bus.LineWidth, bus.LineStyle, bus.Color));
             if (bus.Uuid is not null) bb.AddChild(WriterHelper.BuildUuid(bus.Uuid));
             b.AddChild(bb.Build());
         }
@@ -113,9 +124,68 @@ public static class SchWriter
                     s.AddValue((entry.Corner.X - entry.Location.X).ToMm());
                     s.AddValue((entry.Corner.Y - entry.Location.Y).ToMm());
                 })
-                .AddChild(WriterHelper.BuildStroke(entry.LineWidth));
+                .AddChild(WriterHelper.BuildStroke(entry.LineWidth, entry.LineStyle, entry.Color));
             if (entry.Uuid is not null) eb.AddChild(WriterHelper.BuildUuid(entry.Uuid));
             b.AddChild(eb.Build());
+        }
+
+        // Graphical shapes
+        foreach (var poly in sch.Polylines)
+        {
+            b.AddChild(new SExpressionBuilder("polyline")
+                .AddChild(WriterHelper.BuildPoints(poly.Vertices))
+                .AddChild(WriterHelper.BuildStroke(poly.LineWidth, poly.LineStyle, poly.Color))
+                .AddChild(WriterHelper.BuildFill(SchFillType.None))
+                .Build());
+        }
+
+        foreach (var line in sch.Lines)
+        {
+            b.AddChild(new SExpressionBuilder("polyline")
+                .AddChild(WriterHelper.BuildPoints([line.Start, line.End]))
+                .AddChild(WriterHelper.BuildStroke(line.Width, line.LineStyle, line.Color))
+                .AddChild(WriterHelper.BuildFill(SchFillType.None))
+                .Build());
+        }
+
+        foreach (var circle in sch.Circles)
+        {
+            b.AddChild(new SExpressionBuilder("circle")
+                .AddChild("center", c => { c.AddValue(circle.Center.X.ToMm()); c.AddValue(circle.Center.Y.ToMm()); })
+                .AddChild("radius", r => r.AddValue(circle.Radius.ToMm()))
+                .AddChild(WriterHelper.BuildStroke(circle.LineWidth))
+                .AddChild(WriterHelper.BuildFill(circle.FillType, circle.FillColor))
+                .Build());
+        }
+
+        foreach (var rect in sch.Rectangles)
+        {
+            b.AddChild(new SExpressionBuilder("rectangle")
+                .AddChild("start", s => { s.AddValue(rect.Corner1.X.ToMm()); s.AddValue(rect.Corner1.Y.ToMm()); })
+                .AddChild("end", e => { e.AddValue(rect.Corner2.X.ToMm()); e.AddValue(rect.Corner2.Y.ToMm()); })
+                .AddChild(WriterHelper.BuildStroke(rect.LineWidth))
+                .AddChild(WriterHelper.BuildFill(rect.FillType, rect.FillColor))
+                .Build());
+        }
+
+        foreach (var arc in sch.Arcs)
+        {
+            b.AddChild(new SExpressionBuilder("arc")
+                .AddChild("start", s => { s.AddValue(arc.ArcStart.X.ToMm()); s.AddValue(arc.ArcStart.Y.ToMm()); })
+                .AddChild("mid", m => { m.AddValue(arc.ArcMid.X.ToMm()); m.AddValue(arc.ArcMid.Y.ToMm()); })
+                .AddChild("end", e => { e.AddValue(arc.ArcEnd.X.ToMm()); e.AddValue(arc.ArcEnd.Y.ToMm()); })
+                .AddChild(WriterHelper.BuildStroke(arc.LineWidth))
+                .AddChild(WriterHelper.BuildFill(SchFillType.None))
+                .Build());
+        }
+
+        foreach (var bezier in sch.Beziers)
+        {
+            b.AddChild(new SExpressionBuilder("bezier")
+                .AddChild(WriterHelper.BuildPoints(bezier.ControlPoints))
+                .AddChild(WriterHelper.BuildStroke(bezier.LineWidth))
+                .AddChild(WriterHelper.BuildFill(SchFillType.None))
+                .Build());
         }
 
         // Sheets
@@ -124,11 +194,25 @@ public static class SchWriter
             b.AddChild(BuildSheet(sheet));
         }
 
+        // Power ports
+        foreach (var power in sch.PowerObjects.OfType<KiCadSchPowerObject>())
+        {
+            b.AddChild(BuildPowerPort(power));
+        }
+
         // Placed symbols
         foreach (var comp in sch.Components.OfType<KiCadSchComponent>())
         {
             b.AddChild(BuildPlacedSymbol(comp));
         }
+
+        // Sheet instances
+        if (sch.SheetInstances is not null)
+            b.AddChild(sch.SheetInstances);
+
+        // Symbol instances
+        if (sch.SymbolInstances is not null)
+            b.AddChild(sch.SymbolInstances);
 
         return b.Build();
     }
@@ -137,7 +221,7 @@ public static class SchWriter
     {
         var wb = new SExpressionBuilder("wire")
             .AddChild(WriterHelper.BuildPoints(wire.Vertices))
-            .AddChild(WriterHelper.BuildStroke(wire.LineWidth));
+            .AddChild(WriterHelper.BuildStroke(wire.LineWidth, wire.LineStyle, wire.Color));
         if (wire.Uuid is not null) wb.AddChild(WriterHelper.BuildUuid(wire.Uuid));
         return wb.Build();
     }
@@ -161,9 +245,27 @@ public static class SchWriter
             _ => "label"
         };
         var lb = new SExpressionBuilder(token)
-            .AddValue(label.Text)
-            .AddChild(WriterHelper.BuildPosition(label.Location, label.Orientation))
-            .AddChild(WriterHelper.BuildTextEffects(WriterHelper.DefaultTextSize, WriterHelper.DefaultTextSize, label.Justification));
+            .AddValue(label.Text);
+
+        var fontH = label.FontSizeHeight != Coord.Zero ? label.FontSizeHeight : WriterHelper.DefaultTextSize;
+        var fontW = label.FontSizeWidth != Coord.Zero ? label.FontSizeWidth : WriterHelper.DefaultTextSize;
+
+        if (label.Shape is not null)
+            lb.AddChild("shape", s => s.AddSymbol(label.Shape));
+
+        lb.AddChild(WriterHelper.BuildPosition(label.Location, label.Orientation));
+
+        if (label.FieldsAutoplaced)
+            lb.AddChild("fields_autoplaced", f => f.AddBool(true));
+
+        lb.AddChild(WriterHelper.BuildTextEffects(fontH, fontW, label.Justification, isMirrored: label.IsMirrored, isBold: label.IsBold, isItalic: label.IsItalic));
+
+        // Write properties for global/hierarchical labels
+        foreach (var prop in label.Properties)
+        {
+            lb.AddChild(SymLibWriter.BuildProperty(prop));
+        }
+
         if (label.Uuid is not null) lb.AddChild(WriterHelper.BuildUuid(label.Uuid));
         return lb.Build();
     }
@@ -176,24 +278,39 @@ public static class SchWriter
             {
                 s.AddValue(sheet.Size.X.ToMm());
                 s.AddValue(sheet.Size.Y.ToMm());
-            })
-            .AddChild(WriterHelper.BuildStroke(sheet.LineWidth));
+            });
 
-        // Properties
-        sb.AddChild("property", p =>
+        if (sheet.FieldsAutoplaced)
+            sb.AddChild("fields_autoplaced", f => f.AddBool(true));
+
+        sb.AddChild(WriterHelper.BuildStroke(sheet.LineWidth, sheet.LineStyle, sheet.Color));
+        sb.AddChild(WriterHelper.BuildFill(sheet.FillType, sheet.FillColor));
+
+        // Properties - use stored per-property data if available, otherwise fall back to defaults
+        if (sheet.SheetProperties.Count > 0)
         {
-            p.AddValue("Sheetname");
-            p.AddValue(sheet.SheetName);
-            p.AddChild(WriterHelper.BuildPosition(sheet.Location));
-            p.AddChild(WriterHelper.BuildTextEffects(WriterHelper.DefaultTextSize, WriterHelper.DefaultTextSize));
-        });
-        sb.AddChild("property", p =>
+            foreach (var prop in sheet.SheetProperties)
+            {
+                sb.AddChild(SymLibWriter.BuildProperty(prop));
+            }
+        }
+        else
         {
-            p.AddValue("Sheetfile");
-            p.AddValue(sheet.FileName);
-            p.AddChild(WriterHelper.BuildPosition(sheet.Location));
-            p.AddChild(WriterHelper.BuildTextEffects(WriterHelper.DefaultTextSize, WriterHelper.DefaultTextSize));
-        });
+            sb.AddChild("property", p =>
+            {
+                p.AddValue("Sheetname");
+                p.AddValue(sheet.SheetName);
+                p.AddChild(WriterHelper.BuildPosition(sheet.Location));
+                p.AddChild(WriterHelper.BuildTextEffects(WriterHelper.DefaultTextSize, WriterHelper.DefaultTextSize));
+            });
+            sb.AddChild("property", p =>
+            {
+                p.AddValue("Sheetfile");
+                p.AddValue(sheet.FileName);
+                p.AddChild(WriterHelper.BuildPosition(sheet.Location));
+                p.AddChild(WriterHelper.BuildTextEffects(WriterHelper.DefaultTextSize, WriterHelper.DefaultTextSize));
+            });
+        }
 
         foreach (var pin in sheet.Pins.OfType<KiCadSchSheetPin>())
         {
@@ -208,8 +325,27 @@ public static class SchWriter
             sb.AddChild(pb.Build());
         }
 
+        // Instances
+        if (sheet.Instances is not null)
+            sb.AddChild(sheet.Instances);
+
         if (sheet.Uuid is not null) sb.AddChild(WriterHelper.BuildUuid(sheet.Uuid));
         return sb.Build();
+    }
+
+    private static SExpr BuildPowerPort(KiCadSchPowerObject power)
+    {
+        // If we have the raw S-expression node, re-emit it verbatim for perfect round-trip
+        if (power.RawNode is not null)
+            return power.RawNode;
+
+        // Otherwise build from model properties
+        var pb = new SExpressionBuilder("power_port")
+            .AddValue(power.Text ?? "");
+        pb.AddChild(WriterHelper.BuildPosition(power.Location, power.Rotation));
+        pb.AddChild(WriterHelper.BuildTextEffects(WriterHelper.DefaultTextSize, WriterHelper.DefaultTextSize));
+        if (power.Uuid is not null) pb.AddChild(WriterHelper.BuildUuid(power.Uuid));
+        return pb.Build();
     }
 
     private static SExpr BuildPlacedSymbol(KiCadSchComponent comp)
@@ -219,7 +355,10 @@ public static class SchWriter
 
         sb.AddChild(WriterHelper.BuildPosition(comp.Location, comp.Rotation));
 
-        if (comp.IsMirroredX)
+        // Mirror - support "x", "y", and "xy"
+        if (comp.IsMirroredX && comp.IsMirroredY)
+            sb.AddChild("mirror", m => m.AddSymbol("xy"));
+        else if (comp.IsMirroredX)
             sb.AddChild("mirror", m => m.AddSymbol("x"));
         else if (comp.IsMirroredY)
             sb.AddChild("mirror", m => m.AddSymbol("y"));
@@ -227,14 +366,48 @@ public static class SchWriter
         if (comp.Unit > 0)
             sb.AddChild("unit", u => u.AddValue(comp.Unit));
 
+        // in_bom / on_board
+        sb.AddChild("in_bom", v => v.AddBool(comp.InBom));
+        sb.AddChild("on_board", v => v.AddBool(comp.OnBoard));
+
+        // convert / body_style
+        if (comp.BodyStyle > 0)
+            sb.AddChild("convert", c => c.AddValue(comp.BodyStyle));
+
+        if (comp.FieldsAutoplaced)
+            sb.AddChild("fields_autoplaced", f => f.AddBool(true));
+
+        // lib_name
+        if (comp.LibName is not null)
+            sb.AddChild("lib_name", l => l.AddValue(comp.LibName));
+
         foreach (var param in comp.Parameters.OfType<KiCadSchParameter>())
         {
             sb.AddChild(SymLibWriter.BuildProperty(param));
         }
 
+        // Write pins
+        foreach (var pin in comp.Pins.OfType<KiCadSchPin>())
+        {
+            sb.AddChild(BuildPlacedPin(pin));
+        }
+
+        // Instances
+        if (comp.InstancesRaw is not null)
+            sb.AddChild(comp.InstancesRaw);
+
         if (comp.Uuid is not null)
             sb.AddChild(WriterHelper.BuildUuid(comp.Uuid));
 
         return sb.Build();
+    }
+
+    private static SExpr BuildPlacedPin(KiCadSchPin pin)
+    {
+        var pb = new SExpressionBuilder("pin")
+            .AddValue(pin.Name ?? "~");
+        if (pin.Uuid is not null)
+            pb.AddChild(WriterHelper.BuildUuid(pin.Uuid));
+        return pb.Build();
     }
 }

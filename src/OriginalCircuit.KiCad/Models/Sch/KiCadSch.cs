@@ -3,6 +3,7 @@ using OriginalCircuit.Eda.Models;
 using OriginalCircuit.Eda.Models.Sch;
 using OriginalCircuit.Eda.Primitives;
 using OriginalCircuit.KiCad.Serialization;
+using SExpr = OriginalCircuit.KiCad.SExpression.SExpression;
 
 namespace OriginalCircuit.KiCad.Models.Sch;
 
@@ -22,6 +23,12 @@ public sealed class KiCadSch : ISchDocument
     private readonly List<KiCadSchBusEntry> _busEntries = [];
     private readonly List<KiCadSchSheet> _sheets = [];
     private readonly List<KiCadSchComponent> _libSymbols = [];
+    private readonly List<KiCadSchPolyline> _polylines = [];
+    private readonly List<KiCadSchCircle> _circles = [];
+    private readonly List<KiCadSchRectangle> _rectangles = [];
+    private readonly List<KiCadSchArc> _arcs = [];
+    private readonly List<KiCadSchBezier> _beziers = [];
+    private readonly List<KiCadSchLine> _lines = [];
     private readonly List<KiCadDiagnostic> _diagnostics = [];
 
     /// <summary>
@@ -43,6 +50,26 @@ public sealed class KiCadSch : ISchDocument
     /// Gets the UUID of the document.
     /// </summary>
     public string? Uuid { get; set; }
+
+    /// <summary>
+    /// Gets or sets the paper size (e.g., "A4", "A3", "USLetter").
+    /// </summary>
+    public string? Paper { get; set; }
+
+    /// <summary>
+    /// Gets or sets the raw title_block S-expression subtree for round-trip fidelity.
+    /// </summary>
+    public SExpr? TitleBlock { get; set; }
+
+    /// <summary>
+    /// Gets or sets the raw sheet_instances S-expression subtree for round-trip fidelity.
+    /// </summary>
+    public SExpr? SheetInstances { get; set; }
+
+    /// <summary>
+    /// Gets or sets the raw symbol_instances S-expression subtree for round-trip fidelity.
+    /// </summary>
+    public SExpr? SymbolInstances { get; set; }
 
     /// <summary>
     /// Gets the diagnostics collected during parsing.
@@ -100,6 +127,42 @@ public sealed class KiCadSch : ISchDocument
     /// </summary>
     public IReadOnlyList<KiCadSchComponent> LibSymbols => _libSymbols;
     internal List<KiCadSchComponent> LibSymbolList => _libSymbols;
+
+    /// <summary>
+    /// Gets the schematic-level polylines.
+    /// </summary>
+    public IReadOnlyList<KiCadSchPolyline> Polylines => _polylines;
+    internal List<KiCadSchPolyline> PolylineList => _polylines;
+
+    /// <summary>
+    /// Gets the schematic-level circles.
+    /// </summary>
+    public IReadOnlyList<KiCadSchCircle> Circles => _circles;
+    internal List<KiCadSchCircle> CircleList => _circles;
+
+    /// <summary>
+    /// Gets the schematic-level rectangles.
+    /// </summary>
+    public IReadOnlyList<KiCadSchRectangle> Rectangles => _rectangles;
+    internal List<KiCadSchRectangle> RectangleList => _rectangles;
+
+    /// <summary>
+    /// Gets the schematic-level arcs.
+    /// </summary>
+    public IReadOnlyList<KiCadSchArc> Arcs => _arcs;
+    internal List<KiCadSchArc> ArcList => _arcs;
+
+    /// <summary>
+    /// Gets the schematic-level bezier curves.
+    /// </summary>
+    public IReadOnlyList<KiCadSchBezier> Beziers => _beziers;
+    internal List<KiCadSchBezier> BezierList => _beziers;
+
+    /// <summary>
+    /// Gets the schematic-level lines (2-point polylines).
+    /// </summary>
+    public IReadOnlyList<KiCadSchLine> Lines => _lines;
+    internal List<KiCadSchLine> LineList => _lines;
 
     /// <inheritdoc />
     /// <remarks>This property is computed on each access. Cache the result if accessing repeatedly.</remarks>
