@@ -332,9 +332,11 @@ public static class PcbReader
         text.FontWidth = fontW;
         text.FontBold = isBold;
         text.FontItalic = isItalic;
-        text.IsHidden = isHidden;
         text.IsMirrored = isMirrored;
         text.Justification = justification;
+
+        // Check for hide both from effects and as a top-level symbol on the gr_text node
+        text.IsHidden = isHidden || node.Values.Any(v => v is SExprSymbol s && s.Value == "hide");
 
         // Parse font thickness from effects > font > (thickness N)
         var fontNode = node.GetChild("effects")?.GetChild("font");
