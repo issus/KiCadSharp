@@ -329,7 +329,7 @@ public static class PcbWriter
 
     private static void AddGraphicCommon(SExpressionBuilder gb, KiCadPcbGraphic graphic)
     {
-        if (graphic.StrokeWidth != Coord.Zero || graphic.StrokeStyle != LineStyle.Solid)
+        if (graphic.HasStroke || graphic.StrokeWidth != Coord.Zero || graphic.StrokeStyle != LineStyle.Solid)
             gb.AddChild(WriterHelper.BuildStroke(graphic.StrokeWidth, graphic.StrokeStyle, graphic.StrokeColor));
 
         if (graphic.UsePcbFillFormat)
