@@ -17,6 +17,8 @@ public sealed class KiCadPcbComponent : IPcbComponent
     private readonly List<KiCadPcbArc> _arcs = [];
     private readonly List<KiCadPcbText> _texts = [];
     private readonly List<KiCadPcbRegion> _regions = [];
+    private readonly List<KiCadPcbRectangle> _rectangles = [];
+    private readonly List<KiCadPcbCircle> _circles = [];
     private readonly List<KiCadSchParameter> _properties = [];
     private readonly List<KiCadDiagnostic> _diagnostics = [];
 
@@ -60,6 +62,18 @@ public sealed class KiCadPcbComponent : IPcbComponent
     /// <inheritdoc />
     public IReadOnlyList<IPcbRegion> Regions => _regions;
     internal List<KiCadPcbRegion> RegionList => _regions;
+
+    /// <summary>
+    /// Gets the rectangles (fp_rect) in this footprint.
+    /// </summary>
+    public IReadOnlyList<KiCadPcbRectangle> Rectangles => _rectangles;
+    internal List<KiCadPcbRectangle> RectangleList => _rectangles;
+
+    /// <summary>
+    /// Gets the circles (fp_circle) in this footprint.
+    /// </summary>
+    public IReadOnlyList<KiCadPcbCircle> Circles => _circles;
+    internal List<KiCadPcbCircle> CircleList => _circles;
 
     /// <summary>
     /// Gets the footprint location on the board.
@@ -207,6 +221,8 @@ public sealed class KiCadPcbComponent : IPcbComponent
             foreach (var track in Tracks) rect = rect.Union(track.Bounds);
             foreach (var arc in Arcs) rect = rect.Union(arc.Bounds);
             foreach (var text in Texts) rect = rect.Union(text.Bounds);
+            foreach (var r in Rectangles) rect = rect.Union(r.Bounds);
+            foreach (var c in Circles) rect = rect.Union(c.Bounds);
             return rect;
         }
     }

@@ -113,6 +113,18 @@ public static class FootprintWriter
             b.AddChild(BuildFpLine(track));
         }
 
+        // Rectangles
+        foreach (var rect in component.Rectangles)
+        {
+            b.AddChild(BuildFpRect(rect));
+        }
+
+        // Circles
+        foreach (var circle in component.Circles)
+        {
+            b.AddChild(BuildFpCircle(circle));
+        }
+
         // Arcs
         foreach (var arc in component.Arcs.OfType<KiCadPcbArc>())
         {
@@ -203,6 +215,44 @@ public static class FootprintWriter
             lb.AddChild(WriterHelper.BuildUuid(track.Uuid));
 
         return lb.Build();
+    }
+
+    private static SExpr BuildFpRect(KiCadPcbRectangle rect)
+    {
+        var rb = new SExpressionBuilder("fp_rect")
+            .AddChild("start", s => { s.AddValue(rect.Start.X.ToMm()); s.AddValue(rect.Start.Y.ToMm()); })
+            .AddChild("end", e => { e.AddValue(rect.End.X.ToMm()); e.AddValue(rect.End.Y.ToMm()); })
+            .AddChild(WriterHelper.BuildStroke(rect.Width, rect.StrokeStyle, rect.StrokeColor));
+
+        if (rect.FillType != SchFillType.None)
+            rb.AddChild(WriterHelper.BuildFill(rect.FillType, rect.FillColor));
+
+        if (rect.LayerName is not null)
+            rb.AddChild("layer", l => l.AddSymbol(rect.LayerName));
+
+        if (rect.Uuid is not null)
+            rb.AddChild(WriterHelper.BuildUuid(rect.Uuid));
+
+        return rb.Build();
+    }
+
+    private static SExpr BuildFpCircle(KiCadPcbCircle circle)
+    {
+        var cb = new SExpressionBuilder("fp_circle")
+            .AddChild("center", c => { c.AddValue(circle.Center.X.ToMm()); c.AddValue(circle.Center.Y.ToMm()); })
+            .AddChild("end", e => { e.AddValue(circle.End.X.ToMm()); e.AddValue(circle.End.Y.ToMm()); })
+            .AddChild(WriterHelper.BuildStroke(circle.Width, circle.StrokeStyle, circle.StrokeColor));
+
+        if (circle.FillType != SchFillType.None)
+            cb.AddChild(WriterHelper.BuildFill(circle.FillType, circle.FillColor));
+
+        if (circle.LayerName is not null)
+            cb.AddChild("layer", l => l.AddSymbol(circle.LayerName));
+
+        if (circle.Uuid is not null)
+            cb.AddChild(WriterHelper.BuildUuid(circle.Uuid));
+
+        return cb.Build();
     }
 
     private static SExpr BuildFpArc(KiCadPcbArc arc)

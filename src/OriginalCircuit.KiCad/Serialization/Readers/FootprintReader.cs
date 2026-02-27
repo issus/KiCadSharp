@@ -133,6 +133,8 @@ public static class FootprintReader
         var texts = new List<KiCadPcbText>();
         var tracks = new List<KiCadPcbTrack>();
         var arcs = new List<KiCadPcbArc>();
+        var rectangles = new List<KiCadPcbRectangle>();
+        var circles = new List<KiCadPcbCircle>();
         var properties = new List<KiCadSchParameter>();
 
         foreach (var child in node.Children)
@@ -154,10 +156,10 @@ public static class FootprintReader
                         arcs.Add(ParseFpArc(child));
                         break;
                     case "fp_circle":
-                        arcs.Add(ParseFpCircle(child));
+                        circles.Add(ParseFpCircle(child));
                         break;
                     case "fp_rect":
-                        tracks.AddRange(ParseFpRect(child));
+                        rectangles.Add(ParseFpRect(child));
                         break;
                     case "model":
                         component.Model3D = child.GetString();
@@ -230,6 +232,8 @@ public static class FootprintReader
         component.TextList.AddRange(texts);
         component.TrackList.AddRange(tracks);
         component.ArcList.AddRange(arcs);
+        component.RectangleList.AddRange(rectangles);
+        component.CircleList.AddRange(circles);
         component.PropertyList.AddRange(properties);
         component.DiagnosticList.AddRange(diagnostics);
 
@@ -395,70 +399,56 @@ public static class FootprintReader
         };
     }
 
-    private static KiCadPcbArc ParseFpCircle(SExpr node)
+    private static KiCadPcbCircle ParseFpCircle(SExpr node)
     {
         var centerNode = node.GetChild("center");
         var endNode = node.GetChild("end");
         var center = centerNode is not null ? SExpressionHelper.ParseXY(centerNode) : CoordPoint.Zero;
         var end = endNode is not null ? SExpressionHelper.ParseXY(endNode) : CoordPoint.Zero;
-        var (width, _, _) = SExpressionHelper.ParseStroke(node);
+        var (width, style, color) = SExpressionHelper.ParseStroke(node);
         if (width == Coord.Zero)
             width = Coord.FromMm(node.GetChild("width")?.GetDouble() ?? 0);
 
-        var dx = end.X.ToMm() - center.X.ToMm();
-        var dy = end.Y.ToMm() - center.Y.ToMm();
-        var radius = Coord.FromMm(Math.Sqrt(dx * dx + dy * dy));
+        var (fillType, _, fillColor) = SExpressionHelper.ParseFill(node);
 
-        // Create a 360-degree arc using the end point as start, a diametrically opposite point as mid
-        var midPoint = new CoordPoint(
-            Coord.FromMm(2 * center.X.ToMm() - end.X.ToMm()),
-            Coord.FromMm(2 * center.Y.ToMm() - end.Y.ToMm()));
-
-        // Use a point 90 degrees around as mid for better three-point representation
-        var midX = center.X.ToMm() - dy;
-        var midY = center.Y.ToMm() + dx;
-        midPoint = new CoordPoint(Coord.FromMm(midX), Coord.FromMm(midY));
-
-        return new KiCadPcbArc
+        return new KiCadPcbCircle
         {
             Center = center,
-            Radius = radius,
-            StartAngle = 0,
-            EndAngle = 360,
+            End = end,
             Width = width,
+            StrokeStyle = style,
+            StrokeColor = color,
+            FillType = fillType,
+            FillColor = fillColor,
             LayerName = node.GetChild("layer")?.GetString(),
-            ArcStart = end,
-            ArcMid = midPoint,
-            ArcEnd = end,
             Uuid = SExpressionHelper.ParseUuid(node)
         };
     }
 
-    private static List<KiCadPcbTrack> ParseFpRect(SExpr node)
+    private static KiCadPcbRectangle ParseFpRect(SExpr node)
     {
         var startNode = node.GetChild("start");
         var endNode = node.GetChild("end");
         var start = startNode is not null ? SExpressionHelper.ParseXY(startNode) : CoordPoint.Zero;
         var end = endNode is not null ? SExpressionHelper.ParseXY(endNode) : CoordPoint.Zero;
-        var (width, _, _) = SExpressionHelper.ParseStroke(node);
+        var (width, style, color) = SExpressionHelper.ParseStroke(node);
         if (width == Coord.Zero)
             width = Coord.FromMm(node.GetChild("width")?.GetDouble() ?? 0);
 
-        var layer = node.GetChild("layer")?.GetString();
-        var uuid = SExpressionHelper.ParseUuid(node);
+        var (fillType, _, fillColor) = SExpressionHelper.ParseFill(node);
 
-        var topLeft = start;
-        var topRight = new CoordPoint(end.X, start.Y);
-        var bottomRight = end;
-        var bottomLeft = new CoordPoint(start.X, end.Y);
-
-        return
-        [
-            new KiCadPcbTrack { Start = topLeft, End = topRight, Width = width, LayerName = layer, Uuid = uuid },
-            new KiCadPcbTrack { Start = topRight, End = bottomRight, Width = width, LayerName = layer },
-            new KiCadPcbTrack { Start = bottomRight, End = bottomLeft, Width = width, LayerName = layer },
-            new KiCadPcbTrack { Start = bottomLeft, End = topLeft, Width = width, LayerName = layer },
-        ];
+        return new KiCadPcbRectangle
+        {
+            Start = start,
+            End = end,
+            Width = width,
+            StrokeStyle = style,
+            StrokeColor = color,
+            FillType = fillType,
+            FillColor = fillColor,
+            LayerName = node.GetChild("layer")?.GetString(),
+            Uuid = SExpressionHelper.ParseUuid(node)
+        };
     }
 
     private static KiCadPcbArc ParseFpArc(SExpr node)
