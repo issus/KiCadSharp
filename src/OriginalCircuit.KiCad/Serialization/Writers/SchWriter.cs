@@ -98,7 +98,7 @@ public static class SchWriter
         {
             var bb = new SExpressionBuilder("bus")
                 .AddChild(WriterHelper.BuildPoints(bus.Vertices))
-                .AddChild(WriterHelper.BuildStroke(bus.LineWidth));
+                .AddChild(WriterHelper.BuildStroke(bus.LineWidth, bus.LineStyle, bus.Color));
             if (bus.Uuid is not null) bb.AddChild(WriterHelper.BuildUuid(bus.Uuid));
             b.AddChild(bb.Build());
         }
@@ -113,7 +113,7 @@ public static class SchWriter
                     s.AddValue((entry.Corner.X - entry.Location.X).ToMm());
                     s.AddValue((entry.Corner.Y - entry.Location.Y).ToMm());
                 })
-                .AddChild(WriterHelper.BuildStroke(entry.LineWidth));
+                .AddChild(WriterHelper.BuildStroke(entry.LineWidth, entry.LineStyle, entry.Color));
             if (entry.Uuid is not null) eb.AddChild(WriterHelper.BuildUuid(entry.Uuid));
             b.AddChild(eb.Build());
         }
@@ -137,7 +137,7 @@ public static class SchWriter
     {
         var wb = new SExpressionBuilder("wire")
             .AddChild(WriterHelper.BuildPoints(wire.Vertices))
-            .AddChild(WriterHelper.BuildStroke(wire.LineWidth));
+            .AddChild(WriterHelper.BuildStroke(wire.LineWidth, wire.LineStyle, wire.Color));
         if (wire.Uuid is not null) wb.AddChild(WriterHelper.BuildUuid(wire.Uuid));
         return wb.Build();
     }

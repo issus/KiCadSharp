@@ -190,12 +190,13 @@ public static class SchReader
     private static KiCadSchWire ParseWire(SExpr node)
     {
         var pts = SExpressionHelper.ParsePoints(node);
-        var (width, _, color) = SExpressionHelper.ParseStroke(node);
+        var (width, style, color) = SExpressionHelper.ParseStroke(node);
 
         return new KiCadSchWire
         {
             Vertices = pts,
             LineWidth = width,
+            LineStyle = style,
             Color = color,
             Uuid = SExpressionHelper.ParseUuid(node)
         };
@@ -263,12 +264,13 @@ public static class SchReader
     private static KiCadSchBus ParseBus(SExpr node)
     {
         var pts = SExpressionHelper.ParsePoints(node);
-        var (width, _, color) = SExpressionHelper.ParseStroke(node);
+        var (width, style, color) = SExpressionHelper.ParseStroke(node);
 
         return new KiCadSchBus
         {
             Vertices = pts,
             LineWidth = width,
+            LineStyle = style,
             Color = color,
             Uuid = SExpressionHelper.ParseUuid(node)
         };
@@ -280,13 +282,14 @@ public static class SchReader
         var sizeNode = node.GetChild("size");
         var sx = Coord.FromMm(sizeNode?.GetDouble(0) ?? 0);
         var sy = Coord.FromMm(sizeNode?.GetDouble(1) ?? 0);
-        var (width, _, color) = SExpressionHelper.ParseStroke(node);
+        var (width, style, color) = SExpressionHelper.ParseStroke(node);
 
         return new KiCadSchBusEntry
         {
             Location = loc,
             Corner = new CoordPoint(loc.X + sx, loc.Y + sy),
             LineWidth = width,
+            LineStyle = style,
             Color = color,
             Uuid = SExpressionHelper.ParseUuid(node)
         };
