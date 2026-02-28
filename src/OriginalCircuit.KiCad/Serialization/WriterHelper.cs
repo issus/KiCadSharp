@@ -17,6 +17,13 @@ internal static class WriterHelper
     /// <summary>Number of decimal places used when rounding mm values for output.</summary>
     private const int MmDecimalPlaces = 6;
 
+    /// <summary>
+    /// Maximum quantization error from the Coord fixed-point representation.
+    /// The Coord system uses ~393,701 units/mm (irrational factor 10,000,000/25.4).
+    /// Pure metric values (e.g. 1.0, 0.5, 0.8) can have up to ~2.5e-6 mm error.
+    /// </summary>
+    private const double CoordQuantizationTolerance = 3e-6;
+
     /// <summary>Format string for mm values.</summary>
     private static readonly string MmFormat = $"0.######";
 
@@ -27,9 +34,23 @@ internal static class WriterHelper
     internal static double RoundMm(double mm) => Math.Round(mm, MmDecimalPlaces);
 
     /// <summary>
-    /// Converts a Coord to mm with rounding.
+    /// Converts a Coord to mm, snapping to the simplest representation within
+    /// the Coord quantization tolerance. This finds the number with the fewest
+    /// decimal places that is within ~3e-6 mm of the true value, preventing
+    /// artifacts like 0.999998 instead of 1.0 or 1.249997 instead of 1.25.
     /// </summary>
-    internal static double ToRoundedMm(this Coord c) => RoundMm(c.ToMm());
+    internal static double ToRoundedMm(this Coord c)
+    {
+        var mm = c.ToMm();
+        // Try progressively more decimal places; pick the simplest within tolerance
+        for (int decimals = 0; decimals <= MmDecimalPlaces; decimals++)
+        {
+            var rounded = Math.Round(mm, decimals);
+            if (Math.Abs(rounded - mm) <= CoordQuantizationTolerance)
+                return rounded;
+        }
+        return Math.Round(mm, MmDecimalPlaces);
+    }
 
     /// <summary>
     /// Formats a rounded mm value as a string with controlled decimal places.

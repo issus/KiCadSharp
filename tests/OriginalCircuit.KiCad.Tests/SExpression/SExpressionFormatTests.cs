@@ -517,4 +517,28 @@ public class SExpressionFormatTests
         var num = new SExprNumber(1.5) { OriginalText = "1.500" };
         num.ToString().Should().Be("1.500");
     }
+
+    // ── Coord snap-to-clean-value ─────────────────────────────────────
+
+    [Theory]
+    [InlineData(1.0, "1")]
+    [InlineData(0.5, "0.5")]
+    [InlineData(0.8, "0.8")]
+    [InlineData(1.25, "1.25")]
+    [InlineData(2.5, "2.5")]
+    [InlineData(3.0, "3")]
+    [InlineData(100.0, "100")]
+    [InlineData(1.27, "1.27")]
+    [InlineData(0.254, "0.254")]
+    [InlineData(2.54, "2.54")]
+    [InlineData(0.15, "0.15")]
+    [InlineData(0.1, "0.1")]
+    [InlineData(12.0, "12")]
+    public void CoordToMm_SnapsToCleanValue(double mmInput, string expected)
+    {
+        var coord = Coord.FromMm(mmInput);
+        var rounded = WriterHelper.ToRoundedMm(coord);
+        var formatted = WriterHelper.FormatMm(rounded);
+        formatted.Should().Be(expected, $"Coord.FromMm({mmInput}).ToRoundedMm() should snap to clean value");
+    }
 }
