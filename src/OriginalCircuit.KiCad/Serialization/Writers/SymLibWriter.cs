@@ -57,6 +57,9 @@ public static class SymLibWriter
             b.AddChild(BuildSymbol(comp));
         }
 
+        if (lib.EmbeddedFilesRaw != null)
+            b.AddChild(lib.EmbeddedFilesRaw);
+
         return b.Build();
     }
 
@@ -133,6 +136,9 @@ public static class SymLibWriter
             }
         }
 
+        if (component.UnitName != null)
+            b.AddChild("unit_name", u => u.AddValue(component.UnitName));
+
         // Sub-symbols
         foreach (var sub in component.SubSymbols)
         {
@@ -157,7 +163,7 @@ public static class SymLibWriter
                         b.AddChild(BuildPolyline([line.Start, line.End], line.Width, line.LineStyle, line.Color, emitColor: line.HasStrokeColor));
                         break;
                     case KiCadSchPolyline poly:
-                        b.AddChild(BuildPolyline(poly.Vertices, poly.LineWidth, poly.LineStyle, poly.Color, poly.FillType, poly.FillColor, emitColor: poly.HasStrokeColor));
+                        b.AddChild(BuildPolyline(poly.Vertices, poly.LineWidth, poly.LineStyle, poly.Color, poly.FillType, poly.FillColor, emitColor: poly.HasStrokeColor, uuid: poly.Uuid, uuidIsSymbol: poly.UuidIsSymbol));
                         break;
                     case KiCadSchPolygon polygon:
                         b.AddChild(BuildPolygon(polygon));
@@ -187,7 +193,7 @@ public static class SymLibWriter
             foreach (var line in component.Lines.OfType<KiCadSchLine>())
                 b.AddChild(BuildPolyline([line.Start, line.End], line.Width, line.LineStyle, line.Color, emitColor: line.HasStrokeColor));
             foreach (var poly in component.Polylines.OfType<KiCadSchPolyline>())
-                b.AddChild(BuildPolyline(poly.Vertices, poly.LineWidth, poly.LineStyle, poly.Color, poly.FillType, poly.FillColor, emitColor: poly.HasStrokeColor));
+                b.AddChild(BuildPolyline(poly.Vertices, poly.LineWidth, poly.LineStyle, poly.Color, poly.FillType, poly.FillColor, emitColor: poly.HasStrokeColor, uuid: poly.Uuid, uuidIsSymbol: poly.UuidIsSymbol));
             foreach (var poly in component.Polygons.OfType<KiCadSchPolygon>())
                 b.AddChild(BuildPolygon(poly));
             foreach (var arc in component.Arcs.OfType<KiCadSchArc>())
@@ -278,7 +284,7 @@ public static class SymLibWriter
                 b.AddChild("hide", h => h.AddBool(true));
         }
 
-        // Name with font size
+        // Name with font size and styling
         // When the font size is zero, KiCad implicitly hides the text via (size 0 0),
         // so preserve zero font sizes and don't add a separate (hide yes) node.
         bool nameHiddenByZeroFont = pin.NameFontSizeHeight == Coord.Zero && pin.NameFontSizeWidth == Coord.Zero && !pin.ShowName;
@@ -287,17 +293,17 @@ public static class SymLibWriter
         b.AddChild("name", n =>
         {
             n.AddValue(pin.Name ?? "~");
-            n.AddChild(WriterHelper.BuildTextEffects(nameFontH, nameFontW, hide: !pin.ShowName && !nameHiddenByZeroFont));
+            n.AddChild(WriterHelper.BuildTextEffects(nameFontH, nameFontW, hide: !pin.ShowName && !nameHiddenByZeroFont, isBold: pin.NameIsBold, isItalic: pin.NameIsItalic, fontFace: pin.NameFontFace, fontThickness: pin.NameFontThickness, fontColor: pin.NameFontColor));
         });
 
-        // Number with font size
+        // Number with font size and styling
         bool numHiddenByZeroFont = pin.NumberFontSizeHeight == Coord.Zero && pin.NumberFontSizeWidth == Coord.Zero && !pin.ShowDesignator;
         var numFontH = numHiddenByZeroFont ? Coord.Zero : (pin.NumberFontSizeHeight != Coord.Zero ? pin.NumberFontSizeHeight : WriterHelper.DefaultTextSize);
         var numFontW = numHiddenByZeroFont ? Coord.Zero : (pin.NumberFontSizeWidth != Coord.Zero ? pin.NumberFontSizeWidth : WriterHelper.DefaultTextSize);
         b.AddChild("number", n =>
         {
             n.AddValue(pin.Designator ?? "~");
-            n.AddChild(WriterHelper.BuildTextEffects(numFontH, numFontW, hide: !pin.ShowDesignator && !numHiddenByZeroFont));
+            n.AddChild(WriterHelper.BuildTextEffects(numFontH, numFontW, hide: !pin.ShowDesignator && !numHiddenByZeroFont, isBold: pin.NumberIsBold, isItalic: pin.NumberIsItalic, fontFace: pin.NumberFontFace, fontThickness: pin.NumberFontThickness, fontColor: pin.NumberFontColor));
         });
 
         // Alternates
@@ -316,60 +322,72 @@ public static class SymLibWriter
 
     private static SExpr BuildRectangle(KiCadSchRectangle rect)
     {
-        return new SExpressionBuilder("rectangle")
+        var b = new SExpressionBuilder("rectangle")
             .AddChild("start", s => { s.AddMm(rect.Corner1.X); s.AddMm(rect.Corner1.Y); })
             .AddChild("end", e => { e.AddMm(rect.Corner2.X); e.AddMm(rect.Corner2.Y); })
             .AddChild(WriterHelper.BuildStroke(rect.LineWidth, rect.LineStyle, rect.Color, emitColor: rect.HasStrokeColor))
-            .AddChild(WriterHelper.BuildFill(rect.FillType, rect.FillColor))
-            .Build();
+            .AddChild(WriterHelper.BuildFill(rect.FillType, rect.FillColor));
+        if (rect.Uuid != null)
+            b.AddChild(WriterHelper.BuildUuid(rect.Uuid, rect.UuidIsSymbol));
+        return b.Build();
     }
 
-    private static SExpr BuildPolyline(IReadOnlyList<CoordPoint> vertices, Coord width, LineStyle style, EdaColor color = default, SchFillType fillType = SchFillType.None, EdaColor fillColor = default, bool emitColor = false)
+    private static SExpr BuildPolyline(IReadOnlyList<CoordPoint> vertices, Coord width, LineStyle style, EdaColor color = default, SchFillType fillType = SchFillType.None, EdaColor fillColor = default, bool emitColor = false, string? uuid = null, bool uuidIsSymbol = false)
     {
-        return new SExpressionBuilder("polyline")
+        var b = new SExpressionBuilder("polyline")
             .AddChild(WriterHelper.BuildPoints(vertices))
             .AddChild(WriterHelper.BuildStroke(width, style, color, emitColor: emitColor))
-            .AddChild(WriterHelper.BuildFill(fillType, fillColor))
-            .Build();
+            .AddChild(WriterHelper.BuildFill(fillType, fillColor));
+        if (uuid != null)
+            b.AddChild(WriterHelper.BuildUuid(uuid, uuidIsSymbol));
+        return b.Build();
     }
 
     private static SExpr BuildPolygon(KiCadSchPolygon poly)
     {
-        return new SExpressionBuilder("polyline")
+        var b = new SExpressionBuilder("polyline")
             .AddChild(WriterHelper.BuildPoints(poly.Vertices))
             .AddChild(WriterHelper.BuildStroke(poly.LineWidth, poly.LineStyle, poly.Color, emitColor: poly.HasStrokeColor))
-            .AddChild(WriterHelper.BuildFill(poly.FillType, poly.FillColor))
-            .Build();
+            .AddChild(WriterHelper.BuildFill(poly.FillType, poly.FillColor));
+        if (poly.Uuid != null)
+            b.AddChild(WriterHelper.BuildUuid(poly.Uuid, poly.UuidIsSymbol));
+        return b.Build();
     }
 
     private static SExpr BuildArc(KiCadSchArc arc)
     {
-        return new SExpressionBuilder("arc")
+        var b = new SExpressionBuilder("arc")
             .AddChild("start", s => { s.AddMm(arc.ArcStart.X); s.AddMm(arc.ArcStart.Y); })
             .AddChild("mid", m => { m.AddMm(arc.ArcMid.X); m.AddMm(arc.ArcMid.Y); })
             .AddChild("end", e => { e.AddMm(arc.ArcEnd.X); e.AddMm(arc.ArcEnd.Y); })
             .AddChild(WriterHelper.BuildStroke(arc.LineWidth, arc.LineStyle, arc.Color, emitColor: arc.HasStrokeColor))
-            .AddChild(WriterHelper.BuildFill(arc.FillType, arc.FillColor))
-            .Build();
+            .AddChild(WriterHelper.BuildFill(arc.FillType, arc.FillColor));
+        if (arc.Uuid != null)
+            b.AddChild(WriterHelper.BuildUuid(arc.Uuid, arc.UuidIsSymbol));
+        return b.Build();
     }
 
     private static SExpr BuildCircle(KiCadSchCircle circle)
     {
-        return new SExpressionBuilder("circle")
+        var b = new SExpressionBuilder("circle")
             .AddChild("center", c => { c.AddMm(circle.Center.X); c.AddMm(circle.Center.Y); })
             .AddChild("radius", r => r.AddMm(circle.Radius))
             .AddChild(WriterHelper.BuildStroke(circle.LineWidth, circle.LineStyle, circle.Color, emitColor: circle.HasStrokeColor))
-            .AddChild(WriterHelper.BuildFill(circle.FillType, circle.FillColor))
-            .Build();
+            .AddChild(WriterHelper.BuildFill(circle.FillType, circle.FillColor));
+        if (circle.Uuid != null)
+            b.AddChild(WriterHelper.BuildUuid(circle.Uuid, circle.UuidIsSymbol));
+        return b.Build();
     }
 
     private static SExpr BuildBezier(KiCadSchBezier bezier)
     {
-        return new SExpressionBuilder("bezier")
+        var b = new SExpressionBuilder("bezier")
             .AddChild(WriterHelper.BuildPoints(bezier.ControlPoints))
             .AddChild(WriterHelper.BuildStroke(bezier.LineWidth, bezier.LineStyle, bezier.Color, emitColor: bezier.HasStrokeColor))
-            .AddChild(WriterHelper.BuildFill(bezier.FillType, bezier.FillColor))
-            .Build();
+            .AddChild(WriterHelper.BuildFill(bezier.FillType, bezier.FillColor));
+        if (bezier.Uuid != null)
+            b.AddChild(WriterHelper.BuildUuid(bezier.Uuid, bezier.UuidIsSymbol));
+        return b.Build();
     }
 
     private static SExpr BuildTextLabel(KiCadSchLabel label)
@@ -384,7 +402,11 @@ public static class SymLibWriter
         if (label.HasStroke)
             b.AddChild(WriterHelper.BuildStroke(label.StrokeWidth, label.StrokeLineStyle, label.StrokeColor));
 
-        b.AddChild(WriterHelper.BuildTextEffects(fontH, fontW, label.Justification, label.IsHidden, label.IsMirrored, label.IsBold, label.IsItalic, fontThickness: label.FontThickness));
+        b.AddChild(WriterHelper.BuildTextEffects(fontH, fontW, label.Justification, label.IsHidden, label.IsMirrored, label.IsBold, label.IsItalic, fontFace: label.FontFace, fontThickness: label.FontThickness, fontColor: label.FontColor, href: label.Href));
+
+        if (label.Uuid != null)
+            b.AddChild(WriterHelper.BuildUuid(label.Uuid, label.UuidIsSymbol));
+
         return b.Build();
     }
 }

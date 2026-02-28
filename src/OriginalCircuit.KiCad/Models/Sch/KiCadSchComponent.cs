@@ -67,6 +67,12 @@ public sealed class KiCadSchComponent : ISchComponent
     /// </summary>
     public int Unit { get; set; } = 1;
 
+    /// <summary>
+    /// Gets or sets the unit name for KiCad 9+ symbols that use <c>(unit_name "name")</c>.
+    /// Null means the token was not present in the source file.
+    /// </summary>
+    public string? UnitName { get; set; }
+
     /// <inheritdoc />
     public IReadOnlyList<ISchPin> Pins => _pins;
     internal List<KiCadSchPin> PinList => _pins;

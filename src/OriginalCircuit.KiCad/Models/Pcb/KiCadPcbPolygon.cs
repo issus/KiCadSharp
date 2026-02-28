@@ -66,6 +66,11 @@ public sealed class KiCadPcbPolygon
     public bool IsLocked { get; set; }
 
     /// <summary>
+    /// Gets whether the locked state was stored as a child node <c>(locked yes)</c> vs bare symbol.
+    /// </summary>
+    public bool LockedIsChildNode { get; set; }
+
+    /// <summary>
     /// Gets the bounding rectangle.
     /// </summary>
     public CoordRect Bounds => PointsBounds.Compute(Points);

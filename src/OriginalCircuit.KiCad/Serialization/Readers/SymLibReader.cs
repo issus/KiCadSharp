@@ -76,6 +76,10 @@ public static class SymLibReader
                 $"File format version {lib.Version} is newer than the maximum tested version {MaxTestedVersion}. Some features may not be parsed correctly."));
         }
 
+        var embeddedFilesNode = root.GetChild("embedded_files");
+        if (embeddedFilesNode is not null)
+            lib.EmbeddedFilesRaw = embeddedFilesNode;
+
         foreach (var symbolNode in root.GetChildren("symbol"))
         {
             try
@@ -238,6 +242,9 @@ public static class SymLibReader
                     labels.Add(lbl);
                     component.OrderedPrimitivesList.Add(lbl);
                     break;
+                case "unit_name":
+                    component.UnitName = child.GetString();
+                    break;
                 case "property":
                 case "pin_names":
                 case "pin_numbers":
@@ -247,6 +254,7 @@ public static class SymLibReader
                 case "embedded_fonts":
                 case "power":
                 case "extends":
+                case "duplicate_pin_numbers_are_jumpers":
                     // Known tokens handled elsewhere
                     break;
                 default:
@@ -302,41 +310,39 @@ public static class SymLibReader
         var numberNode = node.GetChild("number");
         pin.Designator = numberNode?.GetString();
 
-        // Check name effects for hide and parse font sizes
+        // Check name effects for hide and parse font sizes and styling
         var nameEffects = nameNode?.GetChild("effects");
         if (nameEffects is not null)
         {
-            var nameFont = nameEffects.GetChild("font");
-            var nameSize = nameFont?.GetChild("size");
-            if (nameSize is not null)
-            {
-                var h = nameSize.GetDouble(0) ?? 0;
-                var w = nameSize.GetDouble(1) ?? 0;
-                pin.NameFontSizeHeight = Coord.FromMm(h);
-                pin.NameFontSizeWidth = Coord.FromMm(w);
-                if (h == 0 && w == 0)
-                    pin.ShowName = false;
-            }
+            var (nameFontH, nameFontW, _, _, _, nameIsBold, nameIsItalic, nameFontFace, nameFontThickness, nameFontColor) = SExpressionHelper.ParseTextEffects(nameNode!);
+            pin.NameFontSizeHeight = nameFontH;
+            pin.NameFontSizeWidth = nameFontW;
+            pin.NameIsBold = nameIsBold;
+            pin.NameIsItalic = nameIsItalic;
+            pin.NameFontFace = nameFontFace;
+            pin.NameFontThickness = nameFontThickness;
+            pin.NameFontColor = nameFontColor;
+            if (nameFontH == Coord.Zero && nameFontW == Coord.Zero)
+                pin.ShowName = false;
             if (nameEffects.GetChild("hide") is not null ||
                 nameEffects.Values.Any(v => v is SExprSymbol s && s.Value == "hide"))
                 pin.ShowName = false;
         }
 
-        // Check number effects for hide and parse font sizes
+        // Check number effects for hide and parse font sizes and styling
         var numEffects = numberNode?.GetChild("effects");
         if (numEffects is not null)
         {
-            var numFont = numEffects.GetChild("font");
-            var numSize = numFont?.GetChild("size");
-            if (numSize is not null)
-            {
-                var h = numSize.GetDouble(0) ?? 0;
-                var w = numSize.GetDouble(1) ?? 0;
-                pin.NumberFontSizeHeight = Coord.FromMm(h);
-                pin.NumberFontSizeWidth = Coord.FromMm(w);
-                if (h == 0 && w == 0)
-                    pin.ShowDesignator = false;
-            }
+            var (numFontH, numFontW, _, _, _, numIsBold, numIsItalic, numFontFace, numFontThickness, numFontColor) = SExpressionHelper.ParseTextEffects(numberNode!);
+            pin.NumberFontSizeHeight = numFontH;
+            pin.NumberFontSizeWidth = numFontW;
+            pin.NumberIsBold = numIsBold;
+            pin.NumberIsItalic = numIsItalic;
+            pin.NumberFontFace = numFontFace;
+            pin.NumberFontThickness = numFontThickness;
+            pin.NumberFontColor = numFontColor;
+            if (numFontH == Coord.Zero && numFontW == Coord.Zero)
+                pin.ShowDesignator = false;
             if (numEffects.GetChild("hide") is not null ||
                 numEffects.Values.Any(v => v is SExprSymbol s && s.Value == "hide"))
                 pin.ShowDesignator = false;
@@ -476,6 +482,7 @@ public static class SymLibReader
         var pts = SExpressionHelper.ParsePoints(node);
         var (width, lineStyle, color, hasColor) = SExpressionHelper.ParseStrokeEx(node);
         var (fillType, isFilled, fillColor) = SExpressionHelper.ParseFill(node);
+        var (uuid, uuidIsSymbol) = SExpressionHelper.ParseUuidEx(node);
 
         if (isFilled && pts.Count >= 3)
         {
@@ -488,7 +495,9 @@ public static class SymLibReader
                 LineStyle = lineStyle,
                 HasStrokeColor = hasColor,
                 IsFilled = true,
-                FillType = fillType
+                FillType = fillType,
+                Uuid = uuid,
+                UuidIsSymbol = uuidIsSymbol
             });
         }
         else
@@ -501,7 +510,9 @@ public static class SymLibReader
                 LineStyle = lineStyle,
                 HasStrokeColor = hasColor,
                 FillType = fillType,
-                FillColor = fillColor
+                FillColor = fillColor,
+                Uuid = uuid,
+                UuidIsSymbol = uuidIsSymbol
             });
         }
     }
@@ -514,6 +525,7 @@ public static class SymLibReader
         var end = endNode is not null ? SExpressionHelper.ParseXY(endNode) : CoordPoint.Zero;
         var (width, lineStyle, color, hasColor) = SExpressionHelper.ParseStrokeEx(node);
         var (fillType, isFilled, fillColor) = SExpressionHelper.ParseFill(node);
+        var (uuid, uuidIsSymbol) = SExpressionHelper.ParseUuidEx(node);
 
         return new KiCadSchRectangle
         {
@@ -525,7 +537,9 @@ public static class SymLibReader
             LineStyle = lineStyle,
             HasStrokeColor = hasColor,
             IsFilled = isFilled,
-            FillType = fillType
+            FillType = fillType,
+            Uuid = uuid,
+            UuidIsSymbol = uuidIsSymbol
         };
     }
 
@@ -539,6 +553,7 @@ public static class SymLibReader
         var end = endNode is not null ? SExpressionHelper.ParseXY(endNode) : CoordPoint.Zero;
         var (width, lineStyle, color, hasColor) = SExpressionHelper.ParseStrokeEx(node);
         var (fillType, _, fillColor) = SExpressionHelper.ParseFill(node);
+        var (uuid, uuidIsSymbol) = SExpressionHelper.ParseUuidEx(node);
 
         var (center, radius, startAngle, endAngle) = SExpressionHelper.ComputeArcFromThreePoints(start, mid, end);
 
@@ -556,7 +571,9 @@ public static class SymLibReader
             FillColor = fillColor,
             ArcStart = start,
             ArcMid = mid,
-            ArcEnd = end
+            ArcEnd = end,
+            Uuid = uuid,
+            UuidIsSymbol = uuidIsSymbol
         };
     }
 
@@ -567,6 +584,7 @@ public static class SymLibReader
         var radius = Coord.FromMm(node.GetChild("radius")?.GetDouble() ?? 0);
         var (width, lineStyle, color, hasColor) = SExpressionHelper.ParseStrokeEx(node);
         var (fillType, isFilled, fillColor) = SExpressionHelper.ParseFill(node);
+        var (uuid, uuidIsSymbol) = SExpressionHelper.ParseUuidEx(node);
 
         return new KiCadSchCircle
         {
@@ -578,7 +596,9 @@ public static class SymLibReader
             LineStyle = lineStyle,
             HasStrokeColor = hasColor,
             IsFilled = isFilled,
-            FillType = fillType
+            FillType = fillType,
+            Uuid = uuid,
+            UuidIsSymbol = uuidIsSymbol
         };
     }
 
@@ -587,6 +607,7 @@ public static class SymLibReader
         var pts = SExpressionHelper.ParsePoints(node);
         var (width, lineStyle, color, hasColor) = SExpressionHelper.ParseStrokeEx(node);
         var (fillType, _, fillColor) = SExpressionHelper.ParseFill(node);
+        var (uuid, uuidIsSymbol) = SExpressionHelper.ParseUuidEx(node);
 
         return new KiCadSchBezier
         {
@@ -596,16 +617,25 @@ public static class SymLibReader
             LineStyle = lineStyle,
             HasStrokeColor = hasColor,
             FillType = fillType,
-            FillColor = fillColor
+            FillColor = fillColor,
+            Uuid = uuid,
+            UuidIsSymbol = uuidIsSymbol
         };
     }
 
     private static KiCadSchLabel ParseTextLabel(SExpr node)
     {
         var (loc, angle) = SExpressionHelper.ParsePosition(node);
-        var (fontH, fontW, justification, isHidden, isMirrored, isBold, isItalic, _, fontThickness, _) = SExpressionHelper.ParseTextEffects(node);
+        var (fontH, fontW, justification, isHidden, isMirrored, isBold, isItalic, fontFace, fontThickness, fontColor) = SExpressionHelper.ParseTextEffects(node);
         var hasStroke = node.GetChild("stroke") is not null;
         var (strokeWidth, strokeStyle, strokeColor) = SExpressionHelper.ParseStroke(node);
+
+        // Parse href from effects node
+        var effectsNode = node.GetChild("effects");
+        var hrefNode = effectsNode?.GetChild("href");
+
+        // Parse UUID
+        var (uuid, uuidIsSymbol) = SExpressionHelper.ParseUuidEx(node);
 
         return new KiCadSchLabel
         {
@@ -623,7 +653,12 @@ public static class SymLibReader
             StrokeWidth = strokeWidth,
             StrokeLineStyle = strokeStyle,
             StrokeColor = strokeColor,
-            FontThickness = fontThickness
+            FontThickness = fontThickness,
+            FontFace = fontFace,
+            FontColor = fontColor,
+            Href = hrefNode?.GetString(),
+            Uuid = uuid,
+            UuidIsSymbol = uuidIsSymbol
         };
     }
 }

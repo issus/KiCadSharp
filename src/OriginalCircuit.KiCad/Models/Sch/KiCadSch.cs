@@ -40,9 +40,11 @@ public sealed class KiCadSch : ISchDocument
     private readonly List<KiCadSchLine> _lines = [];
     private readonly List<KiCadDiagnostic> _diagnostics = [];
     private readonly List<SExpr> _tablesRaw = [];
+    private readonly List<SExpr> _textBoxesRaw = [];
     private readonly List<SExpr> _ruleAreasRaw = [];
     private readonly List<SExpr> _netclassFlagsRaw = [];
     private readonly List<SExpr> _busAliasesRaw = [];
+    private readonly List<SExpr> _groupsRaw = [];
     private readonly List<object> _orderedElements = [];
 
     /// <summary>
@@ -54,6 +56,11 @@ public sealed class KiCadSch : ISchDocument
     /// Gets the generator name.
     /// </summary>
     public string? Generator { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the generator value was encoded as a symbol (unquoted) rather than a string.
+    /// </summary>
+    public bool GeneratorIsSymbol { get; set; }
 
     /// <summary>
     /// Gets the generator version.
@@ -98,6 +105,12 @@ public sealed class KiCadSch : ISchDocument
     internal List<SExpr> TablesRawList => _tablesRaw;
 
     /// <summary>
+    /// Gets the raw S-expression storage for text_box elements (KiCad 8+).
+    /// </summary>
+    public IReadOnlyList<SExpr> TextBoxesRaw => _textBoxesRaw;
+    internal List<SExpr> TextBoxesRawList => _textBoxesRaw;
+
+    /// <summary>
     /// Gets the raw S-expression storage for rule area definitions (KiCad 8+).
     /// </summary>
     public IReadOnlyList<SExpr> RuleAreasRaw => _ruleAreasRaw;
@@ -114,6 +127,17 @@ public sealed class KiCadSch : ISchDocument
     /// </summary>
     public IReadOnlyList<SExpr> BusAliasesRaw => _busAliasesRaw;
     internal List<SExpr> BusAliasesRawList => _busAliasesRaw;
+
+    /// <summary>
+    /// Gets or sets the raw embedded_files S-expression subtree for round-trip fidelity.
+    /// </summary>
+    public SExpr? EmbeddedFilesRaw { get; set; }
+
+    /// <summary>
+    /// Gets the raw S-expression storage for group definitions (KiCad 8+).
+    /// </summary>
+    public IReadOnlyList<SExpr> GroupsRaw => _groupsRaw;
+    internal List<SExpr> GroupsRawList => _groupsRaw;
 
     /// <summary>
     /// Gets the ordered list of all content elements in their original file order.

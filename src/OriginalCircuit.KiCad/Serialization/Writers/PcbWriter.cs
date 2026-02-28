@@ -40,7 +40,13 @@ public static class PcbWriter
     {
         var b = new SExpressionBuilder("kicad_pcb")
             .AddChild("version", v => v.AddValue(pcb.Version == 0 ? 20231120 : pcb.Version))
-            .AddChild("generator", g => g.AddValue(pcb.Generator ?? "kicadsharp"));
+            .AddChild("generator", g =>
+            {
+                if (pcb.GeneratorIsSymbol)
+                    g.AddSymbol(pcb.Generator ?? "pcbnew");
+                else
+                    g.AddValue(pcb.Generator ?? "pcbnew");
+            });
 
         if (pcb.GeneratorVersion is not null)
             b.AddChild("generator_version", g => g.AddValue(pcb.GeneratorVersion));
@@ -151,7 +157,21 @@ public static class PcbWriter
                 b.AddChild(raw);
             foreach (var gen in pcb.GeneratedElements)
                 b.AddChild(gen);
+
+            // Non-ordered fallback: emit raw passthroughs not in RawElementList
+            foreach (var raw in pcb.GrTextBoxesRaw)
+                b.AddChild(raw);
+            foreach (var raw in pcb.ImagesRaw)
+                b.AddChild(raw);
+            foreach (var raw in pcb.GrBBoxesRaw)
+                b.AddChild(raw);
+            foreach (var raw in pcb.GroupsRaw)
+                b.AddChild(raw);
         }
+
+        // Properties raw (not included in element ordering lists)
+        if (pcb.PropertiesRaw is not null)
+            b.AddChild(pcb.PropertiesRaw);
 
         // Embedded fonts (KiCad 8+) — emit before embedded_files to match KiCad ordering
         if (pcb.EmbeddedFonts.HasValue)
@@ -186,7 +206,7 @@ public static class PcbWriter
         sb.AddChild("net", n => n.AddValue(track.Net));
 
         if (track.Uuid is not null)
-            sb.AddChild(WriterHelper.BuildUuid(track.Uuid));
+            sb.AddChild(WriterHelper.BuildUuidToken(track.Uuid, track.UuidToken ?? "uuid", track.UuidIsSymbol));
 
         if (track.Status.HasValue)
             sb.AddChild("status", s => s.AddValue(track.Status.Value));
@@ -243,7 +263,7 @@ public static class PcbWriter
         vb.AddChild("net", n => n.AddValue(via.Net));
 
         if (via.Uuid is not null)
-            vb.AddChild(WriterHelper.BuildUuid(via.Uuid));
+            vb.AddChild(WriterHelper.BuildUuidToken(via.Uuid, via.UuidToken ?? "uuid", via.UuidIsSymbol));
 
         if (via.Status.HasValue)
             vb.AddChild("status", s => s.AddValue(via.Status.Value));
@@ -255,7 +275,7 @@ public static class PcbWriter
     {
         var ab = new SExpressionBuilder("arc");
 
-        if (arc.IsLocked)
+        if (arc.IsLocked && !arc.LockedIsChildNode)
             ab.AddSymbol("locked");
 
         ab.AddChild("start", s => { s.AddMm(arc.ArcStart.X); s.AddMm(arc.ArcStart.Y); })
@@ -263,13 +283,16 @@ public static class PcbWriter
           .AddChild("end", e => { e.AddMm(arc.ArcEnd.X); e.AddMm(arc.ArcEnd.Y); })
           .AddChild("width", w => w.AddMm(arc.Width));
 
+        if (arc.IsLocked && arc.LockedIsChildNode)
+            ab.AddChild("locked", l => l.AddBool(true));
+
         if (arc.LayerName is not null)
             ab.AddChild("layer", l => l.AddValue(arc.LayerName));
 
         ab.AddChild("net", n => n.AddValue(arc.Net));
 
         if (arc.Uuid is not null)
-            ab.AddChild(WriterHelper.BuildUuid(arc.Uuid));
+            ab.AddChild(WriterHelper.BuildUuidToken(arc.Uuid, arc.UuidToken ?? "uuid", arc.UuidIsSymbol));
 
         if (arc.Status.HasValue)
             ab.AddChild("status", s => s.AddValue(arc.Status.Value));
@@ -282,7 +305,10 @@ public static class PcbWriter
         var tb = new SExpressionBuilder("gr_text")
             .AddValue(text.Text);
 
-        tb.AddChild(WriterHelper.BuildPosition(text.Location, text.Rotation));
+        if (text.PositionIncludesAngle)
+            tb.AddChild(WriterHelper.BuildPosition(text.Location, text.Rotation));
+        else
+            tb.AddChild(WriterHelper.BuildPositionCompact(text.Location, text.Rotation));
 
         if (text.IsHidden)
             tb.AddSymbol("hide");
@@ -296,7 +322,7 @@ public static class PcbWriter
             });
 
         if (text.Uuid is not null)
-            tb.AddChild(WriterHelper.BuildUuid(text.Uuid));
+            tb.AddChild(WriterHelper.BuildUuidToken(text.Uuid, text.UuidToken ?? "uuid", text.UuidIsSymbol));
 
         var fontW = text.FontWidth != Coord.Zero ? text.FontWidth : text.Height;
         tb.AddChild(WriterHelper.BuildPcbTextEffects(
@@ -346,7 +372,7 @@ public static class PcbWriter
     private static void AddGraphicCommon(SExpressionBuilder gb, KiCadPcbGraphic graphic)
     {
         if (graphic.HasStroke || graphic.StrokeWidth != Coord.Zero || graphic.StrokeStyle != LineStyle.Solid)
-            gb.AddChild(WriterHelper.BuildStroke(graphic.StrokeWidth, graphic.StrokeStyle, graphic.StrokeColor));
+            gb.AddChild(WriterHelper.BuildStroke(graphic.StrokeWidth, graphic.StrokeStyle, graphic.StrokeColor, emitColor: graphic.HasStrokeColor));
 
         if (graphic.UsePcbFillFormat)
             gb.AddChild(WriterHelper.BuildPcbFill(graphic.FillType));
@@ -361,7 +387,7 @@ public static class PcbWriter
             gb.AddChild("layer", l => l.AddValue(graphic.LayerName));
 
         if (graphic.Uuid is not null)
-            gb.AddChild(WriterHelper.BuildUuid(graphic.Uuid));
+            gb.AddChild(WriterHelper.BuildUuidToken(graphic.Uuid, graphic.UuidToken ?? "uuid", graphic.UuidIsSymbol));
     }
 
     private static SExpr BuildGrLine(KiCadPcbGraphicLine line)
@@ -431,18 +457,24 @@ public static class PcbWriter
             .AddValue(nc.Name)
             .AddValue(nc.Description);
 
-        if (nc.Clearance != Coord.Zero)
+        if (nc.HasClearance || nc.Clearance != Coord.Zero)
             nb.AddChild("clearance", c => c.AddMm(nc.Clearance));
-        if (nc.TraceWidth != Coord.Zero)
+        if (nc.HasTraceWidth || nc.TraceWidth != Coord.Zero)
             nb.AddChild("trace_width", c => c.AddMm(nc.TraceWidth));
-        if (nc.ViaDia != Coord.Zero)
+        if (nc.HasViaDia || nc.ViaDia != Coord.Zero)
             nb.AddChild("via_dia", c => c.AddMm(nc.ViaDia));
-        if (nc.ViaDrill != Coord.Zero)
+        if (nc.HasViaDrill || nc.ViaDrill != Coord.Zero)
             nb.AddChild("via_drill", c => c.AddMm(nc.ViaDrill));
-        if (nc.UViaDia != Coord.Zero)
+        if (nc.HasUViaDia || nc.UViaDia != Coord.Zero)
             nb.AddChild("uvia_dia", c => c.AddMm(nc.UViaDia));
-        if (nc.UViaDrill != Coord.Zero)
+        if (nc.HasUViaDrill || nc.UViaDrill != Coord.Zero)
             nb.AddChild("uvia_drill", c => c.AddMm(nc.UViaDrill));
+        if (nc.HasDiffPairWidth || nc.DiffPairWidth != Coord.Zero)
+            nb.AddChild("diff_pair_width", c => c.AddMm(nc.DiffPairWidth));
+        if (nc.HasDiffPairGap || nc.DiffPairGap != Coord.Zero)
+            nb.AddChild("diff_pair_gap", c => c.AddMm(nc.DiffPairGap));
+        if (nc.HasBusWidth || nc.BusWidth != Coord.Zero)
+            nb.AddChild("bus_width", c => c.AddMm(nc.BusWidth));
 
         foreach (var netName in nc.NetNames)
         {
@@ -458,13 +490,16 @@ public static class PcbWriter
     {
         var zb = new SExpressionBuilder("zone");
 
-        if (zone.IsLocked)
+        if (zone.IsLocked && !zone.LockedIsChildNode)
             zb.AddSymbol("locked");
 
         zb.AddChild("net", n => n.AddValue(zone.Net));
 
         if (zone.NetName is not null)
             zb.AddChild("net_name", n => n.AddValue(zone.NetName));
+
+        if (zone.IsLocked && zone.LockedIsChildNode)
+            zb.AddChild("locked", l => l.AddBool(true));
 
         if (zone.LayerNames is not null && zone.LayerNames.Count > 0)
         {
@@ -480,7 +515,7 @@ public static class PcbWriter
         }
 
         if (zone.Uuid is not null)
-            zb.AddChild(WriterHelper.BuildUuid(zone.Uuid));
+            zb.AddChild(WriterHelper.BuildUuidToken(zone.Uuid, zone.UuidToken ?? "uuid", zone.UuidIsSymbol));
 
         if (zone.Name is not null)
             zb.AddChild("name", n => n.AddValue(zone.Name));

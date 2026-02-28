@@ -53,6 +53,21 @@ public sealed class KiCadSchSheetPin : ISchSheetPin
     public bool IsItalic { get; set; }
 
     /// <summary>
+    /// Gets or sets the font face name.
+    /// </summary>
+    public string? FontFace { get; set; }
+
+    /// <summary>
+    /// Gets or sets the font thickness (stroke width of text glyphs).
+    /// </summary>
+    public Coord FontThickness { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the text is mirrored.
+    /// </summary>
+    public bool IsMirrored { get; set; }
+
+    /// <summary>
     /// Gets or sets the font color.
     /// </summary>
     public EdaColor FontColor { get; set; }

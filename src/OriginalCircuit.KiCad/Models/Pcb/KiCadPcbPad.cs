@@ -220,6 +220,11 @@ public sealed class KiCadPcbPad : IPcbPad
     /// </summary>
     public bool IsLocked { get; set; }
 
+    /// <summary>
+    /// Gets whether the locked state was stored as a child node <c>(locked yes)</c> vs bare symbol.
+    /// </summary>
+    public bool LockedIsChildNode { get; set; }
+
     /// <inheritdoc />
     public CoordRect Bounds => CoordRect.FromCenterAndSize(Location, Size.X, Size.Y);
 }

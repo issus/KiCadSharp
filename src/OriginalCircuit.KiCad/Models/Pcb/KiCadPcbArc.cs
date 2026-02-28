@@ -60,9 +60,24 @@ public sealed class KiCadPcbArc : IPcbArc
     public string? Uuid { get; set; }
 
     /// <summary>
+    /// Gets the original token name used for the UUID (e.g. "tstamp" or "uuid").
+    /// </summary>
+    public string UuidToken { get; set; } = "uuid";
+
+    /// <summary>
+    /// Gets whether the UUID value was stored as a bare symbol (unquoted).
+    /// </summary>
+    public bool UuidIsSymbol { get; set; }
+
+    /// <summary>
     /// Gets whether this arc is locked.
     /// </summary>
     public bool IsLocked { get; set; }
+
+    /// <summary>
+    /// Gets whether the locked state was stored as a child node <c>(locked yes)</c> vs bare symbol.
+    /// </summary>
+    public bool LockedIsChildNode { get; set; }
 
     /// <summary>
     /// Gets the stroke line style.

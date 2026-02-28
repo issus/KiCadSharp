@@ -31,6 +31,15 @@ public sealed class KiCadPcbZone
     /// <summary>Gets or sets whether this zone is locked.</summary>
     public bool IsLocked { get; set; }
 
+    /// <summary>Gets or sets whether the locked flag uses child node format <c>(locked yes)</c> instead of bare symbol.</summary>
+    public bool LockedIsChildNode { get; set; }
+
+    /// <summary>Gets or sets the token name used for the UUID node (<c>uuid</c> or <c>tstamp</c>).</summary>
+    public string UuidToken { get; set; } = "uuid";
+
+    /// <summary>Gets or sets whether the UUID value is a bare symbol (unquoted) vs a quoted string.</summary>
+    public bool UuidIsSymbol { get; set; }
+
     /// <summary>Gets or sets the hatch style (edge, full, none).</summary>
     public string? HatchStyle { get; set; }
 

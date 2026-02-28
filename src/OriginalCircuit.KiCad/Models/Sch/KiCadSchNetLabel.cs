@@ -70,6 +70,21 @@ public sealed class KiCadSchNetLabel : ISchNetLabel
     public List<KiCadSchParameter> Properties { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the font face name.
+    /// </summary>
+    public string? FontFace { get; set; }
+
+    /// <summary>
+    /// Gets or sets the font thickness (stroke width of text glyphs).
+    /// </summary>
+    public Coord FontThickness { get; set; }
+
+    /// <summary>
+    /// Gets or sets the font color.
+    /// </summary>
+    public EdaColor FontColor { get; set; }
+
+    /// <summary>
     /// Gets the UUID of the net label.
     /// </summary>
     public string? Uuid { get; set; }

@@ -62,9 +62,15 @@ public static class PcbReader
         var pcb = new KiCadPcb
         {
             Version = root.GetChild("version")?.GetInt() ?? 0,
-            Generator = root.GetChild("generator")?.GetString(),
             GeneratorVersion = root.GetChild("generator_version")?.GetString()
         };
+
+        var genNode = root.GetChild("generator");
+        if (genNode is not null)
+        {
+            pcb.Generator = genNode.GetString();
+            pcb.GeneratorIsSymbol = genNode.Values.Count > 0 && genNode.Values[0] is SExprSymbol;
+        }
 
         var diagnostics = new List<KiCadDiagnostic>();
 
@@ -180,10 +186,28 @@ public static class PcbReader
                         break;
                     case "dimension":
                     case "target":
-                    case "group":
                         // Store raw for round-trip
                         pcb.RawElementList.Add(child);
                         pcb.BoardElementOrderList.Add(child);
+                        break;
+                    case "group":
+                        pcb.GroupsRaw.Add(child);
+                        pcb.BoardElementOrderList.Add(child);
+                        break;
+                    case "gr_text_box":
+                        pcb.GrTextBoxesRaw.Add(child);
+                        pcb.BoardElementOrderList.Add(child);
+                        break;
+                    case "image":
+                        pcb.ImagesRaw.Add(child);
+                        pcb.BoardElementOrderList.Add(child);
+                        break;
+                    case "gr_bbox":
+                        pcb.GrBBoxesRaw.Add(child);
+                        pcb.BoardElementOrderList.Add(child);
+                        break;
+                    case "properties":
+                        pcb.PropertiesRaw = child;
                         break;
                     case "embedded_fonts":
                         pcb.EmbeddedFonts = child.GetBool();
@@ -254,6 +278,10 @@ public static class PcbReader
         var start = startNode is not null ? SExpressionHelper.ParseXY(startNode) : CoordPoint.Zero;
         var end = endNode is not null ? SExpressionHelper.ParseXY(endNode) : CoordPoint.Zero;
 
+        var (segUuid, segUuidToken) = SExpressionHelper.ParseUuidWithToken(node);
+        var segUuidNode = node.GetChild("uuid") ?? node.GetChild("tstamp");
+        var segUuidIsSymbol = segUuidNode?.Values.Count > 0 && segUuidNode.Values[0] is SExprSymbol;
+
         var track = new KiCadPcbTrack
         {
             Start = start,
@@ -261,7 +289,9 @@ public static class PcbReader
             Width = Coord.FromMm(node.GetChild("width")?.GetDouble() ?? 0),
             LayerName = node.GetChild("layer")?.GetString(),
             Net = node.GetChild("net")?.GetInt() ?? 0,
-            Uuid = SExpressionHelper.ParseUuid(node),
+            Uuid = segUuid,
+            UuidToken = segUuidToken,
+            UuidIsSymbol = segUuidIsSymbol,
             IsLocked = node.Values.Any(v => v is SExprSymbol s && s.Value == "locked"),
             Status = node.GetChild("status")?.GetInt()
         };
@@ -281,13 +311,19 @@ public static class PcbReader
     {
         var (loc, _) = SExpressionHelper.ParsePosition(node);
 
+        var (viaUuid, viaUuidToken) = SExpressionHelper.ParseUuidWithToken(node);
+        var viaUuidNode = node.GetChild("uuid") ?? node.GetChild("tstamp");
+        var viaUuidIsSymbol = viaUuidNode?.Values.Count > 0 && viaUuidNode.Values[0] is SExprSymbol;
+
         var via = new KiCadPcbVia
         {
             Location = loc,
             Diameter = Coord.FromMm(node.GetChild("size")?.GetDouble() ?? 0),
             HoleSize = Coord.FromMm(node.GetChild("drill")?.GetDouble() ?? 0),
             Net = node.GetChild("net")?.GetInt() ?? 0,
-            Uuid = SExpressionHelper.ParseUuid(node)
+            Uuid = viaUuid,
+            UuidToken = viaUuidToken,
+            UuidIsSymbol = viaUuidIsSymbol
         };
 
         // Parse via type
@@ -362,7 +398,11 @@ public static class PcbReader
 
         var (center, radius, startAngle, endAngle) = SExpressionHelper.ComputeArcFromThreePoints(start, mid, end);
 
-        return new KiCadPcbArc
+        var (arcUuid, arcUuidToken) = SExpressionHelper.ParseUuidWithToken(node);
+        var arcUuidNode = node.GetChild("uuid") ?? node.GetChild("tstamp");
+        var arcUuidIsSymbol = arcUuidNode?.Values.Count > 0 && arcUuidNode.Values[0] is SExprSymbol;
+
+        var arc = new KiCadPcbArc
         {
             Center = center,
             Radius = radius,
@@ -374,10 +414,22 @@ public static class PcbReader
             ArcStart = start,
             ArcMid = mid,
             ArcEnd = end,
-            Uuid = SExpressionHelper.ParseUuid(node),
+            Uuid = arcUuid,
+            UuidToken = arcUuidToken,
+            UuidIsSymbol = arcUuidIsSymbol,
             IsLocked = node.Values.Any(v => v is SExprSymbol s && s.Value == "locked"),
             Status = node.GetChild("status")?.GetInt()
         };
+
+        // Also check for (locked yes) child node format (KiCad 9+)
+        var lockedChild = node.GetChild("locked");
+        if (lockedChild is not null)
+        {
+            arc.IsLocked = lockedChild.GetBool() ?? true;
+            arc.LockedIsChildNode = true;
+        }
+
+        return arc;
     }
 
     private static KiCadPcbText ParseGrText(SExpr node)
@@ -390,9 +442,20 @@ public static class PcbReader
         var (loc, angle) = SExpressionHelper.ParsePosition(node);
         text.Location = loc;
         text.Rotation = angle;
+
+        // Detect whether the angle was explicitly present in the at node
+        var atNode = node.GetChild("at");
+        text.PositionIncludesAngle = atNode is not null && atNode.Values.Count >= 3;
+
         var layerNode = node.GetChild("layer");
         text.LayerName = layerNode?.GetString();
-        text.Uuid = SExpressionHelper.ParseUuid(node);
+
+        var (textUuid, textUuidToken) = SExpressionHelper.ParseUuidWithToken(node);
+        var textUuidNode = node.GetChild("uuid") ?? node.GetChild("tstamp");
+        var textUuidIsSymbol = textUuidNode?.Values.Count > 0 && textUuidNode.Values[0] is SExprSymbol;
+        text.Uuid = textUuid;
+        text.UuidToken = textUuidToken;
+        text.UuidIsSymbol = textUuidIsSymbol;
 
         // Check for knockout on layer node: (layer "F.SilkS" knockout)
         if (layerNode is not null)
@@ -447,7 +510,13 @@ public static class PcbReader
     private static void ParseGraphicCommon(SExpr node, KiCadPcbGraphic graphic)
     {
         graphic.LayerName = node.GetChild("layer")?.GetString();
-        graphic.Uuid = SExpressionHelper.ParseUuid(node);
+
+        var (grUuid, grUuidToken) = SExpressionHelper.ParseUuidWithToken(node);
+        var grUuidNode = node.GetChild("uuid") ?? node.GetChild("tstamp");
+        var grUuidIsSymbol = grUuidNode?.Values.Count > 0 && grUuidNode.Values[0] is SExprSymbol;
+        graphic.Uuid = grUuid;
+        graphic.UuidToken = grUuidToken;
+        graphic.UuidIsSymbol = grUuidIsSymbol;
 
         // Check for locked as bare symbol
         graphic.IsLocked = node.Values.Any(v => v is SExprSymbol s && s.Value == "locked");
@@ -543,16 +612,30 @@ public static class PcbReader
 
     private static KiCadPcbZone ParseZoneStructured(SExpr node)
     {
+        var (zoneUuid, zoneUuidToken) = SExpressionHelper.ParseUuidWithToken(node);
+        var zoneUuidNode = node.GetChild("uuid") ?? node.GetChild("tstamp");
+        var zoneUuidIsSymbol = zoneUuidNode?.Values.Count > 0 && zoneUuidNode.Values[0] is SExprSymbol;
+
         var zone = new KiCadPcbZone
         {
             Net = node.GetChild("net")?.GetInt() ?? 0,
             NetName = node.GetChild("net_name")?.GetString(),
-            Uuid = SExpressionHelper.ParseUuid(node),
+            Uuid = zoneUuid,
+            UuidToken = zoneUuidToken,
+            UuidIsSymbol = zoneUuidIsSymbol,
             Priority = node.GetChild("priority")?.GetInt() ?? 0,
             Name = node.GetChild("name")?.GetString(),
             IsLocked = node.Values.Any(v => v is SExprSymbol s && s.Value == "locked"),
             MinThickness = Coord.FromMm(node.GetChild("min_thickness")?.GetDouble() ?? 0)
         };
+
+        // Also check for (locked yes) child node format (KiCad 9+)
+        var lockedChild = node.GetChild("locked");
+        if (lockedChild is not null)
+        {
+            zone.IsLocked = lockedChild.GetBool() ?? true;
+            zone.LockedIsChildNode = true;
+        }
 
         // Layer(s)
         zone.LayerName = node.GetChild("layer")?.GetString();
@@ -674,6 +757,31 @@ public static class PcbReader
             UViaDia = Coord.FromMm(node.GetChild("uvia_dia")?.GetDouble() ?? 0),
             UViaDrill = Coord.FromMm(node.GetChild("uvia_drill")?.GetDouble() ?? 0)
         };
+
+        // Track Has* flags for existing properties
+        if (node.GetChild("clearance") is not null) nc.HasClearance = true;
+        if (node.GetChild("trace_width") is not null) nc.HasTraceWidth = true;
+        if (node.GetChild("via_dia") is not null) nc.HasViaDia = true;
+        if (node.GetChild("via_drill") is not null) nc.HasViaDrill = true;
+        if (node.GetChild("uvia_dia") is not null) nc.HasUViaDia = true;
+        if (node.GetChild("uvia_drill") is not null) nc.HasUViaDrill = true;
+
+        // Parse diff_pair and bus_width
+        if (node.GetChild("diff_pair_width") is not null)
+        {
+            nc.DiffPairWidth = Coord.FromMm(node.GetChild("diff_pair_width")?.GetDouble() ?? 0);
+            nc.HasDiffPairWidth = true;
+        }
+        if (node.GetChild("diff_pair_gap") is not null)
+        {
+            nc.DiffPairGap = Coord.FromMm(node.GetChild("diff_pair_gap")?.GetDouble() ?? 0);
+            nc.HasDiffPairGap = true;
+        }
+        if (node.GetChild("bus_width") is not null)
+        {
+            nc.BusWidth = Coord.FromMm(node.GetChild("bus_width")?.GetDouble() ?? 0);
+            nc.HasBusWidth = true;
+        }
 
         // Parse add_net children
         foreach (var netChild in node.GetChildren("add_net"))

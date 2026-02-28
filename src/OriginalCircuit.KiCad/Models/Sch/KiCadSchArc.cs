@@ -50,6 +50,21 @@ public sealed class KiCadSchArc : ISchArc
     public EdaColor FillColor { get; set; }
 
     /// <summary>
+    /// Gets or sets the UUID of this arc.
+    /// </summary>
+    public string? Uuid { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the UUID was encoded as a symbol (unquoted) rather than a string.
+    /// </summary>
+    public bool UuidIsSymbol { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the fill node was present in the source file.
+    /// </summary>
+    public bool HasFill { get; set; }
+
+    /// <summary>
     /// Gets the original start point from the KiCad file.
     /// </summary>
     public CoordPoint ArcStart { get; set; }

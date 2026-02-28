@@ -166,15 +166,40 @@ public static class FootprintReader
         }
 
         // Parse clearance, solder mask margin, etc.
-        component.Clearance = Coord.FromMm(node.GetChild("clearance")?.GetDouble() ?? 0);
-        component.SolderMaskMargin = Coord.FromMm(node.GetChild("solder_mask_margin")?.GetDouble() ?? 0);
-        component.SolderPasteMargin = Coord.FromMm(node.GetChild("solder_paste_margin")?.GetDouble() ?? 0);
+        var clearanceNode = node.GetChild("clearance");
+        if (clearanceNode is not null)
+        {
+            component.Clearance = Coord.FromMm(clearanceNode.GetDouble() ?? 0);
+            component.HasClearance = true;
+        }
+        var solderMaskNode = node.GetChild("solder_mask_margin");
+        if (solderMaskNode is not null)
+        {
+            component.SolderMaskMargin = Coord.FromMm(solderMaskNode.GetDouble() ?? 0);
+            component.HasSolderMaskMargin = true;
+        }
+        var solderPasteNode = node.GetChild("solder_paste_margin");
+        if (solderPasteNode is not null)
+        {
+            component.SolderPasteMargin = Coord.FromMm(solderPasteNode.GetDouble() ?? 0);
+            component.HasSolderPasteMargin = true;
+        }
         component.SolderPasteRatio = node.GetChild("solder_paste_ratio")?.GetDouble() ?? 0;
         var pasteMarginRatioNode = node.GetChild("solder_paste_margin_ratio");
         if (pasteMarginRatioNode is not null)
             component.SolderPasteMarginRatio = pasteMarginRatioNode.GetDouble();
-        component.ThermalWidth = Coord.FromMm(node.GetChild("thermal_width")?.GetDouble() ?? 0);
-        component.ThermalGap = Coord.FromMm(node.GetChild("thermal_gap")?.GetDouble() ?? 0);
+        var thermalWidthNode = node.GetChild("thermal_width");
+        if (thermalWidthNode is not null)
+        {
+            component.ThermalWidth = Coord.FromMm(thermalWidthNode.GetDouble() ?? 0);
+            component.HasThermalWidth = true;
+        }
+        var thermalGapNode = node.GetChild("thermal_gap");
+        if (thermalGapNode is not null)
+        {
+            component.ThermalGap = Coord.FromMm(thermalGapNode.GetDouble() ?? 0);
+            component.HasThermalGap = true;
+        }
 
         // Parse zone_connect
         var zcNode = node.GetChild("zone_connect");
@@ -255,6 +280,10 @@ public static class FootprintReader
                         var curve = ParseFpCurve(child);
                         curves.Add(curve);
                         component.GraphicalItemOrderList.Add(curve);
+                        break;
+                    case "fp_image":
+                    case "image":
+                        component.ImagesRaw.Add(child);
                         break;
                     case "model":
                         component.Model3DList.Add(Parse3DModel(child));
@@ -342,6 +371,8 @@ public static class FootprintReader
                     case "generator_version":
                     case "embedded_fonts":
                     case "duplicate_pad_numbers_are_jumpers":
+                    case "locked":
+                    case "placed":
                         // Known tokens handled elsewhere or intentionally skipped
                         break;
                     default:
@@ -520,7 +551,7 @@ public static class FootprintReader
         if (tentingNode is not null)
             pad.TentingRaw = tentingNode;
 
-        // Pad locked flag
+        // Pad locked flag (bare symbol format)
         foreach (var v in node.Values)
         {
             if (v is SExprSymbol s && s.Value == "locked")
@@ -528,6 +559,13 @@ public static class FootprintReader
                 pad.IsLocked = true;
                 break;
             }
+        }
+        // Also check for (locked yes) child node format (KiCad 9+)
+        var padLockedChild = node.GetChild("locked");
+        if (padLockedChild is not null)
+        {
+            pad.IsLocked = padLockedChild.GetBool() ?? true;
+            pad.LockedIsChildNode = true;
         }
 
         // Remove unused layers and keep end layers (KiCad 8+ uses boolean value: yes/no)
@@ -678,7 +716,7 @@ public static class FootprintReader
 
         var (fillType, _, fillColor, usePcbFillFmt) = SExpressionHelper.ParseFillWithFormat(node);
 
-        return new KiCadPcbTrack
+        var track = new KiCadPcbTrack
         {
             Start = start,
             End = end,
@@ -692,6 +730,15 @@ public static class FootprintReader
             IsLocked = SExpressionHelper.HasSymbol(node, "locked"),
             Uuid = SExpressionHelper.ParseUuid(node)
         };
+
+        var lockedChild = node.GetChild("locked");
+        if (lockedChild is not null)
+        {
+            track.IsLocked = lockedChild.GetBool() ?? true;
+            track.LockedIsChildNode = true;
+        }
+
+        return track;
     }
 
     private static KiCadPcbCircle ParseFpCircle(SExpr node)
@@ -706,7 +753,7 @@ public static class FootprintReader
 
         var (fillType, _, fillColor, usePcbFillFmt) = SExpressionHelper.ParseFillWithFormat(node);
 
-        return new KiCadPcbCircle
+        var circle = new KiCadPcbCircle
         {
             Center = center,
             End = end,
@@ -720,6 +767,15 @@ public static class FootprintReader
             IsLocked = SExpressionHelper.HasSymbol(node, "locked"),
             Uuid = SExpressionHelper.ParseUuid(node)
         };
+
+        var lockedChild = node.GetChild("locked");
+        if (lockedChild is not null)
+        {
+            circle.IsLocked = lockedChild.GetBool() ?? true;
+            circle.LockedIsChildNode = true;
+        }
+
+        return circle;
     }
 
     private static KiCadPcbRectangle ParseFpRect(SExpr node)
@@ -734,7 +790,7 @@ public static class FootprintReader
 
         var (fillType, _, fillColor, usePcbFillFmt) = SExpressionHelper.ParseFillWithFormat(node);
 
-        return new KiCadPcbRectangle
+        var rect = new KiCadPcbRectangle
         {
             Start = start,
             End = end,
@@ -748,6 +804,15 @@ public static class FootprintReader
             IsLocked = SExpressionHelper.HasSymbol(node, "locked"),
             Uuid = SExpressionHelper.ParseUuid(node)
         };
+
+        var lockedChild = node.GetChild("locked");
+        if (lockedChild is not null)
+        {
+            rect.IsLocked = lockedChild.GetBool() ?? true;
+            rect.LockedIsChildNode = true;
+        }
+
+        return rect;
     }
 
     private static KiCadPcbArc ParseFpArc(SExpr node)
@@ -766,7 +831,7 @@ public static class FootprintReader
 
         var (center, radius, startAngle, endAngle) = SExpressionHelper.ComputeArcFromThreePoints(start, mid, end);
 
-        return new KiCadPcbArc
+        var arc = new KiCadPcbArc
         {
             Center = center,
             Radius = radius,
@@ -782,6 +847,15 @@ public static class FootprintReader
             IsLocked = SExpressionHelper.HasSymbol(node, "locked"),
             Uuid = SExpressionHelper.ParseUuid(node)
         };
+
+        var lockedChild = node.GetChild("locked");
+        if (lockedChild is not null)
+        {
+            arc.IsLocked = lockedChild.GetBool() ?? true;
+            arc.LockedIsChildNode = true;
+        }
+
+        return arc;
     }
 
     private static KiCadPcbPolygon ParseFpPoly(SExpr node)
@@ -792,7 +866,7 @@ public static class FootprintReader
             width = Coord.FromMm(node.GetChild("width")?.GetDouble() ?? 0);
         var (fillType, _, fillColor, usePcbFillFmt) = SExpressionHelper.ParseFillWithFormat(node);
 
-        return new KiCadPcbPolygon
+        var poly = new KiCadPcbPolygon
         {
             Points = points,
             Width = width,
@@ -805,6 +879,15 @@ public static class FootprintReader
             IsLocked = SExpressionHelper.HasSymbol(node, "locked"),
             Uuid = SExpressionHelper.ParseUuid(node)
         };
+
+        var lockedChild = node.GetChild("locked");
+        if (lockedChild is not null)
+        {
+            poly.IsLocked = lockedChild.GetBool() ?? true;
+            poly.LockedIsChildNode = true;
+        }
+
+        return poly;
     }
 
     private static KiCadPcbCurve ParseFpCurve(SExpr node)
@@ -814,7 +897,7 @@ public static class FootprintReader
         if (width == Coord.Zero)
             width = Coord.FromMm(node.GetChild("width")?.GetDouble() ?? 0);
 
-        return new KiCadPcbCurve
+        var curve = new KiCadPcbCurve
         {
             Points = points,
             Width = width,
@@ -824,6 +907,15 @@ public static class FootprintReader
             IsLocked = SExpressionHelper.HasSymbol(node, "locked"),
             Uuid = SExpressionHelper.ParseUuid(node)
         };
+
+        var lockedChild = node.GetChild("locked");
+        if (lockedChild is not null)
+        {
+            curve.IsLocked = lockedChild.GetBool() ?? true;
+            curve.LockedIsChildNode = true;
+        }
+
+        return curve;
     }
 
     private static KiCadPcb3DModel Parse3DModel(SExpr node)
@@ -841,6 +933,11 @@ public static class FootprintReader
             var hideVal = hideNode.GetString();
             model.IsHidden = hideVal is null || hideVal == "yes";
         }
+
+        // Parse opacity
+        var opacityNode = node.GetChild("opacity");
+        if (opacityNode is not null)
+            model.Opacity = opacityNode.GetDouble();
 
         var offsetNode = node.GetChild("offset")?.GetChild("xyz");
         if (offsetNode is not null)

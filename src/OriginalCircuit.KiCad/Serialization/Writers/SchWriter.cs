@@ -40,7 +40,13 @@ public static class SchWriter
     {
         var b = new SExpressionBuilder("kicad_sch")
             .AddChild("version", v => v.AddValue(sch.Version == 0 ? 20231120 : sch.Version))
-            .AddChild("generator", g => g.AddValue(sch.Generator ?? "kicadsharp"));
+            .AddChild("generator", g =>
+            {
+                if (sch.GeneratorIsSymbol)
+                    g.AddSymbol(sch.Generator ?? "eeschema");
+                else
+                    g.AddValue(sch.Generator ?? "kicadsharp");
+            });
 
         if (sch.GeneratorVersion is not null)
             b.AddChild("generator_version", g => g.AddValue(sch.GeneratorVersion));
@@ -193,10 +199,18 @@ public static class SchWriter
             b.AddChild(ruleArea);
         foreach (var netclassFlag in sch.NetclassFlagsRaw)
             b.AddChild(netclassFlag);
+        foreach (var textBox in sch.TextBoxesRaw)
+            b.AddChild(textBox);
         foreach (var busAlias in sch.BusAliasesRaw)
             b.AddChild(busAlias);
+        foreach (var group in sch.GroupsRaw)
+            b.AddChild(group);
         foreach (var comp in sch.Components.OfType<KiCadSchComponent>())
             b.AddChild(BuildPlacedSymbol(comp));
+
+        // embedded_files at end
+        if (sch.EmbeddedFilesRaw is not null)
+            b.AddChild(sch.EmbeddedFilesRaw);
     }
 
     private static SExpr BuildWire(KiCadSchWire wire)
@@ -240,7 +254,9 @@ public static class SchWriter
         if (label.FieldsAutoplaced)
             lb.AddChild("fields_autoplaced", f => f.AddBool(true));
 
-        lb.AddChild(WriterHelper.BuildTextEffects(fontH, fontW, label.Justification, isMirrored: label.IsMirrored, isBold: label.IsBold, isItalic: label.IsItalic));
+        lb.AddChild(WriterHelper.BuildTextEffects(fontH, fontW, label.Justification, hide: false,
+            isMirrored: label.IsMirrored, isBold: label.IsBold, isItalic: label.IsItalic,
+            fontFace: label.FontFace, fontThickness: label.FontThickness, fontColor: label.FontColor));
 
         // uuid comes before properties in KiCad 9+
         if (label.Uuid is not null) lb.AddChild(WriterHelper.BuildUuid(label.Uuid));
@@ -314,15 +330,27 @@ public static class SchWriter
         {
             var ioStr = SExpressionHelper.SheetPinIoTypeToString(pin.IoType);
             var angleFromSide = SExpressionHelper.SheetPinSideToAngle(pin.Side);
-            var fontH = pin.FontSizeHeight != Coord.Zero ? pin.FontSizeHeight : WriterHelper.DefaultTextSize;
-            var fontW = pin.FontSizeWidth != Coord.Zero ? pin.FontSizeWidth : WriterHelper.DefaultTextSize;
             var pb = new SExpressionBuilder("pin")
-                .AddValue(pin.Name)
-                .AddSymbol(ioStr)
-                .AddChild(WriterHelper.BuildPosition(pin.Location, angleFromSide));
+                .AddValue(pin.Name);
+
+            // Simplified KiCad 9+ sheet pin format: (pin "name" (uuid "..."))
+            // Full format: (pin "name" ioType (at X Y ANGLE) (uuid "...") (effects ...))
+            var hasAtOrEffects = pin.FontSizeHeight != Coord.Zero || pin.Location != default;
+            if (hasAtOrEffects)
+            {
+                pb.AddSymbol(ioStr);
+                pb.AddChild(WriterHelper.BuildPosition(pin.Location, angleFromSide));
+            }
             if (pin.Uuid is not null) pb.AddChild(WriterHelper.BuildUuid(pin.Uuid));
-            pb.AddChild(WriterHelper.BuildTextEffects(fontH, fontW, pin.Justification,
-                isBold: pin.IsBold, isItalic: pin.IsItalic, fontColor: pin.FontColor));
+            if (hasAtOrEffects)
+            {
+                var fontH = pin.FontSizeHeight != Coord.Zero ? pin.FontSizeHeight : WriterHelper.DefaultTextSize;
+                var fontW = pin.FontSizeWidth != Coord.Zero ? pin.FontSizeWidth : WriterHelper.DefaultTextSize;
+                pb.AddChild(WriterHelper.BuildTextEffects(fontH, fontW, pin.Justification,
+                    hide: false, isMirrored: pin.IsMirrored,
+                    isBold: pin.IsBold, isItalic: pin.IsItalic,
+                    fontFace: pin.FontFace, fontThickness: pin.FontThickness, fontColor: pin.FontColor));
+            }
             sb.AddChild(pb.Build());
         }
 
@@ -342,7 +370,7 @@ public static class SchWriter
         if (label.ExcludeFromSimPresent)
             tb.AddChild("exclude_from_sim", v => v.AddBool(label.ExcludeFromSim));
         tb.AddChild(WriterHelper.BuildPosition(label.Location, label.Rotation))
-            .AddChild(WriterHelper.BuildTextEffects(fontH, fontW, label.Justification, label.IsHidden, label.IsMirrored, label.IsBold, label.IsItalic, fontThickness: label.FontThickness, fontColor: label.FontColor, href: label.Href));
+            .AddChild(WriterHelper.BuildTextEffects(fontH, fontW, label.Justification, label.IsHidden, label.IsMirrored, label.IsBold, label.IsItalic, fontFace: label.FontFace, fontThickness: label.FontThickness, fontColor: label.FontColor, href: label.Href));
         if (label.Uuid is not null) tb.AddChild(WriterHelper.BuildUuid(label.Uuid));
         return tb.Build();
     }
@@ -402,12 +430,15 @@ public static class SchWriter
 
     private static SExpr BuildCircle(KiCadSchCircle circle)
     {
-        return new SExpressionBuilder("circle")
+        var cb = new SExpressionBuilder("circle")
             .AddChild("center", c => { c.AddMm(circle.Center.X); c.AddMm(circle.Center.Y); })
             .AddChild("radius", r => r.AddMm(circle.Radius))
-            .AddChild(WriterHelper.BuildStroke(circle.LineWidth))
-            .AddChild(WriterHelper.BuildFill(circle.FillType, circle.FillColor))
-            .Build();
+            .AddChild(WriterHelper.BuildStroke(circle.LineWidth, circle.LineStyle, circle.Color, emitColor: circle.HasStrokeColor));
+        if (circle.HasFill)
+            cb.AddChild(WriterHelper.BuildFill(circle.FillType, circle.FillColor));
+        if (circle.Uuid is not null)
+            cb.AddChild(WriterHelper.BuildUuid(circle.Uuid, circle.UuidIsSymbol));
+        return cb.Build();
     }
 
     private static SExpr BuildRectangle(KiCadSchRectangle rect)
@@ -423,22 +454,28 @@ public static class SchWriter
 
     private static SExpr BuildArc(KiCadSchArc arc)
     {
-        return new SExpressionBuilder("arc")
+        var ab = new SExpressionBuilder("arc")
             .AddChild("start", s => { s.AddMm(arc.ArcStart.X); s.AddMm(arc.ArcStart.Y); })
             .AddChild("mid", m => { m.AddMm(arc.ArcMid.X); m.AddMm(arc.ArcMid.Y); })
             .AddChild("end", e => { e.AddMm(arc.ArcEnd.X); e.AddMm(arc.ArcEnd.Y); })
-            .AddChild(WriterHelper.BuildStroke(arc.LineWidth))
-            .AddChild(WriterHelper.BuildFill(SchFillType.None))
-            .Build();
+            .AddChild(WriterHelper.BuildStroke(arc.LineWidth, arc.LineStyle, arc.Color, emitColor: arc.HasStrokeColor));
+        if (arc.HasFill)
+            ab.AddChild(WriterHelper.BuildFill(arc.FillType, arc.FillColor));
+        if (arc.Uuid is not null)
+            ab.AddChild(WriterHelper.BuildUuid(arc.Uuid, arc.UuidIsSymbol));
+        return ab.Build();
     }
 
     private static SExpr BuildBezier(KiCadSchBezier bezier)
     {
-        return new SExpressionBuilder("bezier")
+        var bb = new SExpressionBuilder("bezier")
             .AddChild(WriterHelper.BuildPoints(bezier.ControlPoints))
-            .AddChild(WriterHelper.BuildStroke(bezier.LineWidth))
-            .AddChild(WriterHelper.BuildFill(SchFillType.None))
-            .Build();
+            .AddChild(WriterHelper.BuildStroke(bezier.LineWidth, bezier.LineStyle, bezier.Color, emitColor: bezier.HasStrokeColor));
+        if (bezier.HasFill)
+            bb.AddChild(WriterHelper.BuildFill(bezier.FillType, bezier.FillColor));
+        if (bezier.Uuid is not null)
+            bb.AddChild(WriterHelper.BuildUuid(bezier.Uuid, bezier.UuidIsSymbol));
+        return bb.Build();
     }
 
     private static SExpr BuildPowerPort(KiCadSchPowerObject power)

@@ -113,19 +113,19 @@ public static class FootprintWriter
             b.AddChild("sheetfile", s => s.AddValue(component.SheetFile));
 
         // Clearances
-        if (component.Clearance != Coord.Zero)
+        if (component.HasClearance || component.Clearance != Coord.Zero)
             b.AddChild("clearance", c => c.AddMm(component.Clearance));
-        if (component.SolderMaskMargin != Coord.Zero)
+        if (component.HasSolderMaskMargin || component.SolderMaskMargin != Coord.Zero)
             b.AddChild("solder_mask_margin", c => c.AddMm(component.SolderMaskMargin));
-        if (component.SolderPasteMargin != Coord.Zero)
+        if (component.HasSolderPasteMargin || component.SolderPasteMargin != Coord.Zero)
             b.AddChild("solder_paste_margin", c => c.AddMm(component.SolderPasteMargin));
         if (component.SolderPasteRatio != 0)
             b.AddChild("solder_paste_ratio", c => c.AddValue(component.SolderPasteRatio));
         if (component.SolderPasteMarginRatio.HasValue)
             b.AddChild("solder_paste_margin_ratio", c => c.AddValue(component.SolderPasteMarginRatio.Value));
-        if (component.ThermalWidth != Coord.Zero)
+        if (component.HasThermalWidth || component.ThermalWidth != Coord.Zero)
             b.AddChild("thermal_width", c => c.AddMm(component.ThermalWidth));
-        if (component.ThermalGap != Coord.Zero)
+        if (component.HasThermalGap || component.ThermalGap != Coord.Zero)
             b.AddChild("thermal_gap", c => c.AddMm(component.ThermalGap));
         if (component.ZoneConnect != ZoneConnectionType.Inherited)
             b.AddChild("zone_connect", c => c.AddValue((int)component.ZoneConnect));
@@ -202,6 +202,10 @@ public static class FootprintWriter
             foreach (var tb2 in component.TextBoxesRaw)
                 b.AddChild(tb2);
         }
+
+        // Images (raw)
+        foreach (var img in component.ImagesRaw)
+            b.AddChild(img);
 
         // Pads
         foreach (var pad in component.Pads.OfType<KiCadPcbPad>())
@@ -347,7 +351,7 @@ public static class FootprintWriter
     private static SExpr BuildFpLine(KiCadPcbTrack track, string uuidToken = "uuid", bool uuidIsSymbol = false)
     {
         var lb = new SExpressionBuilder("fp_line");
-        if (track.IsLocked)
+        if (track.IsLocked && !track.LockedIsChildNode)
             lb.AddSymbol("locked");
         lb.AddChild("start", s => { s.AddMm(track.Start.X); s.AddMm(track.Start.Y); })
             .AddChild("end", e => { e.AddMm(track.End.X); e.AddMm(track.End.Y); })
@@ -357,6 +361,9 @@ public static class FootprintWriter
             lb.AddChild(WriterHelper.BuildPcbFill(track.FillType));
         else if (track.FillType != SchFillType.None)
             lb.AddChild(WriterHelper.BuildFill(track.FillType, track.FillColor));
+
+        if (track.IsLocked && track.LockedIsChildNode)
+            lb.AddChild("locked", l => l.AddBool(true));
 
         if (track.LayerName is not null)
             lb.AddChild("layer", l => l.AddValue(track.LayerName));
@@ -370,7 +377,7 @@ public static class FootprintWriter
     private static SExpr BuildFpRect(KiCadPcbRectangle rect, string uuidToken = "uuid", bool uuidIsSymbol = false)
     {
         var rb = new SExpressionBuilder("fp_rect");
-        if (rect.IsLocked)
+        if (rect.IsLocked && !rect.LockedIsChildNode)
             rb.AddSymbol("locked");
         rb.AddChild("start", s => { s.AddMm(rect.Start.X); s.AddMm(rect.Start.Y); })
             .AddChild("end", e => { e.AddMm(rect.End.X); e.AddMm(rect.End.Y); })
@@ -380,6 +387,9 @@ public static class FootprintWriter
             rb.AddChild(WriterHelper.BuildPcbFill(rect.FillType));
         else if (rect.FillType != SchFillType.None)
             rb.AddChild(WriterHelper.BuildFill(rect.FillType, rect.FillColor));
+
+        if (rect.IsLocked && rect.LockedIsChildNode)
+            rb.AddChild("locked", l => l.AddBool(true));
 
         if (rect.LayerName is not null)
             rb.AddChild("layer", l => l.AddValue(rect.LayerName));
@@ -393,7 +403,7 @@ public static class FootprintWriter
     private static SExpr BuildFpCircle(KiCadPcbCircle circle, string uuidToken = "uuid", bool uuidIsSymbol = false)
     {
         var cb = new SExpressionBuilder("fp_circle");
-        if (circle.IsLocked)
+        if (circle.IsLocked && !circle.LockedIsChildNode)
             cb.AddSymbol("locked");
         cb.AddChild("center", c => { c.AddMm(circle.Center.X); c.AddMm(circle.Center.Y); })
             .AddChild("end", e => { e.AddMm(circle.End.X); e.AddMm(circle.End.Y); })
@@ -403,6 +413,9 @@ public static class FootprintWriter
             cb.AddChild(WriterHelper.BuildPcbFill(circle.FillType));
         else if (circle.FillType != SchFillType.None)
             cb.AddChild(WriterHelper.BuildFill(circle.FillType, circle.FillColor));
+
+        if (circle.IsLocked && circle.LockedIsChildNode)
+            cb.AddChild("locked", l => l.AddBool(true));
 
         if (circle.LayerName is not null)
             cb.AddChild("layer", l => l.AddValue(circle.LayerName));
@@ -416,12 +429,15 @@ public static class FootprintWriter
     private static SExpr BuildFpArc(KiCadPcbArc arc, string uuidToken = "uuid", bool uuidIsSymbol = false)
     {
         var ab = new SExpressionBuilder("fp_arc");
-        if (arc.IsLocked)
+        if (arc.IsLocked && !arc.LockedIsChildNode)
             ab.AddSymbol("locked");
         ab.AddChild("start", s => { s.AddMm(arc.ArcStart.X); s.AddMm(arc.ArcStart.Y); })
             .AddChild("mid", m => { m.AddMm(arc.ArcMid.X); m.AddMm(arc.ArcMid.Y); })
             .AddChild("end", e => { e.AddMm(arc.ArcEnd.X); e.AddMm(arc.ArcEnd.Y); })
             .AddChild(WriterHelper.BuildStroke(arc.Width, arc.StrokeStyle, arc.StrokeColor));
+
+        if (arc.IsLocked && arc.LockedIsChildNode)
+            ab.AddChild("locked", l => l.AddBool(true));
 
         if (arc.LayerName is not null)
             ab.AddChild("layer", l => l.AddValue(arc.LayerName));
@@ -439,7 +455,7 @@ public static class FootprintWriter
             .AddSymbol(SExpressionHelper.PadTypeToString(pad.PadType))
             .AddSymbol(SExpressionHelper.PadShapeToString(pad.Shape));
 
-        if (pad.IsLocked)
+        if (pad.IsLocked && !pad.LockedIsChildNode)
             pb.AddSymbol("locked");
 
         pb.AddChild(WriterHelper.BuildPositionCompact(pad.Location, pad.Rotation));
@@ -570,6 +586,9 @@ public static class FootprintWriter
         if (pad.TeardropsRaw is not null)
             pb.AddChild(pad.TeardropsRaw);
 
+        if (pad.IsLocked && pad.LockedIsChildNode)
+            pb.AddChild("locked", l => l.AddBool(true));
+
         if (pad.Uuid is not null)
             pb.AddChild(WriterHelper.BuildUuidToken(pad.Uuid, uuidToken, uuidIsSymbol));
 
@@ -579,7 +598,7 @@ public static class FootprintWriter
     private static SExpr BuildFpPoly(KiCadPcbPolygon poly, string uuidToken = "uuid", bool uuidIsSymbol = false)
     {
         var pb = new SExpressionBuilder("fp_poly");
-        if (poly.IsLocked)
+        if (poly.IsLocked && !poly.LockedIsChildNode)
             pb.AddSymbol("locked");
 
         pb.AddChild(WriterHelper.BuildPoints(poly.Points));
@@ -589,6 +608,9 @@ public static class FootprintWriter
             pb.AddChild(WriterHelper.BuildPcbFill(poly.FillType));
         else if (poly.FillType != SchFillType.None)
             pb.AddChild(WriterHelper.BuildFill(poly.FillType, poly.FillColor));
+
+        if (poly.IsLocked && poly.LockedIsChildNode)
+            pb.AddChild("locked", l => l.AddBool(true));
 
         if (poly.LayerName is not null)
             pb.AddChild("layer", l => l.AddValue(poly.LayerName));
@@ -602,11 +624,14 @@ public static class FootprintWriter
     private static SExpr BuildFpCurve(KiCadPcbCurve curve, string uuidToken = "uuid", bool uuidIsSymbol = false)
     {
         var cb = new SExpressionBuilder("fp_curve");
-        if (curve.IsLocked)
+        if (curve.IsLocked && !curve.LockedIsChildNode)
             cb.AddSymbol("locked");
 
         cb.AddChild(WriterHelper.BuildPoints(curve.Points));
         cb.AddChild(WriterHelper.BuildStroke(curve.Width, curve.StrokeStyle, curve.StrokeColor));
+
+        if (curve.IsLocked && curve.LockedIsChildNode)
+            cb.AddChild("locked", l => l.AddBool(true));
 
         if (curve.LayerName is not null)
             cb.AddChild("layer", l => l.AddValue(curve.LayerName));
@@ -622,6 +647,8 @@ public static class FootprintWriter
         var mb = new SExpressionBuilder("model").AddValue(model.Path);
         if (model.IsHidden)
             mb.AddChild("hide", h => h.AddBool(true));
+        if (model.Opacity.HasValue)
+            mb.AddChild("opacity", o => o.AddValue(model.Opacity.Value));
         mb.AddChild("offset", o => o.AddChild("xyz", xyz =>
         {
             xyz.AddMm(model.Offset.X);

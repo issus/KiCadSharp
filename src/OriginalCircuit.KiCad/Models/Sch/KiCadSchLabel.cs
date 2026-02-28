@@ -72,6 +72,11 @@ public sealed class KiCadSchLabel : ISchLabel
     public EdaColor StrokeColor { get; set; }
 
     /// <summary>
+    /// Gets or sets the font face name.
+    /// </summary>
+    public string? FontFace { get; set; }
+
+    /// <summary>
     /// Gets or sets the font thickness (stroke width of text glyphs).
     /// </summary>
     public Coord FontThickness { get; set; }
@@ -100,6 +105,11 @@ public sealed class KiCadSchLabel : ISchLabel
     /// Gets the UUID of the text label.
     /// </summary>
     public string? Uuid { get; set; }
+
+    /// <summary>
+    /// Gets whether the UUID was stored as a bare symbol (unquoted).
+    /// </summary>
+    public bool UuidIsSymbol { get; set; }
 
     /// <inheritdoc />
     public CoordRect Bounds

@@ -57,6 +57,12 @@ public sealed class KiCadPcb : IPcbDocument
     public string? GeneratorVersion { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the generator value was a bare symbol (unquoted) in the source file.
+    /// When true, the writer emits <c>(generator pcbnew)</c>; when false, <c>(generator "pcbnew")</c>.
+    /// </summary>
+    public bool GeneratorIsSymbol { get; set; }
+
+    /// <summary>
     /// Gets or sets whether embedded fonts are enabled (KiCad 8+).
     /// Null means the token was not present in the source file.
     /// </summary>
@@ -67,6 +73,42 @@ public sealed class KiCadPcb : IPcbDocument
     /// These are auto-generated graphical primitives preserved verbatim during round-trip.
     /// </summary>
     public List<SExpr> GeneratedElements { get; set; } = [];
+
+    /// <summary>
+    /// Gets the list of raw S-expression nodes for <c>(gr_text_box ...)</c> elements,
+    /// preserved verbatim during round-trip.
+    /// </summary>
+    public List<SExpr> GrTextBoxesRaw { get; } = [];
+
+    /// <summary>
+    /// Gets the list of raw S-expression nodes for <c>(image ...)</c> elements,
+    /// preserved verbatim during round-trip.
+    /// </summary>
+    public List<SExpr> ImagesRaw { get; } = [];
+
+    /// <summary>
+    /// Gets the list of raw S-expression nodes for <c>(gr_bbox ...)</c> elements,
+    /// preserved verbatim during round-trip.
+    /// </summary>
+    public List<SExpr> GrBBoxesRaw { get; } = [];
+
+    /// <summary>
+    /// Gets or sets the raw S-expression for <c>(properties ...)</c> data,
+    /// preserved verbatim during round-trip.
+    /// </summary>
+    public SExpr? PropertiesRaw { get; set; }
+
+    /// <summary>
+    /// Gets the list of raw S-expression nodes for <c>(group ...)</c> elements,
+    /// preserved verbatim during round-trip.
+    /// </summary>
+    public List<SExpr> GroupsRaw { get; } = [];
+
+    /// <summary>
+    /// Gets the list of raw S-expression nodes for <c>(text_box ...)</c> elements
+    /// (footprint-level text boxes), preserved verbatim during round-trip.
+    /// </summary>
+    public List<SExpr> TextBoxesRaw { get; } = [];
 
     /// <summary>
     /// Gets or sets the raw S-expression for <c>(embedded_files ...)</c> data,

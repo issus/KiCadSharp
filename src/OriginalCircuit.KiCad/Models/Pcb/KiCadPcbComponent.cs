@@ -224,6 +224,21 @@ public sealed class KiCadPcbComponent : IPcbComponent
     public Coord Clearance { get; set; }
 
     /// <summary>
+    /// Gets whether the clearance token was explicitly present in the source file.
+    /// </summary>
+    public bool HasClearance { get; set; }
+
+    /// <summary>
+    /// Gets whether the solder_mask_margin token was explicitly present in the source file.
+    /// </summary>
+    public bool HasSolderMaskMargin { get; set; }
+
+    /// <summary>
+    /// Gets whether the solder_paste_margin token was explicitly present in the source file.
+    /// </summary>
+    public bool HasSolderPasteMargin { get; set; }
+
+    /// <summary>
     /// Gets the zone connection type.
     /// </summary>
     public ZoneConnectionType ZoneConnect { get; set; }
@@ -234,9 +249,19 @@ public sealed class KiCadPcbComponent : IPcbComponent
     public Coord ThermalWidth { get; set; }
 
     /// <summary>
+    /// Gets whether the thermal_width token was explicitly present in the source file.
+    /// </summary>
+    public bool HasThermalWidth { get; set; }
+
+    /// <summary>
     /// Gets the thermal relief gap.
     /// </summary>
     public Coord ThermalGap { get; set; }
+
+    /// <summary>
+    /// Gets whether the thermal_gap token was explicitly present in the source file.
+    /// </summary>
+    public bool HasThermalGap { get; set; }
 
     /// <summary>
     /// Gets the tedit timestamp (legacy).
@@ -319,6 +344,11 @@ public sealed class KiCadPcbComponent : IPcbComponent
     /// Gets the raw fp_text_box nodes for round-trip fidelity.
     /// </summary>
     public List<SExpr> TextBoxesRaw { get; } = [];
+
+    /// <summary>
+    /// Gets the raw fp_image / image nodes within this footprint for round-trip fidelity.
+    /// </summary>
+    public List<SExpr> ImagesRaw { get; } = [];
 
     /// <summary>
     /// Gets the raw private_layers node for round-trip fidelity.

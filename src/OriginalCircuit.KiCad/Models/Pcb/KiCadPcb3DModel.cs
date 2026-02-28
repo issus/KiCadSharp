@@ -46,4 +46,9 @@ public sealed class KiCadPcb3DModel
     /// Gets whether this 3D model is hidden.
     /// </summary>
     public bool IsHidden { get; set; }
+
+    /// <summary>
+    /// Gets or sets the 3D model opacity (KiCad 8+). Null means not specified.
+    /// </summary>
+    public double? Opacity { get; set; }
 }

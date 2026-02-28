@@ -39,6 +39,21 @@ public sealed class KiCadSchBezier : ISchBezier
     /// </summary>
     public EdaColor FillColor { get; set; }
 
+    /// <summary>
+    /// Gets or sets the UUID of this bezier curve.
+    /// </summary>
+    public string? Uuid { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the UUID was encoded as a symbol (unquoted) rather than a string.
+    /// </summary>
+    public bool UuidIsSymbol { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the fill node was present in the source file.
+    /// </summary>
+    public bool HasFill { get; set; }
+
     /// <inheritdoc />
     public CoordRect Bounds => PointsBounds.Compute(ControlPoints);
 }

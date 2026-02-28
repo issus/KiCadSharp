@@ -69,6 +69,56 @@ public sealed class KiCadSchPin : ISchPin
     public Coord NumberFontSizeWidth { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the pin name font is bold.
+    /// </summary>
+    public bool NameIsBold { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the pin name font is italic.
+    /// </summary>
+    public bool NameIsItalic { get; set; }
+
+    /// <summary>
+    /// Gets or sets the pin name font face (e.g., "Arial"). Null means default/not specified.
+    /// </summary>
+    public string? NameFontFace { get; set; }
+
+    /// <summary>
+    /// Gets or sets the pin name font stroke thickness.
+    /// </summary>
+    public Coord NameFontThickness { get; set; }
+
+    /// <summary>
+    /// Gets or sets the pin name font color.
+    /// </summary>
+    public EdaColor NameFontColor { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the pin number font is bold.
+    /// </summary>
+    public bool NumberIsBold { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the pin number font is italic.
+    /// </summary>
+    public bool NumberIsItalic { get; set; }
+
+    /// <summary>
+    /// Gets or sets the pin number font face (e.g., "Arial"). Null means default/not specified.
+    /// </summary>
+    public string? NumberFontFace { get; set; }
+
+    /// <summary>
+    /// Gets or sets the pin number font stroke thickness.
+    /// </summary>
+    public Coord NumberFontThickness { get; set; }
+
+    /// <summary>
+    /// Gets or sets the pin number font color.
+    /// </summary>
+    public EdaColor NumberFontColor { get; set; }
+
+    /// <summary>
     /// Gets the list of pin alternates.
     /// </summary>
     public List<KiCadSchPinAlternate> Alternates { get; set; } = [];

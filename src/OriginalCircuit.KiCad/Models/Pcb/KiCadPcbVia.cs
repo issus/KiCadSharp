@@ -50,6 +50,16 @@ public sealed class KiCadPcbVia : IPcbVia
     public string? Uuid { get; set; }
 
     /// <summary>
+    /// Gets or sets the token name used for the UUID node (<c>uuid</c> or <c>tstamp</c>).
+    /// </summary>
+    public string UuidToken { get; set; } = "uuid";
+
+    /// <summary>
+    /// Gets or sets whether the UUID value is a bare symbol (unquoted) vs a quoted string.
+    /// </summary>
+    public bool UuidIsSymbol { get; set; }
+
+    /// <summary>
     /// Gets whether this via is free (not locked to a net).
     /// </summary>
     public bool IsFree { get; set; }

@@ -72,6 +72,11 @@ public sealed class KiCadPcbCircle
     public bool IsLocked { get; set; }
 
     /// <summary>
+    /// Gets whether the locked state was stored as a child node <c>(locked yes)</c> vs bare symbol.
+    /// </summary>
+    public bool LockedIsChildNode { get; set; }
+
+    /// <summary>
     /// Computes the radius of the circle from center and end point.
     /// </summary>
     public Coord Radius

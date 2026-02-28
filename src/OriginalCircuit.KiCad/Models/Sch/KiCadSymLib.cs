@@ -99,6 +99,11 @@ public sealed class KiCadSymLib : ISchLibrary
         _components.Add(component);
     }
 
+    /// <summary>
+    /// Gets or sets the raw embedded_files S-expression node for round-trip fidelity.
+    /// </summary>
+    public SExpr? EmbeddedFilesRaw { get; set; }
+
     /// <inheritdoc />
     public async ValueTask SaveAsync(string path, SaveOptions? options = null, CancellationToken ct = default)
     {

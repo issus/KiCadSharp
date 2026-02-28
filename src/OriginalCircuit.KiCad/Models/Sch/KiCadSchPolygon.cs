@@ -40,6 +40,16 @@ public sealed class KiCadSchPolygon : ISchPolygon
     /// </summary>
     public SchFillType FillType { get; set; }
 
+    /// <summary>
+    /// Gets the UUID of the polygon.
+    /// </summary>
+    public string? Uuid { get; set; }
+
+    /// <summary>
+    /// Gets whether the UUID was stored as a bare symbol (unquoted).
+    /// </summary>
+    public bool UuidIsSymbol { get; set; }
+
     /// <inheritdoc />
     public CoordRect Bounds => PointsBounds.Compute(Vertices);
 }
