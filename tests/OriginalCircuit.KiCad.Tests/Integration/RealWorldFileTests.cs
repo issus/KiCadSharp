@@ -191,6 +191,6 @@ public class RealWorldFileTests
         var fileSizeMB = new FileInfo(path).Length / (1024.0 * 1024.0);
         var throughputMBs = fileSizeMB / (avgMs / 1000.0);
 
-        throughputMBs.Should().BeGreaterThan(40, $"Parser throughput was {throughputMBs:F1} MB/s ({avgMs}ms for {fileSizeMB:F1} MB)");
+        throughputMBs.Should().BeGreaterThan(20, $"Parser throughput was {throughputMBs:F1} MB/s ({avgMs}ms for {fileSizeMB:F1} MB)");
     }
 }

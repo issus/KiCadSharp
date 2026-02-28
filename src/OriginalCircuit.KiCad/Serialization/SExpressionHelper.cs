@@ -236,6 +236,20 @@ internal static class SExpressionHelper
     }
 
     /// <summary>
+    /// Parses a UUID from a parent node, returning the value and the original token name ("uuid" or "tstamp").
+    /// </summary>
+    public static (string? Uuid, string TokenName) ParseUuidWithToken(SExpr parent)
+    {
+        var uuidNode = parent.GetChild("uuid");
+        if (uuidNode is not null)
+            return (uuidNode.GetString(), "uuid");
+        var tstampNode = parent.GetChild("tstamp");
+        if (tstampNode is not null)
+            return (tstampNode.GetString(), "tstamp");
+        return (null, "uuid");
+    }
+
+    /// <summary>
     /// Converts a KiCad electrical type string to the shared enum.
     /// </summary>
     public static PinElectricalType ParsePinElectricalType(string? type)

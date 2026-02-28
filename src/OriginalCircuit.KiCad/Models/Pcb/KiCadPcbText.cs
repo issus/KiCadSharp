@@ -107,6 +107,24 @@ public sealed class KiCadPcbText : IPcbText
     /// </summary>
     public bool IsKnockout { get; set; }
 
+    /// <summary>
+    /// Gets whether the position node included the angle value in the original file.
+    /// When false, <c>(at X Y)</c> is emitted; when true, <c>(at X Y ANGLE)</c> is emitted.
+    /// </summary>
+    public bool PositionIncludesAngle { get; set; } = true;
+
+    /// <summary>
+    /// Gets whether the <c>unlocked</c> keyword appears inside the at node (KiCad 7+ format).
+    /// When true, the position is emitted as <c>(at X Y unlocked)</c> or <c>(at X Y ANGLE unlocked)</c>.
+    /// </summary>
+    public bool UnlockedInAtNode { get; set; }
+
+    /// <summary>
+    /// Gets whether the UUID/tstamp comes after effects in the original file ordering.
+    /// KiCad 6 files put tstamp after effects; KiCad 8+ puts uuid before effects.
+    /// </summary>
+    public bool UuidAfterEffects { get; set; }
+
     /// <inheritdoc />
     public CoordRect Bounds
     {

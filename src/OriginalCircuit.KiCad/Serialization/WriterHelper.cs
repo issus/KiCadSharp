@@ -334,6 +334,20 @@ internal static class WriterHelper
     }
 
     /// <summary>
+    /// Builds a UUID node with a configurable token name (e.g. "uuid" or "tstamp") for round-trip fidelity.
+    /// When <paramref name="asSymbol"/> is true, the value is emitted as a bare symbol (unquoted).
+    /// </summary>
+    public static SExpr BuildUuidToken(string uuid, string tokenName, bool asSymbol = false)
+    {
+        var b = new SExpressionBuilder(tokenName);
+        if (asSymbol)
+            b.AddSymbol(uuid);
+        else
+            b.AddValue(uuid);
+        return b.Build();
+    }
+
+    /// <summary>
     /// Builds a <c>(color R G B A)</c> node.
     /// </summary>
     public static SExpr BuildColor(EdaColor color)

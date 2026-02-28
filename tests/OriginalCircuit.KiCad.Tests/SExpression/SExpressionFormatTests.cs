@@ -72,8 +72,8 @@ public class SExpressionFormatTests
 
         var text = new StreamReader(ms).ReadToEnd();
 
-        // The (at 0 0 0) pattern should appear - angle is always emitted
-        text.Should().Contain("(at 0 0 0)");
+        // KiCad 8+ omits angle=0 for pad and footprint positions (uses compact format)
+        text.Should().Contain("(at 0 0)");
     }
 
     [Fact]
@@ -121,11 +121,8 @@ public class SExpressionFormatTests
 
         var text = new StreamReader(ms).ReadToEnd();
 
-        // Layers should be unquoted symbols, not quoted strings
-        text.Should().Contain("(layers F.Cu F.Paste F.Mask)");
-        text.Should().NotContain("\"F.Cu\"");
-        text.Should().NotContain("\"F.Paste\"");
-        text.Should().NotContain("\"F.Mask\"");
+        // KiCad 8+ emits layer names as quoted strings
+        text.Should().Contain("(layers \"F.Cu\" \"F.Paste\" \"F.Mask\")");
     }
 
     // ── S-12: UUID as unquoted symbol ───────────────────────────────
@@ -154,9 +151,8 @@ public class SExpressionFormatTests
 
         var text = new StreamReader(ms).ReadToEnd();
 
-        // UUID should be an unquoted symbol
-        text.Should().Contain("(uuid 12345678-1234-1234-1234-123456789abc)");
-        text.Should().NotContain("\"12345678-1234-1234-1234-123456789abc\"");
+        // KiCad 8+ emits UUIDs as quoted strings
+        text.Should().Contain("(uuid \"12345678-1234-1234-1234-123456789abc\")");
     }
 
     // ── S-11: PCB version default ───────────────────────────────────
@@ -199,10 +195,8 @@ public class SExpressionFormatTests
 
         var text = new StreamReader(ms).ReadToEnd();
 
-        // Via layer names should be unquoted symbols
-        text.Should().Contain("(layers F.Cu B.Cu)");
-        text.Should().NotContain("\"F.Cu\"");
-        text.Should().NotContain("\"B.Cu\"");
+        // KiCad 8+ emits via layer names as quoted strings
+        text.Should().Contain("(layers \"F.Cu\" \"B.Cu\")");
     }
 
     // ── S-01: OriginalText preserves trailing zeros ─────────────────

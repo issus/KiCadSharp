@@ -31,6 +31,12 @@ public sealed class KiCadPcbComponent : IPcbComponent
     public string Name { get; set; } = "";
 
     /// <summary>
+    /// Gets or sets the root S-expression token name for round-trip fidelity.
+    /// Legacy KiCad 5 files use "module"; KiCad 6+ uses "footprint".
+    /// </summary>
+    public string RootToken { get; set; } = "footprint";
+
+    /// <summary>
     /// Gets or sets the footprint file version (only present in standalone .kicad_mod files).
     /// </summary>
     public int? Version { get; set; }
@@ -39,6 +45,11 @@ public sealed class KiCadPcbComponent : IPcbComponent
     /// Gets or sets the generator name (only present in standalone .kicad_mod files).
     /// </summary>
     public string? Generator { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the generator value was a bare symbol (unquoted) in the source file.
+    /// </summary>
+    public bool GeneratorIsSymbol { get; set; }
 
     /// <summary>
     /// Gets or sets the generator version (only present in standalone .kicad_mod files).
@@ -277,6 +288,17 @@ public sealed class KiCadPcbComponent : IPcbComponent
     /// Gets the UUID / tstamp.
     /// </summary>
     public string? Uuid { get; set; }
+
+    /// <summary>
+    /// Gets or sets the UUID token name ("uuid" or "tstamp") for round-trip fidelity.
+    /// </summary>
+    public string UuidToken { get; set; } = "uuid";
+
+    /// <summary>
+    /// Gets or sets whether UUID/tstamp values are bare symbols (unquoted) in the original file.
+    /// KiCad 6 tstamp values are bare symbols; KiCad 8+ uuid values are quoted strings.
+    /// </summary>
+    public bool UuidIsSymbol { get; set; }
 
     /// <summary>
     /// Gets the raw fp_text_private nodes for round-trip fidelity.

@@ -39,13 +39,21 @@ public static class FootprintWriter
 
     internal static SExpr BuildFootprint(KiCadPcbComponent component)
     {
-        var b = new SExpressionBuilder("footprint").AddValue(component.Name);
+        var b = new SExpressionBuilder(component.RootToken).AddValue(component.Name);
 
         // Standalone .kicad_mod file metadata (only emitted when present)
         if (component.Version is not null)
             b.AddChild("version", v => v.AddValue((double)component.Version.Value));
         if (component.Generator is not null)
-            b.AddChild("generator", g => g.AddValue(component.Generator));
+        {
+            b.AddChild("generator", g =>
+            {
+                if (component.GeneratorIsSymbol)
+                    g.AddSymbol(component.Generator);
+                else
+                    g.AddValue(component.Generator);
+            });
+        }
         if (component.GeneratorVersion is not null)
             b.AddChild("generator_version", g => g.AddValue(component.GeneratorVersion));
 
@@ -70,8 +78,11 @@ public static class FootprintWriter
         if (component.Tedit is not null)
             b.AddChild("tedit", t => t.AddValue(component.Tedit));
 
+        var uuidTok = component.UuidToken;
+        var uuidSym = component.UuidIsSymbol;
+
         if (component.Uuid is not null)
-            b.AddChild(WriterHelper.BuildUuid(component.Uuid));
+            b.AddChild(WriterHelper.BuildUuidToken(component.Uuid, uuidTok, uuidSym));
 
         if (component.Location != CoordPoint.Zero || component.Rotation != 0)
             b.AddChild(WriterHelper.BuildPositionCompact(component.Location, component.Rotation));
@@ -150,60 +161,52 @@ public static class FootprintWriter
         if (component.NetTiePadGroupsRaw is not null)
             b.AddChild(component.NetTiePadGroupsRaw);
 
-        // Graphical items — use original order if available, otherwise group by type
+        // Graphical items (lines, rects, circles, arcs, polygons, curves, texts) — use original order if available
         if (component.GraphicalItemOrder.Count > 0)
         {
             foreach (var item in component.GraphicalItemOrder)
             {
                 switch (item)
                 {
-                    case KiCadPcbTrack track: b.AddChild(BuildFpLine(track)); break;
-                    case KiCadPcbRectangle rect: b.AddChild(BuildFpRect(rect)); break;
-                    case KiCadPcbCircle circle: b.AddChild(BuildFpCircle(circle)); break;
-                    case KiCadPcbArc arc: b.AddChild(BuildFpArc(arc)); break;
-                    case KiCadPcbPolygon poly: b.AddChild(BuildFpPoly(poly)); break;
-                    case KiCadPcbCurve curve: b.AddChild(BuildFpCurve(curve)); break;
+                    case KiCadPcbTrack track: b.AddChild(BuildFpLine(track, uuidTok, uuidSym)); break;
+                    case KiCadPcbRectangle rect: b.AddChild(BuildFpRect(rect, uuidTok, uuidSym)); break;
+                    case KiCadPcbCircle circle: b.AddChild(BuildFpCircle(circle, uuidTok, uuidSym)); break;
+                    case KiCadPcbArc arc: b.AddChild(BuildFpArc(arc, uuidTok, uuidSym)); break;
+                    case KiCadPcbPolygon poly: b.AddChild(BuildFpPoly(poly, uuidTok, uuidSym)); break;
+                    case KiCadPcbCurve curve: b.AddChild(BuildFpCurve(curve, uuidTok, uuidSym)); break;
+                    case KiCadPcbText text: b.AddChild(BuildFpText(text, uuidTok, uuidSym)); break;
+                    case (string type, SExpr raw) when type is "fp_text_private" or "fp_text_box":
+                        b.AddChild(raw);
+                        break;
                 }
             }
         }
         else
         {
+            foreach (var text in component.Texts.OfType<KiCadPcbText>())
+                b.AddChild(BuildFpText(text, uuidTok, uuidSym));
             foreach (var track in component.Tracks.OfType<KiCadPcbTrack>())
-                b.AddChild(BuildFpLine(track));
+                b.AddChild(BuildFpLine(track, uuidTok, uuidSym));
             foreach (var rect in component.Rectangles)
-                b.AddChild(BuildFpRect(rect));
+                b.AddChild(BuildFpRect(rect, uuidTok, uuidSym));
             foreach (var circle in component.Circles)
-                b.AddChild(BuildFpCircle(circle));
+                b.AddChild(BuildFpCircle(circle, uuidTok, uuidSym));
             foreach (var arc in component.Arcs.OfType<KiCadPcbArc>())
-                b.AddChild(BuildFpArc(arc));
+                b.AddChild(BuildFpArc(arc, uuidTok, uuidSym));
             foreach (var poly in component.Polygons)
-                b.AddChild(BuildFpPoly(poly));
+                b.AddChild(BuildFpPoly(poly, uuidTok, uuidSym));
             foreach (var curve in component.Curves)
-                b.AddChild(BuildFpCurve(curve));
-        }
-
-        // Texts
-        foreach (var text in component.Texts.OfType<KiCadPcbText>())
-        {
-            b.AddChild(BuildFpText(text));
-        }
-
-        // Text private (raw)
-        foreach (var tp in component.TextPrivateRaw)
-        {
-            b.AddChild(tp);
-        }
-
-        // Text boxes (raw)
-        foreach (var tb2 in component.TextBoxesRaw)
-        {
-            b.AddChild(tb2);
+                b.AddChild(BuildFpCurve(curve, uuidTok, uuidSym));
+            foreach (var tp in component.TextPrivateRaw)
+                b.AddChild(tp);
+            foreach (var tb2 in component.TextBoxesRaw)
+                b.AddChild(tb2);
         }
 
         // Pads
         foreach (var pad in component.Pads.OfType<KiCadPcbPad>())
         {
-            b.AddChild(BuildPad(pad));
+            b.AddChild(BuildPad(pad, uuidTok, uuidSym));
         }
 
         // Teardrop (raw)
@@ -273,7 +276,7 @@ public static class FootprintWriter
         return b.Build();
     }
 
-    private static SExpr BuildFpText(KiCadPcbText text)
+    private static SExpr BuildFpText(KiCadPcbText text, string uuidToken = "uuid", bool uuidIsSymbol = false)
     {
         var tb = new SExpressionBuilder("fp_text")
             .AddSymbol(text.TextType ?? "user")
@@ -282,12 +285,27 @@ public static class FootprintWriter
         if (text.IsHidden && !text.HideIsChildNode)
             tb.AddSymbol("hide");
 
-        if (text.IsUnlocked && !text.UnlockedIsChildNode)
+        if (text.IsUnlocked && !text.UnlockedIsChildNode && !text.UnlockedInAtNode)
             tb.AddSymbol("unlocked");
 
-        tb.AddChild(WriterHelper.BuildPosition(text.Location, text.Rotation));
+        // Use compact position (omit angle when 0) if the original didn't include it
+        if (text.UnlockedInAtNode)
+        {
+            // KiCad 7+ format: unlocked keyword inside at node
+            var atb = new SExpressionBuilder("at")
+                .AddMm(text.Location.X)
+                .AddMm(text.Location.Y);
+            if (text.PositionIncludesAngle)
+                atb.AddValue(text.Rotation);
+            atb.AddSymbol("unlocked");
+            tb.AddChild(atb.Build());
+        }
+        else if (text.PositionIncludesAngle)
+            tb.AddChild(WriterHelper.BuildPosition(text.Location, text.Rotation));
+        else
+            tb.AddChild(WriterHelper.BuildPositionCompact(text.Location, text.Rotation));
 
-        if (text.IsUnlocked && text.UnlockedIsChildNode)
+        if (text.IsUnlocked && !text.UnlockedInAtNode && text.UnlockedIsChildNode)
             tb.AddChild("unlocked", u => u.AddBool(true));
 
         if (text.LayerName is not null)
@@ -301,8 +319,9 @@ public static class FootprintWriter
         if (text.IsHidden && text.HideIsChildNode)
             tb.AddChild("hide", h => h.AddBool(true));
 
-        if (text.Uuid is not null)
-            tb.AddChild(WriterHelper.BuildUuid(text.Uuid));
+        // UUID/tstamp before or after effects depending on original format
+        if (text.Uuid is not null && !text.UuidAfterEffects)
+            tb.AddChild(WriterHelper.BuildUuidToken(text.Uuid, uuidToken, uuidIsSymbol));
 
         var fontW = text.FontWidth != Coord.Zero ? text.FontWidth : text.Height;
         tb.AddChild(WriterHelper.BuildTextEffects(
@@ -315,6 +334,9 @@ public static class FootprintWriter
             fontThickness: text.FontThickness,
             fontColor: text.FontColor));
 
+        if (text.Uuid is not null && text.UuidAfterEffects)
+            tb.AddChild(WriterHelper.BuildUuidToken(text.Uuid, uuidToken, uuidIsSymbol));
+
         // Render cache (raw)
         if (text.RenderCache is not null)
             tb.AddChild(text.RenderCache);
@@ -322,7 +344,7 @@ public static class FootprintWriter
         return tb.Build();
     }
 
-    private static SExpr BuildFpLine(KiCadPcbTrack track)
+    private static SExpr BuildFpLine(KiCadPcbTrack track, string uuidToken = "uuid", bool uuidIsSymbol = false)
     {
         var lb = new SExpressionBuilder("fp_line");
         if (track.IsLocked)
@@ -340,12 +362,12 @@ public static class FootprintWriter
             lb.AddChild("layer", l => l.AddValue(track.LayerName));
 
         if (track.Uuid is not null)
-            lb.AddChild(WriterHelper.BuildUuid(track.Uuid));
+            lb.AddChild(WriterHelper.BuildUuidToken(track.Uuid, uuidToken, uuidIsSymbol));
 
         return lb.Build();
     }
 
-    private static SExpr BuildFpRect(KiCadPcbRectangle rect)
+    private static SExpr BuildFpRect(KiCadPcbRectangle rect, string uuidToken = "uuid", bool uuidIsSymbol = false)
     {
         var rb = new SExpressionBuilder("fp_rect");
         if (rect.IsLocked)
@@ -363,12 +385,12 @@ public static class FootprintWriter
             rb.AddChild("layer", l => l.AddValue(rect.LayerName));
 
         if (rect.Uuid is not null)
-            rb.AddChild(WriterHelper.BuildUuid(rect.Uuid));
+            rb.AddChild(WriterHelper.BuildUuidToken(rect.Uuid, uuidToken, uuidIsSymbol));
 
         return rb.Build();
     }
 
-    private static SExpr BuildFpCircle(KiCadPcbCircle circle)
+    private static SExpr BuildFpCircle(KiCadPcbCircle circle, string uuidToken = "uuid", bool uuidIsSymbol = false)
     {
         var cb = new SExpressionBuilder("fp_circle");
         if (circle.IsLocked)
@@ -386,12 +408,12 @@ public static class FootprintWriter
             cb.AddChild("layer", l => l.AddValue(circle.LayerName));
 
         if (circle.Uuid is not null)
-            cb.AddChild(WriterHelper.BuildUuid(circle.Uuid));
+            cb.AddChild(WriterHelper.BuildUuidToken(circle.Uuid, uuidToken, uuidIsSymbol));
 
         return cb.Build();
     }
 
-    private static SExpr BuildFpArc(KiCadPcbArc arc)
+    private static SExpr BuildFpArc(KiCadPcbArc arc, string uuidToken = "uuid", bool uuidIsSymbol = false)
     {
         var ab = new SExpressionBuilder("fp_arc");
         if (arc.IsLocked)
@@ -405,12 +427,12 @@ public static class FootprintWriter
             ab.AddChild("layer", l => l.AddValue(arc.LayerName));
 
         if (arc.Uuid is not null)
-            ab.AddChild(WriterHelper.BuildUuid(arc.Uuid));
+            ab.AddChild(WriterHelper.BuildUuidToken(arc.Uuid, uuidToken, uuidIsSymbol));
 
         return ab.Build();
     }
 
-    internal static SExpr BuildPad(KiCadPcbPad pad)
+    internal static SExpr BuildPad(KiCadPcbPad pad, string uuidToken = "uuid", bool uuidIsSymbol = false)
     {
         var pb = new SExpressionBuilder("pad")
             .AddValue(pad.Designator ?? "")
@@ -549,12 +571,12 @@ public static class FootprintWriter
             pb.AddChild(pad.TeardropsRaw);
 
         if (pad.Uuid is not null)
-            pb.AddChild(WriterHelper.BuildUuid(pad.Uuid));
+            pb.AddChild(WriterHelper.BuildUuidToken(pad.Uuid, uuidToken, uuidIsSymbol));
 
         return pb.Build();
     }
 
-    private static SExpr BuildFpPoly(KiCadPcbPolygon poly)
+    private static SExpr BuildFpPoly(KiCadPcbPolygon poly, string uuidToken = "uuid", bool uuidIsSymbol = false)
     {
         var pb = new SExpressionBuilder("fp_poly");
         if (poly.IsLocked)
@@ -572,12 +594,12 @@ public static class FootprintWriter
             pb.AddChild("layer", l => l.AddValue(poly.LayerName));
 
         if (poly.Uuid is not null)
-            pb.AddChild(WriterHelper.BuildUuid(poly.Uuid));
+            pb.AddChild(WriterHelper.BuildUuidToken(poly.Uuid, uuidToken, uuidIsSymbol));
 
         return pb.Build();
     }
 
-    private static SExpr BuildFpCurve(KiCadPcbCurve curve)
+    private static SExpr BuildFpCurve(KiCadPcbCurve curve, string uuidToken = "uuid", bool uuidIsSymbol = false)
     {
         var cb = new SExpressionBuilder("fp_curve");
         if (curve.IsLocked)
@@ -590,7 +612,7 @@ public static class FootprintWriter
             cb.AddChild("layer", l => l.AddValue(curve.LayerName));
 
         if (curve.Uuid is not null)
-            cb.AddChild(WriterHelper.BuildUuid(curve.Uuid));
+            cb.AddChild(WriterHelper.BuildUuidToken(curve.Uuid, uuidToken, uuidIsSymbol));
 
         return cb.Build();
     }

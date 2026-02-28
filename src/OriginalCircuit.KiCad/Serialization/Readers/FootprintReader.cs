@@ -61,7 +61,8 @@ public static class FootprintReader
 
         var component = new KiCadPcbComponent
         {
-            Name = node.GetString() ?? ""
+            Name = node.GetString() ?? "",
+            RootToken = token
         };
 
         // Standalone .kicad_mod file metadata
@@ -69,7 +70,9 @@ public static class FootprintReader
         if (versionNode is not null)
             component.Version = versionNode.GetInt();
 
-        component.Generator = node.GetChild("generator")?.GetString();
+        var generatorNode = node.GetChild("generator");
+        component.Generator = generatorNode?.GetString();
+        component.GeneratorIsSymbol = generatorNode?.Values.Count > 0 && generatorNode.Values[0] is SExprSymbol;
         component.GeneratorVersion = node.GetChild("generator_version")?.GetString();
 
         var (loc, angle) = SExpressionHelper.ParsePosition(node);
@@ -80,7 +83,31 @@ public static class FootprintReader
         component.Description = node.GetChild("descr")?.GetString();
         component.Tags = node.GetChild("tags")?.GetString();
         component.Path = node.GetChild("path")?.GetString();
-        component.Uuid = SExpressionHelper.ParseUuid(node);
+
+        var (uuid, uuidToken) = SExpressionHelper.ParseUuidWithToken(node);
+        component.Uuid = uuid;
+        bool uuidIsSymbol = false;
+        // If the root has no uuid/tstamp, detect from first child that has one
+        if (uuid is null)
+        {
+            foreach (var child in node.Children)
+            {
+                var childUuid = child.GetChild("tstamp") ?? child.GetChild("uuid");
+                if (childUuid is not null)
+                {
+                    uuidToken = childUuid.Token;
+                    uuidIsSymbol = childUuid.Values.Count > 0 && childUuid.Values[0] is SExprSymbol;
+                    break;
+                }
+            }
+        }
+        else
+        {
+            var rootUuidNode = node.GetChild("uuid") ?? node.GetChild("tstamp");
+            uuidIsSymbol = rootUuidNode?.Values.Count > 0 && rootUuidNode.Values[0] is SExprSymbol;
+        }
+        component.UuidToken = uuidToken;
+        component.UuidIsSymbol = uuidIsSymbol;
 
         // KiCad 8+ tokens
         component.EmbeddedFonts = node.GetChild("embedded_fonts") is { } efNode ? efNode.GetBool() : null;
@@ -187,13 +214,17 @@ public static class FootprintReader
                         pads.Add(ParsePad(child));
                         break;
                     case "fp_text":
-                        texts.Add(ParseFpText(child));
+                        var fpText = ParseFpText(child);
+                        texts.Add(fpText);
+                        component.GraphicalItemOrderList.Add(fpText);
                         break;
                     case "fp_text_private":
                         component.TextPrivateRaw.Add(child);
+                        component.GraphicalItemOrderList.Add(("fp_text_private", child));
                         break;
                     case "fp_text_box":
                         component.TextBoxesRaw.Add(child);
+                        component.GraphicalItemOrderList.Add(("fp_text_box", child));
                         break;
                     case "fp_line":
                         var line = ParseFpLine(child);
@@ -534,6 +565,37 @@ public static class FootprintReader
         var (loc, angle) = SExpressionHelper.ParsePosition(node);
         text.Location = loc;
         text.Rotation = angle;
+
+        // Detect whether the at node included the angle value or unlocked keyword
+        var atNode = node.GetChild("at");
+        if (atNode is not null)
+        {
+            // Count numeric values (x, y, and optionally angle)
+            int numericCount = 0;
+            foreach (var v in atNode.Values)
+            {
+                if (v is SExprSymbol sym && sym.Value == "unlocked")
+                {
+                    text.IsUnlocked = true;
+                    text.UnlockedInAtNode = true;
+                }
+                else
+                {
+                    numericCount++;
+                }
+            }
+            text.PositionIncludesAngle = numericCount >= 3;
+        }
+
+        // Detect child ordering: does uuid/tstamp come after effects?
+        var effectsIdx = -1;
+        var uuidIdx = -1;
+        for (int i = 0; i < node.Children.Count; i++)
+        {
+            if (node.Children[i].Token == "effects") effectsIdx = i;
+            else if (node.Children[i].Token is "uuid" or "tstamp") uuidIdx = i;
+        }
+        text.UuidAfterEffects = effectsIdx >= 0 && uuidIdx > effectsIdx;
 
         var layerNode = node.GetChild("layer");
         text.LayerName = layerNode?.GetString();
