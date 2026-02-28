@@ -56,3 +56,7 @@ BenchmarkDotNet.Artifacts/
 *.env
 credentials.json
 /tests/OriginalCircuit.KiCad.Tests/TestData/RealWorld
+
+## Design files
+*.afdesign
+*.afdesign~lock~
