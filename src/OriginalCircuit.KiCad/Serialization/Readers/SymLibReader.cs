@@ -168,7 +168,8 @@ public static class SymLibReader
 
         // Parse sub-symbols and collect primitives
         var pins = new List<KiCadSchPin>();
-        var lines = new List<KiCadSchLine>();
+        // Note: KiCadSchLine is only used for API-created lines; the reader always
+        // creates KiCadSchPolyline (even for 2-point polylines) to preserve type fidelity.
         var rectangles = new List<KiCadSchRectangle>();
         var arcs = new List<KiCadSchArc>();
         var circles = new List<KiCadSchCircle>();
@@ -187,7 +188,7 @@ public static class SymLibReader
                     subSymbols.Add(sub);
                     // Collect primitives from sub-symbols
                     pins.AddRange(sub.Pins.OfType<KiCadSchPin>());
-                    lines.AddRange(sub.Lines.OfType<KiCadSchLine>());
+
                     rectangles.AddRange(sub.Rectangles.OfType<KiCadSchRectangle>());
                     arcs.AddRange(sub.Arcs.OfType<KiCadSchArc>());
                     circles.AddRange(sub.Circles.OfType<KiCadSchCircle>());
@@ -203,13 +204,10 @@ public static class SymLibReader
                     break;
                 case "polyline":
                     {
-                        var beforeLines = lines.Count;
                         var beforePolylines = polylines.Count;
                         var beforePolygons = polygons.Count;
-                        ParsePolylineOrLine(child, lines, polylines, polygons);
-                        if (lines.Count > beforeLines)
-                            component.OrderedPrimitivesList.Add(lines[^1]);
-                        else if (polylines.Count > beforePolylines)
+                        ParsePolylineOrPolygon(child, polylines, polygons);
+                        if (polylines.Count > beforePolylines)
                             component.OrderedPrimitivesList.Add(polylines[^1]);
                         else if (polygons.Count > beforePolygons)
                             component.OrderedPrimitivesList.Add(polygons[^1]);
@@ -260,7 +258,7 @@ public static class SymLibReader
 
         component.SubSymbolList.AddRange(subSymbols);
         component.PinList.AddRange(pins);
-        component.LineList.AddRange(lines);
+
         component.RectangleList.AddRange(rectangles);
         component.ArcList.AddRange(arcs);
         component.CircleList.AddRange(circles);
@@ -472,8 +470,8 @@ public static class SymLibReader
         return param;
     }
 
-    private static void ParsePolylineOrLine(SExpr node,
-        List<KiCadSchLine> lines, List<KiCadSchPolyline> polylines, List<KiCadSchPolygon> polygons)
+    private static void ParsePolylineOrPolygon(SExpr node,
+        List<KiCadSchPolyline> polylines, List<KiCadSchPolygon> polygons)
     {
         var pts = SExpressionHelper.ParsePoints(node);
         var (width, lineStyle, color, hasColor) = SExpressionHelper.ParseStrokeEx(node);
@@ -491,18 +489,6 @@ public static class SymLibReader
                 HasStrokeColor = hasColor,
                 IsFilled = true,
                 FillType = fillType
-            });
-        }
-        else if (pts.Count == 2 && !isFilled)
-        {
-            lines.Add(new KiCadSchLine
-            {
-                Start = pts[0],
-                End = pts[1],
-                Color = color,
-                Width = width,
-                LineStyle = lineStyle,
-                HasStrokeColor = hasColor
             });
         }
         else

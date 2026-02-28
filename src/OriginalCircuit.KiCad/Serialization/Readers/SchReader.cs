@@ -91,7 +91,8 @@ public static class SchReader
         var sheets = new List<KiCadSchSheet>();
         var libSymbols = new List<KiCadSchComponent>();
         var polylines = new List<KiCadSchPolyline>();
-        var lines = new List<KiCadSchLine>();
+        // Note: KiCadSchLine is only used for API-created lines; the reader always
+        // creates KiCadSchPolyline (even for 2-point polylines) to preserve type fidelity.
         var circles = new List<KiCadSchCircle>();
         var rectangles = new List<KiCadSchRectangle>();
         var arcs = new List<KiCadSchArc>();
@@ -182,15 +183,9 @@ public static class SchReader
                         sch.OrderedElementsList.Add(power);
                         break;
                     case "polyline":
-                        {
-                            var beforeLines = lines.Count;
-                            var beforePolylines = polylines.Count;
-                            ParseSchPolylineOrLine(child, lines, polylines);
-                            if (lines.Count > beforeLines)
-                                sch.OrderedElementsList.Add(lines[^1]);
-                            else if (polylines.Count > beforePolylines)
-                                sch.OrderedElementsList.Add(polylines[^1]);
-                        }
+                        var polyline = ParseSchPolyline(child);
+                        polylines.Add(polyline);
+                        sch.OrderedElementsList.Add(polyline);
                         break;
                     case "circle":
                         var circle = ParseSchCircle(child);
@@ -269,7 +264,7 @@ public static class SchReader
         sch.SheetList.AddRange(sheets);
         sch.LibSymbolList.AddRange(libSymbols);
         sch.PolylineList.AddRange(polylines);
-        sch.LineList.AddRange(lines);
+
         sch.CircleList.AddRange(circles);
         sch.RectangleList.AddRange(rectangles);
         sch.ArcList.AddRange(arcs);
@@ -675,40 +670,23 @@ public static class SchReader
         return component;
     }
 
-    private static void ParseSchPolylineOrLine(SExpr node, List<KiCadSchLine> lines, List<KiCadSchPolyline> polylines)
+    private static KiCadSchPolyline ParseSchPolyline(SExpr node)
     {
         var pts = SExpressionHelper.ParsePoints(node);
         var (width, lineStyle, color) = SExpressionHelper.ParseStroke(node);
         var (uuid, uuidIsSymbol) = SExpressionHelper.ParseUuidEx(node);
         var hasFill = node.GetChild("fill") is not null;
 
-        if (pts.Count == 2)
+        return new KiCadSchPolyline
         {
-            lines.Add(new KiCadSchLine
-            {
-                Start = pts[0],
-                End = pts[1],
-                Color = color,
-                Width = width,
-                LineStyle = lineStyle,
-                HasFill = hasFill,
-                Uuid = uuid,
-                UuidIsSymbol = uuidIsSymbol
-            });
-        }
-        else
-        {
-            polylines.Add(new KiCadSchPolyline
-            {
-                Vertices = pts,
-                Color = color,
-                LineWidth = width,
-                LineStyle = lineStyle,
-                HasFill = hasFill,
-                Uuid = uuid,
-                UuidIsSymbol = uuidIsSymbol
-            });
-        }
+            Vertices = pts,
+            Color = color,
+            LineWidth = width,
+            LineStyle = lineStyle,
+            HasFill = hasFill,
+            Uuid = uuid,
+            UuidIsSymbol = uuidIsSymbol
+        };
     }
 
     private static KiCadSchCircle ParseSchCircle(SExpr node)

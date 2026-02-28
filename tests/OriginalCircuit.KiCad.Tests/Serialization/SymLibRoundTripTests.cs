@@ -581,14 +581,14 @@ public class SymLibRoundTripTests
         var lib2 = await RoundTrip(lib1);
         var sym = lib2["TestLine"]!;
 
-        // Unfilled 2-point polylines become lines
-        sym.Lines.Should().HaveCount(1);
-        var line = sym.Lines.OfType<KiCadSchLine>().Single();
-        line.Width.ToMm().Should().BeApproximately(0.2, 0.01);
-        line.LineStyle.Should().Be(LineStyle.Dash);
-        line.Color.R.Should().Be(64);
-        line.Color.G.Should().Be(128);
-        line.Color.B.Should().Be(192);
+        // 2-point polylines are preserved as polylines (no decomposition into lines)
+        sym.Polylines.Should().HaveCount(1);
+        var poly = sym.Polylines.OfType<KiCadSchPolyline>().Single();
+        poly.LineWidth.ToMm().Should().BeApproximately(0.2, 0.01);
+        poly.LineStyle.Should().Be(LineStyle.Dash);
+        poly.Color.R.Should().Be(64);
+        poly.Color.G.Should().Be(128);
+        poly.Color.B.Should().Be(192);
     }
 
     // ───── Existing minimal.kicad_sym round-trip preserves rectangle fill type ─────
