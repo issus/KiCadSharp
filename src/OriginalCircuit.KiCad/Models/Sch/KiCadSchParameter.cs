@@ -80,6 +80,18 @@ public sealed class KiCadSchParameter : ISchParameter
     public Coord FontThickness { get; set; }
 
     /// <summary>
+    /// Gets or sets whether bold was a bare symbol (KiCad 6 format: <c>bold</c>)
+    /// rather than a child node (KiCad 8 format: <c>(bold yes)</c>).
+    /// </summary>
+    public bool BoldIsSymbol { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether italic was a bare symbol (KiCad 6 format: <c>italic</c>)
+    /// rather than a child node (KiCad 8 format: <c>(italic yes)</c>).
+    /// </summary>
+    public bool ItalicIsSymbol { get; set; }
+
+    /// <summary>
     /// Gets the layer name for this property (KiCad 8 footprint properties).
     /// </summary>
     public string? LayerName { get; set; }

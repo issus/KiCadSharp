@@ -300,17 +300,15 @@ public static class FootprintReader
                         var scaleNode = child.GetChild("scale")?.GetChild("xyz");
                         if (scaleNode is not null)
                         {
-                            component.Model3DScale = new CoordPoint(
-                                Coord.FromMm(scaleNode.GetDouble(0) ?? 1),
-                                Coord.FromMm(scaleNode.GetDouble(1) ?? 1));
+                            component.Model3DScaleX = scaleNode.GetDouble(0) ?? 1;
+                            component.Model3DScaleY = scaleNode.GetDouble(1) ?? 1;
                             component.Model3DScaleZ = scaleNode.GetDouble(2) ?? 1;
                         }
                         var rotateNode = child.GetChild("rotate")?.GetChild("xyz");
                         if (rotateNode is not null)
                         {
-                            component.Model3DRotation = new CoordPoint(
-                                Coord.FromMm(rotateNode.GetDouble(0) ?? 0),
-                                Coord.FromMm(rotateNode.GetDouble(1) ?? 0));
+                            component.Model3DRotationX = rotateNode.GetDouble(0) ?? 0;
+                            component.Model3DRotationY = rotateNode.GetDouble(1) ?? 0;
                             component.Model3DRotationZ = rotateNode.GetDouble(2) ?? 0;
                         }
                         break;
@@ -679,11 +677,13 @@ public static class FootprintReader
             text.UnlockedIsChildNode = true;
         }
 
-        var (fontH, fontW, justification, _, isMirrored, isBold, isItalic, fontFace, fontThickness, fontColor) = SExpressionHelper.ParseTextEffects(node);
+        var (fontH, fontW, justification, _, isMirrored, isBold, isItalic, fontFace, fontThickness, fontColor, _, boldIsSymbol, italicIsSymbol) = SExpressionHelper.ParseTextEffectsEx(node);
         text.Height = fontH;
         text.FontWidth = fontW;
         text.FontBold = isBold;
         text.FontItalic = isItalic;
+        text.BoldIsSymbol = boldIsSymbol;
+        text.ItalicIsSymbol = italicIsSymbol;
         text.FontName = fontFace;
         text.FontThickness = fontThickness;
         text.FontColor = fontColor;
@@ -951,18 +951,16 @@ public static class FootprintReader
         var scaleNode = node.GetChild("scale")?.GetChild("xyz");
         if (scaleNode is not null)
         {
-            model.Scale = new CoordPoint(
-                Coord.FromMm(scaleNode.GetDouble(0) ?? 1),
-                Coord.FromMm(scaleNode.GetDouble(1) ?? 1));
+            model.ScaleX = scaleNode.GetDouble(0) ?? 1;
+            model.ScaleY = scaleNode.GetDouble(1) ?? 1;
             model.ScaleZ = scaleNode.GetDouble(2) ?? 1;
         }
 
         var rotateNode = node.GetChild("rotate")?.GetChild("xyz");
         if (rotateNode is not null)
         {
-            model.Rotation = new CoordPoint(
-                Coord.FromMm(rotateNode.GetDouble(0) ?? 0),
-                Coord.FromMm(rotateNode.GetDouble(1) ?? 0));
+            model.RotationX = rotateNode.GetDouble(0) ?? 0;
+            model.RotationY = rotateNode.GetDouble(1) ?? 0;
             model.RotationZ = rotateNode.GetDouble(2) ?? 0;
         }
 

@@ -300,7 +300,7 @@ public class FootprintRoundTripTests
         fp2.Models3D[0].Path.Should().Contain("SOIC-8_3.9x4.9mm");
         fp2.Models3D[1].Path.Should().Contain("SOIC-8_alt");
         fp2.Models3D[1].OffsetZ.Should().BeApproximately(1.5, 0.01);
-        fp2.Models3D[1].Scale.X.ToMm().Should().BeApproximately(1.1, 0.01);
+        fp2.Models3D[1].ScaleX.Should().BeApproximately(1.1, 0.01);
         fp2.Models3D[1].RotationZ.Should().BeApproximately(30, 0.01);
     }
 

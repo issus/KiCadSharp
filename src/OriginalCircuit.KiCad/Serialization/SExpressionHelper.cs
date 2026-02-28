@@ -82,27 +82,30 @@ internal static class SExpressionHelper
     /// </summary>
     public static (Coord FontHeight, Coord FontWidth, TextJustification Justification, bool IsHidden, bool IsMirrored, bool IsBold, bool IsItalic, string? FontFace, Coord FontThickness, EdaColor FontColor) ParseTextEffects(SExpr parent)
     {
-        var (fontH, fontW, justification, isHidden, isMirrored, isBold, isItalic, fontFace, fontThickness, fontColor, _) = ParseTextEffectsEx(parent);
+        var (fontH, fontW, justification, isHidden, isMirrored, isBold, isItalic, fontFace, fontThickness, fontColor, _, _, _) = ParseTextEffectsEx(parent);
         return (fontH, fontW, justification, isHidden, isMirrored, isBold, isItalic, fontFace, fontThickness, fontColor);
     }
 
     /// <summary>
-    /// Parses text effects, also reporting whether the hide was a symbol value (KiCad 6) vs child node (KiCad 8).
+    /// Parses text effects, also reporting whether the hide was a symbol value (KiCad 6) vs child node (KiCad 8),
+    /// and whether bold/italic used bare symbol format vs child node format.
     /// </summary>
-    public static (Coord FontHeight, Coord FontWidth, TextJustification Justification, bool IsHidden, bool IsMirrored, bool IsBold, bool IsItalic, string? FontFace, Coord FontThickness, EdaColor FontColor, bool HideIsSymbolValue) ParseTextEffectsEx(SExpr parent)
+    public static (Coord FontHeight, Coord FontWidth, TextJustification Justification, bool IsHidden, bool IsMirrored, bool IsBold, bool IsItalic, string? FontFace, Coord FontThickness, EdaColor FontColor, bool HideIsSymbolValue, bool BoldIsSymbol, bool ItalicIsSymbol) ParseTextEffectsEx(SExpr parent)
     {
         var effects = parent.GetChild("effects");
         if (effects is null)
-            return (Coord.FromMm(1.27), Coord.FromMm(1.27), TextJustification.MiddleCenter, false, false, false, false, null, Coord.Zero, default, false);
+            return (Coord.FromMm(1.27), Coord.FromMm(1.27), TextJustification.MiddleCenter, false, false, false, false, null, Coord.Zero, default, false, false, false);
 
         var font = effects.GetChild("font");
         var sizeNode = font?.GetChild("size");
         var fontH = Coord.FromMm(sizeNode?.GetDouble(0) ?? 1.27);
         var fontW = Coord.FromMm(sizeNode?.GetDouble(1) ?? 1.27);
-        // Bold/italic can appear as child elements (font (bold) (italic))
+        // Bold/italic can appear as child elements (font (bold yes) (italic yes))
         // or as symbol values within the font node (font bold italic)
         var isBold = font?.GetChild("bold") is not null;
         var isItalic = font?.GetChild("italic") is not null;
+        var boldIsSymbol = false;
+        var italicIsSymbol = false;
 
         // Font face
         var fontFace = font?.GetChild("face")?.GetString();
@@ -119,8 +122,8 @@ internal static class SExpressionHelper
             {
                 if (val is SExprSymbol sym)
                 {
-                    if (sym.Value == "bold") isBold = true;
-                    if (sym.Value == "italic") isItalic = true;
+                    if (sym.Value == "bold") { isBold = true; boldIsSymbol = true; }
+                    if (sym.Value == "italic") { isItalic = true; italicIsSymbol = true; }
                 }
             }
         }
@@ -137,7 +140,7 @@ internal static class SExpressionHelper
         var hideIsSymbolValue = effects.Values.Any(v => v is SExprSymbol s && s.Value == "hide");
         var isHidden = effects.GetChild("hide") is not null || hideIsSymbolValue;
 
-        return (fontH, fontW, justification, isHidden, isMirrored, isBold, isItalic, fontFace, fontThickness, fontColor, hideIsSymbolValue);
+        return (fontH, fontW, justification, isHidden, isMirrored, isBold, isItalic, fontFace, fontThickness, fontColor, hideIsSymbolValue, boldIsSymbol, italicIsSymbol);
     }
 
     /// <summary>
@@ -196,7 +199,7 @@ internal static class SExpressionHelper
         var r = (byte)Math.Clamp(node.GetDouble(0) ?? 0, 0, 255);
         var g = (byte)Math.Clamp(node.GetDouble(1) ?? 0, 0, 255);
         var b = (byte)Math.Clamp(node.GetDouble(2) ?? 0, 0, 255);
-        var a = (byte)Math.Clamp((node.GetDouble(3) ?? 1.0) * 255, 0, 255);
+        var a = (byte)Math.Clamp(Math.Round((node.GetDouble(3) ?? 1.0) * 255), 0, 255);
         return new EdaColor(r, g, b, a);
     }
 

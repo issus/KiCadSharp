@@ -79,6 +79,16 @@ public sealed class KiCadSchPin : ISchPin
     public bool NameIsItalic { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the pin name bold was a bare symbol (KiCad 6 format).
+    /// </summary>
+    public bool NameBoldIsSymbol { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the pin name italic was a bare symbol (KiCad 6 format).
+    /// </summary>
+    public bool NameItalicIsSymbol { get; set; }
+
+    /// <summary>
     /// Gets or sets the pin name font face (e.g., "Arial"). Null means default/not specified.
     /// </summary>
     public string? NameFontFace { get; set; }
@@ -102,6 +112,16 @@ public sealed class KiCadSchPin : ISchPin
     /// Gets or sets whether the pin number font is italic.
     /// </summary>
     public bool NumberIsItalic { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the pin number bold was a bare symbol (KiCad 6 format).
+    /// </summary>
+    public bool NumberBoldIsSymbol { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the pin number italic was a bare symbol (KiCad 6 format).
+    /// </summary>
+    public bool NumberItalicIsSymbol { get; set; }
 
     /// <summary>
     /// Gets or sets the pin number font face (e.g., "Arial"). Null means default/not specified.

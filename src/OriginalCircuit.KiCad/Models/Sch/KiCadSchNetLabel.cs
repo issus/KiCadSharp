@@ -49,6 +49,18 @@ public sealed class KiCadSchNetLabel : ISchNetLabel
     public bool IsItalic { get; set; }
 
     /// <summary>
+    /// Gets or sets whether bold was a bare symbol (KiCad 6 format: <c>bold</c>)
+    /// rather than a child node (KiCad 8 format: <c>(bold yes)</c>).
+    /// </summary>
+    public bool BoldIsSymbol { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether italic was a bare symbol (KiCad 6 format: <c>italic</c>)
+    /// rather than a child node (KiCad 8 format: <c>(italic yes)</c>).
+    /// </summary>
+    public bool ItalicIsSymbol { get; set; }
+
+    /// <summary>
     /// Gets or sets whether the label text is mirrored.
     /// </summary>
     public bool IsMirrored { get; set; }
@@ -83,6 +95,11 @@ public sealed class KiCadSchNetLabel : ISchNetLabel
     /// Gets or sets the font color.
     /// </summary>
     public EdaColor FontColor { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the position node included an explicit angle value in the source file.
+    /// </summary>
+    public bool PositionIncludesAngle { get; set; } = true;
 
     /// <summary>
     /// Gets the UUID of the net label.

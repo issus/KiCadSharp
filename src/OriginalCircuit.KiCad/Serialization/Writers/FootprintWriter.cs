@@ -264,14 +264,14 @@ public static class FootprintWriter
                 }));
                 m.AddChild("scale", s => s.AddChild("xyz", xyz =>
                 {
-                    xyz.AddMm(component.Model3DScale.X);
-                    xyz.AddMm(component.Model3DScale.Y);
+                    xyz.AddValue(component.Model3DScaleX);
+                    xyz.AddValue(component.Model3DScaleY);
                     xyz.AddValue(component.Model3DScaleZ);
                 }));
                 m.AddChild("rotate", r => r.AddChild("xyz", xyz =>
                 {
-                    xyz.AddMm(component.Model3DRotation.X);
-                    xyz.AddMm(component.Model3DRotation.Y);
+                    xyz.AddValue(component.Model3DRotationX);
+                    xyz.AddValue(component.Model3DRotationY);
                     xyz.AddValue(component.Model3DRotationZ);
                 }));
             });
@@ -336,7 +336,9 @@ public static class FootprintWriter
             isItalic: text.FontItalic,
             fontFace: text.FontName,
             fontThickness: text.FontThickness,
-            fontColor: text.FontColor));
+            fontColor: text.FontColor,
+            boldIsSymbol: text.BoldIsSymbol,
+            italicIsSymbol: text.ItalicIsSymbol));
 
         if (text.Uuid is not null && text.UuidAfterEffects)
             tb.AddChild(WriterHelper.BuildUuidToken(text.Uuid, uuidToken, uuidIsSymbol));
@@ -657,14 +659,14 @@ public static class FootprintWriter
         }));
         mb.AddChild("scale", s => s.AddChild("xyz", xyz =>
         {
-            xyz.AddMm(model.Scale.X);
-            xyz.AddMm(model.Scale.Y);
+            xyz.AddValue(model.ScaleX);
+            xyz.AddValue(model.ScaleY);
             xyz.AddValue(model.ScaleZ);
         }));
         mb.AddChild("rotate", r => r.AddChild("xyz", xyz =>
         {
-            xyz.AddMm(model.Rotation.X);
-            xyz.AddMm(model.Rotation.Y);
+            xyz.AddValue(model.RotationX);
+            xyz.AddValue(model.RotationY);
             xyz.AddValue(model.RotationZ);
         }));
         return mb.Build();

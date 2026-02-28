@@ -293,7 +293,7 @@ public static class SymLibWriter
         b.AddChild("name", n =>
         {
             n.AddValue(pin.Name ?? "~");
-            n.AddChild(WriterHelper.BuildTextEffects(nameFontH, nameFontW, hide: !pin.ShowName && !nameHiddenByZeroFont, isBold: pin.NameIsBold, isItalic: pin.NameIsItalic, fontFace: pin.NameFontFace, fontThickness: pin.NameFontThickness, fontColor: pin.NameFontColor));
+            n.AddChild(WriterHelper.BuildTextEffects(nameFontH, nameFontW, hide: !pin.ShowName && !nameHiddenByZeroFont, isBold: pin.NameIsBold, isItalic: pin.NameIsItalic, fontFace: pin.NameFontFace, fontThickness: pin.NameFontThickness, fontColor: pin.NameFontColor, boldIsSymbol: pin.NameBoldIsSymbol, italicIsSymbol: pin.NameItalicIsSymbol));
         });
 
         // Number with font size and styling
@@ -303,7 +303,7 @@ public static class SymLibWriter
         b.AddChild("number", n =>
         {
             n.AddValue(pin.Designator ?? "~");
-            n.AddChild(WriterHelper.BuildTextEffects(numFontH, numFontW, hide: !pin.ShowDesignator && !numHiddenByZeroFont, isBold: pin.NumberIsBold, isItalic: pin.NumberIsItalic, fontFace: pin.NumberFontFace, fontThickness: pin.NumberFontThickness, fontColor: pin.NumberFontColor));
+            n.AddChild(WriterHelper.BuildTextEffects(numFontH, numFontW, hide: !pin.ShowDesignator && !numHiddenByZeroFont, isBold: pin.NumberIsBold, isItalic: pin.NumberIsItalic, fontFace: pin.NumberFontFace, fontThickness: pin.NumberFontThickness, fontColor: pin.NumberFontColor, boldIsSymbol: pin.NumberBoldIsSymbol, italicIsSymbol: pin.NumberItalicIsSymbol));
         });
 
         // Alternates
@@ -402,7 +402,7 @@ public static class SymLibWriter
         if (label.HasStroke)
             b.AddChild(WriterHelper.BuildStroke(label.StrokeWidth, label.StrokeLineStyle, label.StrokeColor));
 
-        b.AddChild(WriterHelper.BuildTextEffects(fontH, fontW, label.Justification, label.IsHidden, label.IsMirrored, label.IsBold, label.IsItalic, fontFace: label.FontFace, fontThickness: label.FontThickness, fontColor: label.FontColor, href: label.Href));
+        b.AddChild(WriterHelper.BuildTextEffects(fontH, fontW, label.Justification, label.IsHidden, label.IsMirrored, label.IsBold, label.IsItalic, fontFace: label.FontFace, fontThickness: label.FontThickness, fontColor: label.FontColor, href: label.Href, boldIsSymbol: label.BoldIsSymbol, italicIsSymbol: label.ItalicIsSymbol));
 
         if (label.Uuid != null)
             b.AddChild(WriterHelper.BuildUuid(label.Uuid, label.UuidIsSymbol));

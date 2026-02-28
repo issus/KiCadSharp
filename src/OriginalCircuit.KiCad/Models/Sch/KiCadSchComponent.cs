@@ -53,6 +53,11 @@ public sealed class KiCadSchComponent : ISchComponent
     public double Rotation { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the position node included an explicit angle value in the source file.
+    /// </summary>
+    public bool PositionIncludesAngle { get; set; } = true;
+
+    /// <summary>
     /// Gets whether the component is mirrored along the X axis.
     /// </summary>
     public bool IsMirroredX { get; set; }

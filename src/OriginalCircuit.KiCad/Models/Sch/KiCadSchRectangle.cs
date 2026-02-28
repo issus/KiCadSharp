@@ -44,6 +44,11 @@ public sealed class KiCadSchRectangle : ISchRectangle
     public SchFillType FillType { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the fill node was present in the source file.
+    /// </summary>
+    public bool HasFill { get; set; }
+
+    /// <summary>
     /// Gets or sets the UUID of the rectangle.
     /// </summary>
     public string? Uuid { get; set; }

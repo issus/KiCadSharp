@@ -176,7 +176,7 @@ internal static class WriterHelper
     /// <summary>
     /// Builds an <c>(effects (font (size H W)))</c> node.
     /// </summary>
-    public static SExpr BuildTextEffects(Coord fontH, Coord fontW, TextJustification justification = TextJustification.MiddleCenter, bool hide = false, bool isMirrored = false, bool isBold = false, bool isItalic = false, string? fontFace = null, Coord fontThickness = default, EdaColor fontColor = default, string? href = null)
+    public static SExpr BuildTextEffects(Coord fontH, Coord fontW, TextJustification justification = TextJustification.MiddleCenter, bool hide = false, bool isMirrored = false, bool isBold = false, bool isItalic = false, string? fontFace = null, Coord fontThickness = default, EdaColor fontColor = default, string? href = null, bool boldIsSymbol = false, bool italicIsSymbol = false)
     {
         var b = new SExpressionBuilder("effects")
             .AddChild("font", f =>
@@ -190,8 +190,20 @@ internal static class WriterHelper
                 });
                 if (fontThickness != Coord.Zero)
                     f.AddChild("thickness", t => t.AddMm(fontThickness));
-                if (isBold) f.AddChild("bold", bl => bl.AddBool(true));
-                if (isItalic) f.AddChild("italic", it => it.AddBool(true));
+                if (isBold)
+                {
+                    if (boldIsSymbol)
+                        f.AddSymbol("bold");
+                    else
+                        f.AddChild("bold", bl => bl.AddBool(true));
+                }
+                if (isItalic)
+                {
+                    if (italicIsSymbol)
+                        f.AddSymbol("italic");
+                    else
+                        f.AddChild("italic", it => it.AddBool(true));
+                }
                 if (fontColor != default)
                     f.AddChild(BuildColor(fontColor));
             });
@@ -258,8 +270,20 @@ internal static class WriterHelper
                 });
                 if (param.FontThickness != Coord.Zero)
                     f.AddChild("thickness", t => t.AddMm(param.FontThickness));
-                if (param.IsBold) f.AddChild("bold", bl => bl.AddBool(true));
-                if (param.IsItalic) f.AddChild("italic", it => it.AddBool(true));
+                if (param.IsBold)
+                {
+                    if (param.BoldIsSymbol)
+                        f.AddSymbol("bold");
+                    else
+                        f.AddChild("bold", bl => bl.AddBool(true));
+                }
+                if (param.IsItalic)
+                {
+                    if (param.ItalicIsSymbol)
+                        f.AddSymbol("italic");
+                    else
+                        f.AddChild("italic", it => it.AddBool(true));
+                }
                 if (param.FontColor != default)
                     f.AddChild(BuildColor(param.FontColor));
             });
@@ -328,9 +352,11 @@ internal static class WriterHelper
         bool isItalic = false,
         Coord thickness = default,
         string? fontFace = null,
-        EdaColor fontColor = default)
+        EdaColor fontColor = default,
+        bool boldIsSymbol = false,
+        bool italicIsSymbol = false)
     {
-        return BuildTextEffects(fontH, fontW, justification, hide, isMirrored, isBold, isItalic, fontFace, thickness, fontColor);
+        return BuildTextEffects(fontH, fontW, justification, hide, isMirrored, isBold, isItalic, fontFace, thickness, fontColor, boldIsSymbol: boldIsSymbol, italicIsSymbol: italicIsSymbol);
     }
 
     /// <summary>
@@ -370,6 +396,9 @@ internal static class WriterHelper
 
     /// <summary>
     /// Builds a <c>(color R G B A)</c> node.
+    /// Alpha is snapped to the simplest clean fraction that maps back to the same
+    /// byte value, preventing byte-quantization drift during round-trip
+    /// (e.g. 0.5 -> byte 128 -> 0.501960... is snapped back to 0.5).
     /// </summary>
     public static SExpr BuildColor(EdaColor color)
     {
@@ -377,7 +406,28 @@ internal static class WriterHelper
             .AddValue(color.R)
             .AddValue(color.G)
             .AddValue(color.B)
-            .AddValue(color.A / 255.0)
+            .AddValue(SnapAlphaToClean(color.A / 255.0))
             .Build();
+    }
+
+    /// <summary>
+    /// Snaps a [0,1] alpha value to the simplest clean fraction whose byte
+    /// representation matches the original byte.  Tries common denominators
+    /// (1, 2, 4, 5, 10, 20, 50, 100) so values like 0.5, 0.25, 0.1, etc.
+    /// survive a byte round-trip unchanged.
+    /// </summary>
+    private static double SnapAlphaToClean(double alpha)
+    {
+        int[] denominators = [1, 2, 4, 5, 10, 20, 50, 100];
+        var originalByte = (byte)Math.Clamp(Math.Round(alpha * 255), 0, 255);
+        foreach (var d in denominators)
+        {
+            var candidate = Math.Round(alpha * d) / d;
+            var candidateByte = (byte)Math.Clamp(Math.Round(candidate * 255), 0, 255);
+            if (candidateByte == originalByte)
+                return candidate;
+        }
+        // Fall back to 6 decimal places
+        return Math.Round(alpha, 6);
     }
 }

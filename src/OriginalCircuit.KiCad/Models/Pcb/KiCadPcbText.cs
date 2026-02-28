@@ -68,6 +68,18 @@ public sealed class KiCadPcbText : IPcbText
     public bool FontItalic { get; set; }
 
     /// <summary>
+    /// Gets or sets whether bold was a bare symbol (KiCad 6 format: <c>bold</c>)
+    /// rather than a child node (KiCad 8 format: <c>(bold yes)</c>).
+    /// </summary>
+    public bool BoldIsSymbol { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether italic was a bare symbol (KiCad 6 format: <c>italic</c>)
+    /// rather than a child node (KiCad 8 format: <c>(italic yes)</c>).
+    /// </summary>
+    public bool ItalicIsSymbol { get; set; }
+
+    /// <summary>
     /// Gets the text type (for fp_text: reference, value, user).
     /// </summary>
     public string? TextType { get; set; }

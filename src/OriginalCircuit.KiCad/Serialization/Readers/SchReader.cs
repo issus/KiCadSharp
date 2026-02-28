@@ -322,7 +322,8 @@ public static class SchReader
     private static KiCadSchNetLabel ParseNetLabel(SExpr node, NetLabelType labelType)
     {
         var (loc, angle) = SExpressionHelper.ParsePosition(node);
-        var (fontH, fontW, justification, _, isMirrored, isBold, isItalic, fontFace, fontThickness, fontColor) = SExpressionHelper.ParseTextEffects(node);
+        var atNode = node.GetChild("at");
+        var (fontH, fontW, justification, _, isMirrored, isBold, isItalic, fontFace, fontThickness, fontColor, _, boldIsSymbol, italicIsSymbol) = SExpressionHelper.ParseTextEffectsEx(node);
 
         // Parse shape for global/hierarchical labels
         var shape = node.GetChild("shape")?.GetString();
@@ -342,12 +343,15 @@ public static class SchReader
             Text = node.GetString() ?? "",
             Location = loc,
             Orientation = (int)angle,
+            PositionIncludesAngle = atNode is not null && atNode.Values.Count >= 3,
             Justification = justification,
             LabelType = labelType,
             FontSizeHeight = fontH,
             FontSizeWidth = fontW,
             IsBold = isBold,
             IsItalic = isItalic,
+            BoldIsSymbol = boldIsSymbol,
+            ItalicIsSymbol = italicIsSymbol,
             IsMirrored = isMirrored,
             Shape = shape,
             FieldsAutoplaced = fieldsAutoplaced,
@@ -362,13 +366,15 @@ public static class SchReader
     private static KiCadSchLabel ParseTextLabel(SExpr node)
     {
         var (loc, angle) = SExpressionHelper.ParsePosition(node);
-        var (fontH, fontW, justification, isHidden, isMirrored, isBold, isItalic, fontFace, fontThickness, fontColor) = SExpressionHelper.ParseTextEffects(node);
+        var atNode = node.GetChild("at");
+        var (fontH, fontW, justification, isHidden, isMirrored, isBold, isItalic, fontFace, fontThickness, fontColor, _, boldIsSymbol, italicIsSymbol) = SExpressionHelper.ParseTextEffectsEx(node);
 
         var label = new KiCadSchLabel
         {
             Text = node.GetString() ?? "",
             Location = loc,
             Rotation = angle,
+            PositionIncludesAngle = atNode is not null && atNode.Values.Count >= 3,
             Justification = justification,
             IsHidden = isHidden,
             IsMirrored = isMirrored,
@@ -376,6 +382,8 @@ public static class SchReader
             FontSizeWidth = fontW,
             IsBold = isBold,
             IsItalic = isItalic,
+            BoldIsSymbol = boldIsSymbol,
+            ItalicIsSymbol = italicIsSymbol,
             FontFace = fontFace,
             FontThickness = fontThickness,
             FontColor = fontColor,
@@ -569,13 +577,15 @@ public static class SchReader
         var effectsNode = node.GetChild("effects");
         if (effectsNode is not null)
         {
-            var (fontH, fontW, justification, _, isMirrored, isBold, isItalic, fontFace, fontThickness, fontColor) =
-                SExpressionHelper.ParseTextEffects(node);
+            var (fontH, fontW, justification, _, isMirrored, isBold, isItalic, fontFace, fontThickness, fontColor, _, boldIsSymbol, italicIsSymbol) =
+                SExpressionHelper.ParseTextEffectsEx(node);
             pin.FontSizeHeight = fontH;
             pin.FontSizeWidth = fontW;
             pin.Justification = justification;
             pin.IsBold = isBold;
             pin.IsItalic = isItalic;
+            pin.BoldIsSymbol = boldIsSymbol;
+            pin.ItalicIsSymbol = italicIsSymbol;
             pin.FontColor = fontColor;
             pin.FontFace = fontFace;
             pin.FontThickness = fontThickness;
@@ -593,8 +603,10 @@ public static class SchReader
         };
 
         var (loc, angle) = SExpressionHelper.ParsePosition(node);
+        var atNode = node.GetChild("at");
         component.Location = loc;
         component.Rotation = angle;
+        component.PositionIncludesAngle = atNode is not null && atNode.Values.Count >= 3;
         component.Uuid = SExpressionHelper.ParseUuid(node);
 
         // Parse mirror - support "x", "y", and "xy"
@@ -758,23 +770,31 @@ public static class SchReader
         var start = startNode is not null ? SExpressionHelper.ParseXY(startNode) : CoordPoint.Zero;
         var end = endNode is not null ? SExpressionHelper.ParseXY(endNode) : CoordPoint.Zero;
         var (width, lineStyle, color, hasStrokeColor) = SExpressionHelper.ParseStrokeEx(node);
-        var (fillType, isFilled, fillColor) = SExpressionHelper.ParseFill(node);
         var (uuid, uuidIsSymbol) = SExpressionHelper.ParseUuidEx(node);
+        var fillNode = node.GetChild("fill");
 
-        return new KiCadSchRectangle
+        var rect = new KiCadSchRectangle
         {
             Corner1 = start,
             Corner2 = end,
             Color = color,
-            FillColor = fillColor,
             LineWidth = width,
             LineStyle = lineStyle,
             HasStrokeColor = hasStrokeColor,
-            IsFilled = isFilled,
-            FillType = fillType,
             Uuid = uuid,
-            UuidIsSymbol = uuidIsSymbol
+            UuidIsSymbol = uuidIsSymbol,
+            HasFill = fillNode is not null
         };
+
+        if (fillNode is not null)
+        {
+            var (fillType, isFilled, fillColor) = SExpressionHelper.ParseFill(node);
+            rect.FillType = fillType;
+            rect.IsFilled = isFilled;
+            rect.FillColor = fillColor;
+        }
+
+        return rect;
     }
 
     private static KiCadSchArc ParseSchArc(SExpr node)

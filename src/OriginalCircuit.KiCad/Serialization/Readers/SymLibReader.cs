@@ -314,11 +314,13 @@ public static class SymLibReader
         var nameEffects = nameNode?.GetChild("effects");
         if (nameEffects is not null)
         {
-            var (nameFontH, nameFontW, _, _, _, nameIsBold, nameIsItalic, nameFontFace, nameFontThickness, nameFontColor) = SExpressionHelper.ParseTextEffects(nameNode!);
+            var (nameFontH, nameFontW, _, _, _, nameIsBold, nameIsItalic, nameFontFace, nameFontThickness, nameFontColor, _, nameBoldIsSymbol, nameItalicIsSymbol) = SExpressionHelper.ParseTextEffectsEx(nameNode!);
             pin.NameFontSizeHeight = nameFontH;
             pin.NameFontSizeWidth = nameFontW;
             pin.NameIsBold = nameIsBold;
             pin.NameIsItalic = nameIsItalic;
+            pin.NameBoldIsSymbol = nameBoldIsSymbol;
+            pin.NameItalicIsSymbol = nameItalicIsSymbol;
             pin.NameFontFace = nameFontFace;
             pin.NameFontThickness = nameFontThickness;
             pin.NameFontColor = nameFontColor;
@@ -333,11 +335,13 @@ public static class SymLibReader
         var numEffects = numberNode?.GetChild("effects");
         if (numEffects is not null)
         {
-            var (numFontH, numFontW, _, _, _, numIsBold, numIsItalic, numFontFace, numFontThickness, numFontColor) = SExpressionHelper.ParseTextEffects(numberNode!);
+            var (numFontH, numFontW, _, _, _, numIsBold, numIsItalic, numFontFace, numFontThickness, numFontColor, _, numBoldIsSymbol, numItalicIsSymbol) = SExpressionHelper.ParseTextEffectsEx(numberNode!);
             pin.NumberFontSizeHeight = numFontH;
             pin.NumberFontSizeWidth = numFontW;
             pin.NumberIsBold = numIsBold;
             pin.NumberIsItalic = numIsItalic;
+            pin.NumberBoldIsSymbol = numBoldIsSymbol;
+            pin.NumberItalicIsSymbol = numItalicIsSymbol;
             pin.NumberFontFace = numFontFace;
             pin.NumberFontThickness = numFontThickness;
             pin.NumberFontColor = numFontColor;
@@ -410,7 +414,7 @@ public static class SymLibReader
                 param.Id = idVal.Value;
         }
 
-        var (fontH, fontW, justification, isHidden, isMirrored, isBold, isItalic, _, fontThickness, _, hideIsSymbolValue) = SExpressionHelper.ParseTextEffectsEx(node);
+        var (fontH, fontW, justification, isHidden, isMirrored, isBold, isItalic, _, fontThickness, _, hideIsSymbolValue, boldIsSymbol, italicIsSymbol) = SExpressionHelper.ParseTextEffectsEx(node);
         param.FontSizeHeight = fontH;
         param.FontSizeWidth = fontW;
         param.Justification = justification;
@@ -418,6 +422,8 @@ public static class SymLibReader
         param.IsMirrored = isMirrored;
         param.IsBold = isBold;
         param.IsItalic = isItalic;
+        param.BoldIsSymbol = boldIsSymbol;
+        param.ItalicIsSymbol = italicIsSymbol;
         param.FontThickness = fontThickness;
         param.HideIsSymbolValue = hideIsSymbolValue;
 
@@ -526,6 +532,7 @@ public static class SymLibReader
         var (width, lineStyle, color, hasColor) = SExpressionHelper.ParseStrokeEx(node);
         var (fillType, isFilled, fillColor) = SExpressionHelper.ParseFill(node);
         var (uuid, uuidIsSymbol) = SExpressionHelper.ParseUuidEx(node);
+        var fillNode = node.GetChild("fill");
 
         return new KiCadSchRectangle
         {
@@ -539,7 +546,8 @@ public static class SymLibReader
             IsFilled = isFilled,
             FillType = fillType,
             Uuid = uuid,
-            UuidIsSymbol = uuidIsSymbol
+            UuidIsSymbol = uuidIsSymbol,
+            HasFill = fillNode is not null
         };
     }
 
@@ -626,7 +634,7 @@ public static class SymLibReader
     private static KiCadSchLabel ParseTextLabel(SExpr node)
     {
         var (loc, angle) = SExpressionHelper.ParsePosition(node);
-        var (fontH, fontW, justification, isHidden, isMirrored, isBold, isItalic, fontFace, fontThickness, fontColor) = SExpressionHelper.ParseTextEffects(node);
+        var (fontH, fontW, justification, isHidden, isMirrored, isBold, isItalic, fontFace, fontThickness, fontColor, _, boldIsSymbol, italicIsSymbol) = SExpressionHelper.ParseTextEffectsEx(node);
         var hasStroke = node.GetChild("stroke") is not null;
         var (strokeWidth, strokeStyle, strokeColor) = SExpressionHelper.ParseStroke(node);
 
@@ -649,6 +657,8 @@ public static class SymLibReader
             IsMirrored = isMirrored,
             IsBold = isBold,
             IsItalic = isItalic,
+            BoldIsSymbol = boldIsSymbol,
+            ItalicIsSymbol = italicIsSymbol,
             HasStroke = hasStroke,
             StrokeWidth = strokeWidth,
             StrokeLineStyle = strokeStyle,

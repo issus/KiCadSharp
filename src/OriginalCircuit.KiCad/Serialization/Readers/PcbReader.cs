@@ -483,11 +483,13 @@ public static class PcbReader
             }
         }
 
-        var (fontH, fontW, justification, isHidden, isMirrored, isBold, isItalic, fontFace, fontThickness, fontColor) = SExpressionHelper.ParseTextEffects(node);
+        var (fontH, fontW, justification, isHidden, isMirrored, isBold, isItalic, fontFace, fontThickness, fontColor, _, boldIsSymbol, italicIsSymbol) = SExpressionHelper.ParseTextEffectsEx(node);
         text.Height = fontH;
         text.FontWidth = fontW;
         text.FontBold = isBold;
         text.FontItalic = isItalic;
+        text.BoldIsSymbol = boldIsSymbol;
+        text.ItalicIsSymbol = italicIsSymbol;
         text.FontName = fontFace;
         text.FontThickness = fontThickness;
         text.FontColor = fontColor;

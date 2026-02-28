@@ -290,19 +290,29 @@ public sealed class KiCadPcbComponent : IPcbComponent
     public double Model3DOffsetZ { get; set; }
 
     /// <summary>
-    /// Gets the 3D model scale (X, Y factors).
+    /// Gets the 3D model X scale factor (unitless).
     /// </summary>
-    public CoordPoint Model3DScale { get; set; } = new(Coord.FromMm(1), Coord.FromMm(1));
+    public double Model3DScaleX { get; set; } = 1.0;
 
     /// <summary>
-    /// Gets the 3D model Z scale factor.
+    /// Gets the 3D model Y scale factor (unitless).
+    /// </summary>
+    public double Model3DScaleY { get; set; } = 1.0;
+
+    /// <summary>
+    /// Gets the 3D model Z scale factor (unitless).
     /// </summary>
     public double Model3DScaleZ { get; set; } = 1.0;
 
     /// <summary>
-    /// Gets the 3D model rotation (X, Y angles in degrees).
+    /// Gets the 3D model X rotation in degrees.
     /// </summary>
-    public CoordPoint Model3DRotation { get; set; }
+    public double Model3DRotationX { get; set; }
+
+    /// <summary>
+    /// Gets the 3D model Y rotation in degrees.
+    /// </summary>
+    public double Model3DRotationY { get; set; }
 
     /// <summary>
     /// Gets the 3D model Z rotation in degrees.

@@ -53,6 +53,18 @@ public sealed class KiCadSchSheetPin : ISchSheetPin
     public bool IsItalic { get; set; }
 
     /// <summary>
+    /// Gets or sets whether bold was a bare symbol (KiCad 6 format: <c>bold</c>)
+    /// rather than a child node (KiCad 8 format: <c>(bold yes)</c>).
+    /// </summary>
+    public bool BoldIsSymbol { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether italic was a bare symbol (KiCad 6 format: <c>italic</c>)
+    /// rather than a child node (KiCad 8 format: <c>(italic yes)</c>).
+    /// </summary>
+    public bool ItalicIsSymbol { get; set; }
+
+    /// <summary>
     /// Gets or sets the font face name.
     /// </summary>
     public string? FontFace { get; set; }

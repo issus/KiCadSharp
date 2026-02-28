@@ -249,14 +249,17 @@ public static class SchWriter
         if (label.Shape is not null)
             lb.AddChild("shape", s => s.AddSymbol(label.Shape));
 
-        lb.AddChild(WriterHelper.BuildPosition(label.Location, label.Orientation));
+        lb.AddChild(label.PositionIncludesAngle
+            ? WriterHelper.BuildPosition(label.Location, label.Orientation)
+            : WriterHelper.BuildPositionCompact(label.Location, label.Orientation));
 
         if (label.FieldsAutoplaced)
             lb.AddChild("fields_autoplaced", f => f.AddBool(true));
 
         lb.AddChild(WriterHelper.BuildTextEffects(fontH, fontW, label.Justification, hide: false,
             isMirrored: label.IsMirrored, isBold: label.IsBold, isItalic: label.IsItalic,
-            fontFace: label.FontFace, fontThickness: label.FontThickness, fontColor: label.FontColor));
+            fontFace: label.FontFace, fontThickness: label.FontThickness, fontColor: label.FontColor,
+            boldIsSymbol: label.BoldIsSymbol, italicIsSymbol: label.ItalicIsSymbol));
 
         // uuid comes before properties in KiCad 9+
         if (label.Uuid is not null) lb.AddChild(WriterHelper.BuildUuid(label.Uuid));
@@ -349,7 +352,8 @@ public static class SchWriter
                 pb.AddChild(WriterHelper.BuildTextEffects(fontH, fontW, pin.Justification,
                     hide: false, isMirrored: pin.IsMirrored,
                     isBold: pin.IsBold, isItalic: pin.IsItalic,
-                    fontFace: pin.FontFace, fontThickness: pin.FontThickness, fontColor: pin.FontColor));
+                    fontFace: pin.FontFace, fontThickness: pin.FontThickness, fontColor: pin.FontColor,
+                    boldIsSymbol: pin.BoldIsSymbol, italicIsSymbol: pin.ItalicIsSymbol));
             }
             sb.AddChild(pb.Build());
         }
@@ -369,8 +373,10 @@ public static class SchWriter
             .AddValue(label.Text);
         if (label.ExcludeFromSimPresent)
             tb.AddChild("exclude_from_sim", v => v.AddBool(label.ExcludeFromSim));
-        tb.AddChild(WriterHelper.BuildPosition(label.Location, label.Rotation))
-            .AddChild(WriterHelper.BuildTextEffects(fontH, fontW, label.Justification, label.IsHidden, label.IsMirrored, label.IsBold, label.IsItalic, fontFace: label.FontFace, fontThickness: label.FontThickness, fontColor: label.FontColor, href: label.Href));
+        tb.AddChild(label.PositionIncludesAngle
+            ? WriterHelper.BuildPosition(label.Location, label.Rotation)
+            : WriterHelper.BuildPositionCompact(label.Location, label.Rotation))
+            .AddChild(WriterHelper.BuildTextEffects(fontH, fontW, label.Justification, label.IsHidden, label.IsMirrored, label.IsBold, label.IsItalic, fontFace: label.FontFace, fontThickness: label.FontThickness, fontColor: label.FontColor, href: label.Href, boldIsSymbol: label.BoldIsSymbol, italicIsSymbol: label.ItalicIsSymbol));
         if (label.Uuid is not null) tb.AddChild(WriterHelper.BuildUuid(label.Uuid));
         return tb.Build();
     }
@@ -446,9 +452,11 @@ public static class SchWriter
         var rb = new SExpressionBuilder("rectangle")
             .AddChild("start", s => { s.AddMm(rect.Corner1.X); s.AddMm(rect.Corner1.Y); })
             .AddChild("end", e => { e.AddMm(rect.Corner2.X); e.AddMm(rect.Corner2.Y); })
-            .AddChild(WriterHelper.BuildStroke(rect.LineWidth, rect.LineStyle, rect.Color, emitColor: rect.HasStrokeColor))
-            .AddChild(WriterHelper.BuildFill(rect.FillType, rect.FillColor));
-        if (rect.Uuid is not null) rb.AddChild(WriterHelper.BuildUuid(rect.Uuid, rect.UuidIsSymbol));
+            .AddChild(WriterHelper.BuildStroke(rect.LineWidth, rect.LineStyle, rect.Color, emitColor: rect.HasStrokeColor));
+        if (rect.HasFill)
+            rb.AddChild(WriterHelper.BuildFill(rect.FillType, rect.FillColor));
+        if (rect.Uuid is not null)
+            rb.AddChild(WriterHelper.BuildUuid(rect.Uuid, rect.UuidIsSymbol));
         return rb.Build();
     }
 
@@ -503,7 +511,9 @@ public static class SchWriter
 
         sb.AddChild("lib_id", l => l.AddValue(comp.Name));
 
-        sb.AddChild(WriterHelper.BuildPosition(comp.Location, comp.Rotation));
+        sb.AddChild(comp.PositionIncludesAngle
+            ? WriterHelper.BuildPosition(comp.Location, comp.Rotation)
+            : WriterHelper.BuildPositionCompact(comp.Location, comp.Rotation));
 
         // Mirror - only emit when it was present in the source file
         if (comp.MirrorPresent)

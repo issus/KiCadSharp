@@ -333,7 +333,9 @@ public static class PcbWriter
             isMirrored: text.IsMirrored,
             thickness: text.FontThickness,
             fontFace: text.FontName,
-            fontColor: text.FontColor));
+            fontColor: text.FontColor,
+            boldIsSymbol: text.BoldIsSymbol,
+            italicIsSymbol: text.ItalicIsSymbol));
 
         // Render cache (raw)
         if (text.RenderCache is not null)
@@ -498,9 +500,6 @@ public static class PcbWriter
         if (zone.NetName is not null)
             zb.AddChild("net_name", n => n.AddValue(zone.NetName));
 
-        if (zone.IsLocked && zone.LockedIsChildNode)
-            zb.AddChild("locked", l => l.AddBool(true));
-
         if (zone.LayerNames is not null && zone.LayerNames.Count > 0)
         {
             zb.AddChild("layers", l =>
@@ -513,6 +512,9 @@ public static class PcbWriter
         {
             zb.AddChild("layer", l => l.AddValue(zone.LayerName));
         }
+
+        if (zone.IsLocked && zone.LockedIsChildNode)
+            zb.AddChild("locked", l => l.AddBool(true));
 
         if (zone.Uuid is not null)
             zb.AddChild(WriterHelper.BuildUuidToken(zone.Uuid, zone.UuidToken ?? "uuid", zone.UuidIsSymbol));

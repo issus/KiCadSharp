@@ -23,19 +23,29 @@ public sealed class KiCadPcb3DModel
     public double OffsetZ { get; set; }
 
     /// <summary>
-    /// Gets the 3D model scale (X, Y factors).
+    /// Gets the 3D model X scale factor (unitless).
     /// </summary>
-    public CoordPoint Scale { get; set; } = new(Coord.FromMm(1), Coord.FromMm(1));
+    public double ScaleX { get; set; } = 1.0;
 
     /// <summary>
-    /// Gets the 3D model Z scale factor.
+    /// Gets the 3D model Y scale factor (unitless).
+    /// </summary>
+    public double ScaleY { get; set; } = 1.0;
+
+    /// <summary>
+    /// Gets the 3D model Z scale factor (unitless).
     /// </summary>
     public double ScaleZ { get; set; } = 1.0;
 
     /// <summary>
-    /// Gets the 3D model rotation (X, Y angles in degrees).
+    /// Gets the 3D model X rotation in degrees.
     /// </summary>
-    public CoordPoint Rotation { get; set; }
+    public double RotationX { get; set; }
+
+    /// <summary>
+    /// Gets the 3D model Y rotation in degrees.
+    /// </summary>
+    public double RotationY { get; set; }
 
     /// <summary>
     /// Gets the 3D model Z rotation in degrees.

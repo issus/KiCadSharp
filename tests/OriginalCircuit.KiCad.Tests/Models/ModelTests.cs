@@ -136,8 +136,8 @@ public class ModelTests
     {
         var component = new KiCadPcbComponent();
         // Default scale should be 1,1
-        component.Model3DScale.X.ToMm().Should().BeApproximately(1.0, 0.01);
-        component.Model3DScale.Y.ToMm().Should().BeApproximately(1.0, 0.01);
+        component.Model3DScaleX.Should().BeApproximately(1.0, 0.01);
+        component.Model3DScaleY.Should().BeApproximately(1.0, 0.01);
     }
 
     [Fact]
