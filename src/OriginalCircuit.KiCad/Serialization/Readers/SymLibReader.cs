@@ -76,10 +76,6 @@ public static class SymLibReader
                 $"File format version {lib.Version} is newer than the maximum tested version {MaxTestedVersion}. Some features may not be parsed correctly."));
         }
 
-        var embeddedFilesNode = root.GetChild("embedded_files");
-        if (embeddedFilesNode is not null)
-            lib.EmbeddedFilesRaw = embeddedFilesNode;
-
         foreach (var symbolNode in root.GetChildren("symbol"))
         {
             try
@@ -96,7 +92,6 @@ public static class SymLibReader
         }
 
         lib.DiagnosticList.AddRange(diagnostics);
-        lib.SourceTree = root;
         return lib;
     }
 

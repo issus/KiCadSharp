@@ -1,5 +1,4 @@
 using OriginalCircuit.Eda.Primitives;
-using SExpr = OriginalCircuit.KiCad.SExpression.SExpression;
 
 namespace OriginalCircuit.KiCad.Models.Pcb;
 
@@ -127,50 +126,4 @@ public sealed class KiCadPcbZone
     /// <summary>Gets or sets the zone outline polygon points.</summary>
     public IReadOnlyList<CoordPoint> Outline { get; set; } = [];
 
-    /// <summary>
-    /// Gets or sets the raw <c>(polygon ...)</c> S-expression subtree for round-trip fidelity.
-    /// Used when the polygon contains arcs or other non-xy elements that cannot be represented as simple CoordPoints.
-    /// </summary>
-    public SExpr? PolygonRaw { get; set; }
-
-    /// <summary>
-    /// Gets or sets raw filled polygon S-expression subtrees for round-trip fidelity.
-    /// These are large auto-generated data from KiCad's fill algorithm.
-    /// </summary>
-    public List<SExpr> FilledPolygonsRaw { get; set; } = [];
-
-    /// <summary>
-    /// Gets or sets raw fill segments S-expression subtrees for round-trip fidelity.
-    /// </summary>
-    public List<SExpr> FillSegmentsRaw { get; set; } = [];
-
-    /// <summary>
-    /// Gets or sets the raw <c>(fill ...)</c> S-expression subtree for complex fill settings.
-    /// </summary>
-    public SExpr? FillRaw { get; set; }
-
-    /// <summary>
-    /// Gets or sets the raw <c>(keepout ...)</c> S-expression subtree.
-    /// </summary>
-    public SExpr? KeepoutRaw { get; set; }
-
-    /// <summary>
-    /// Gets or sets the raw <c>(connect_pads ...)</c> S-expression subtree.
-    /// </summary>
-    public SExpr? ConnectPadsRaw { get; set; }
-
-    /// <summary>
-    /// Gets or sets the raw <c>(filled_areas_thickness ...)</c> S-expression value.
-    /// </summary>
-    public SExpr? FilledAreasThicknessRaw { get; set; }
-
-    /// <summary>
-    /// Gets or sets the raw <c>(attr ...)</c> S-expression value for the zone.
-    /// </summary>
-    public SExpr? AttrRaw { get; set; }
-
-    /// <summary>
-    /// Gets or sets the raw <c>(placement ...)</c> S-expression subtree for round-trip fidelity.
-    /// </summary>
-    public SExpr? PlacementRaw { get; set; }
 }

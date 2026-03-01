@@ -182,11 +182,6 @@ public sealed class KiCadSchComponent : ISchComponent
     public string? LibName { get; set; }
 
     /// <summary>
-    /// Gets or sets the raw instances S-expression subtree for round-trip fidelity.
-    /// </summary>
-    public SExpression.SExpression? InstancesRaw { get; set; }
-
-    /// <summary>
     /// Gets or sets whether the symbol should be excluded from simulation (KiCad 8+).
     /// </summary>
     public bool ExcludeFromSim { get; set; }

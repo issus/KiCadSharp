@@ -27,10 +27,8 @@ public class PropertyCoverageVerification
 
     private static bool IsRawProperty(PropertyInfo prop)
     {
-        if (prop.Name == "SourceTree") return true;
         if (prop.Name.EndsWith("Raw", StringComparison.Ordinal)) return true;
         if (prop.PropertyType == typeof(SExpr)) return true;
-        if (prop.Name == "GeneratedElements") return true; // List<SExpr>
         // Collection properties of SExpr
         if (IsCollectionOfSExpr(prop)) return true;
         return false;
@@ -228,17 +226,17 @@ public class PropertyCoverageVerification
             catch { /* ignore */ }
         }
 
-        // For KiCadPcbZone hatch properties, check if FillRaw is non-null
+        // For KiCadPcbZone hatch properties, check if IsFilled is true
         // (hatch values are parsed from the fill node and default to 0)
         if (type.Name == "KiCadPcbZone" && prop.Name.StartsWith("Hatch", StringComparison.Ordinal)
             && prop.Name != "HatchStyle" && prop.Name != "HatchPitch")
         {
-            var fillRaw = type.GetProperty("FillRaw", BindingFlags.Public | BindingFlags.Instance);
-            if (fillRaw != null)
+            var isFilled = type.GetProperty("IsFilled", BindingFlags.Public | BindingFlags.Instance);
+            if (isFilled != null)
             {
                 try
                 {
-                    if (fillRaw.GetValue(instance) != null) return true;
+                    if ((bool)isFilled.GetValue(instance)!) return true;
                 }
                 catch { /* ignore */ }
             }
@@ -481,7 +479,6 @@ public class PropertyCoverageVerification
     public async Task Pcb_AllProperties_SurviveRoundTrip(string path)
     {
         var original = await PcbReader.ReadAsync(path);
-        original.SourceTree = null;
 
         using var ms = new MemoryStream();
         await PcbWriter.WriteAsync(original, ms);
@@ -496,7 +493,6 @@ public class PropertyCoverageVerification
     public async Task Sch_AllProperties_SurviveRoundTrip(string path)
     {
         var original = await SchReader.ReadAsync(path);
-        original.SourceTree = null;
 
         using var ms = new MemoryStream();
         await SchWriter.WriteAsync(original, ms);
@@ -511,7 +507,6 @@ public class PropertyCoverageVerification
     public async Task SymLib_AllProperties_SurviveRoundTrip(string path)
     {
         var original = await SymLibReader.ReadAsync(path);
-        original.SourceTree = null;
 
         using var ms = new MemoryStream();
         await SymLibWriter.WriteAsync(original, ms);

@@ -3,8 +3,6 @@ using OriginalCircuit.Eda.Models;
 using OriginalCircuit.Eda.Models.Sch;
 using OriginalCircuit.Eda.Primitives;
 using OriginalCircuit.KiCad.Serialization;
-using OriginalCircuit.KiCad.SExpression;
-using SExpr = OriginalCircuit.KiCad.SExpression.SExpression;
 
 namespace OriginalCircuit.KiCad.Models.Sch;
 
@@ -15,13 +13,6 @@ public sealed class KiCadSch : ISchDocument
 {
     private readonly List<KiCadSchComponent> _components = [];
 
-    /// <summary>
-    /// The original parsed S-expression tree, if this model was loaded from a file.
-    /// When set and the model has not been modified, the writer will re-emit this tree
-    /// directly for byte-perfect round-trip fidelity.
-    /// Set to <c>null</c> to force the writer to rebuild the tree from the model.
-    /// </summary>
-    public SExpr? SourceTree { get; set; }
     private readonly List<KiCadSchWire> _wires = [];
     private readonly List<KiCadSchNetLabel> _netLabels = [];
     private readonly List<KiCadSchJunction> _junctions = [];
@@ -39,12 +30,6 @@ public sealed class KiCadSch : ISchDocument
     private readonly List<KiCadSchBezier> _beziers = [];
     private readonly List<KiCadSchLine> _lines = [];
     private readonly List<KiCadDiagnostic> _diagnostics = [];
-    private readonly List<SExpr> _tablesRaw = [];
-    private readonly List<SExpr> _textBoxesRaw = [];
-    private readonly List<SExpr> _ruleAreasRaw = [];
-    private readonly List<SExpr> _netclassFlagsRaw = [];
-    private readonly List<SExpr> _busAliasesRaw = [];
-    private readonly List<SExpr> _groupsRaw = [];
     private readonly List<object> _orderedElements = [];
 
     /// <summary>
@@ -84,65 +69,9 @@ public sealed class KiCadSch : ISchDocument
     public string? Paper { get; set; }
 
     /// <summary>
-    /// Gets or sets the raw title_block S-expression subtree for round-trip fidelity.
-    /// </summary>
-    public SExpr? TitleBlock { get; set; }
-
-    /// <summary>
-    /// Gets or sets the raw sheet_instances S-expression subtree for round-trip fidelity.
-    /// </summary>
-    public SExpr? SheetInstances { get; set; }
-
-    /// <summary>
-    /// Gets or sets the raw symbol_instances S-expression subtree for round-trip fidelity.
-    /// </summary>
-    public SExpr? SymbolInstances { get; set; }
-
-    /// <summary>
-    /// Gets the raw S-expression storage for table elements (KiCad 8+).
-    /// </summary>
-    public IReadOnlyList<SExpr> TablesRaw => _tablesRaw;
-    internal List<SExpr> TablesRawList => _tablesRaw;
-
-    /// <summary>
-    /// Gets the raw S-expression storage for text_box elements (KiCad 8+).
-    /// </summary>
-    public IReadOnlyList<SExpr> TextBoxesRaw => _textBoxesRaw;
-    internal List<SExpr> TextBoxesRawList => _textBoxesRaw;
-
-    /// <summary>
-    /// Gets the raw S-expression storage for rule area definitions (KiCad 8+).
-    /// </summary>
-    public IReadOnlyList<SExpr> RuleAreasRaw => _ruleAreasRaw;
-    internal List<SExpr> RuleAreasRawList => _ruleAreasRaw;
-
-    /// <summary>
-    /// Gets the raw S-expression storage for net class flag elements (KiCad 8+).
-    /// </summary>
-    public IReadOnlyList<SExpr> NetclassFlagsRaw => _netclassFlagsRaw;
-    internal List<SExpr> NetclassFlagsRawList => _netclassFlagsRaw;
-
-    /// <summary>
-    /// Gets the raw S-expression storage for bus alias definitions.
-    /// </summary>
-    public IReadOnlyList<SExpr> BusAliasesRaw => _busAliasesRaw;
-    internal List<SExpr> BusAliasesRawList => _busAliasesRaw;
-
-    /// <summary>
-    /// Gets or sets the raw embedded_files S-expression subtree for round-trip fidelity.
-    /// </summary>
-    public SExpr? EmbeddedFilesRaw { get; set; }
-
-    /// <summary>
-    /// Gets the raw S-expression storage for group definitions (KiCad 8+).
-    /// </summary>
-    public IReadOnlyList<SExpr> GroupsRaw => _groupsRaw;
-    internal List<SExpr> GroupsRawList => _groupsRaw;
-
-    /// <summary>
     /// Gets the ordered list of all content elements in their original file order.
     /// Used to preserve element ordering during round-trip. Each entry is a typed
-    /// schematic object (wire, junction, label, symbol, etc.) or a raw <see cref="SExpr"/>.
+    /// schematic object (wire, junction, label, symbol, etc.).
     /// </summary>
     public IReadOnlyList<object> OrderedElements => _orderedElements;
     internal List<object> OrderedElementsList => _orderedElements;
@@ -239,11 +168,6 @@ public sealed class KiCadSch : ISchDocument
     /// </summary>
     public IReadOnlyList<KiCadSchLine> Lines => _lines;
     internal List<KiCadSchLine> LineList => _lines;
-
-    /// <summary>
-    /// Gets the raw image nodes at schematic level for round-trip fidelity.
-    /// </summary>
-    public List<SExpr> ImagesRaw { get; } = [];
 
     /// <inheritdoc />
     /// <remarks>This property is computed on each access. Cache the result if accessing repeatedly.</remarks>

@@ -2,7 +2,6 @@ using OriginalCircuit.Eda.Enums;
 using OriginalCircuit.Eda.Models;
 using OriginalCircuit.Eda.Models.Pcb;
 using OriginalCircuit.Eda.Primitives;
-using SExpr = OriginalCircuit.KiCad.SExpression.SExpression;
 
 namespace OriginalCircuit.KiCad.Models.Pcb;
 
@@ -108,11 +107,6 @@ public sealed class KiCadPcbText : IPcbText
     /// Gets whether the hide flag uses child node format <c>(hide yes)</c> instead of bare symbol.
     /// </summary>
     public bool HideIsChildNode { get; set; }
-
-    /// <summary>
-    /// Gets the raw render_cache node for round-trip fidelity.
-    /// </summary>
-    public SExpr? RenderCache { get; set; }
 
     /// <summary>
     /// Gets whether this fp_text is unlocked (placement can differ from footprint).

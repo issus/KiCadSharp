@@ -99,10 +99,6 @@ public static class FootprintWriter
             b.AddChild(SymLibWriter.BuildProperty(prop));
         }
 
-        // Component classes (raw)
-        if (component.ComponentClassesRaw is not null)
-            b.AddChild(component.ComponentClassesRaw);
-
         if (component.Path is not null)
             b.AddChild("path", p => p.AddValue(component.Path));
 
@@ -153,14 +149,6 @@ public static class FootprintWriter
         if (component.DuplicatePadNumbersAreJumpers.HasValue)
             b.AddChild("duplicate_pad_numbers_are_jumpers", d => d.AddBool(component.DuplicatePadNumbersAreJumpers.Value));
 
-        // Private layers
-        if (component.PrivateLayersRaw is not null)
-            b.AddChild(component.PrivateLayersRaw);
-
-        // Net tie pad groups
-        if (component.NetTiePadGroupsRaw is not null)
-            b.AddChild(component.NetTiePadGroupsRaw);
-
         // Graphical items (lines, rects, circles, arcs, polygons, curves, texts) — use original order if available
         if (component.GraphicalItemOrder.Count > 0)
         {
@@ -175,9 +163,6 @@ public static class FootprintWriter
                     case KiCadPcbPolygon poly: b.AddChild(BuildFpPoly(poly, uuidTok, uuidSym)); break;
                     case KiCadPcbCurve curve: b.AddChild(BuildFpCurve(curve, uuidTok, uuidSym)); break;
                     case KiCadPcbText text: b.AddChild(BuildFpText(text, uuidTok, uuidSym)); break;
-                    case (string type, SExpr raw) when type is "fp_text_private" or "fp_text_box":
-                        b.AddChild(raw);
-                        break;
                 }
             }
         }
@@ -197,15 +182,7 @@ public static class FootprintWriter
                 b.AddChild(BuildFpPoly(poly, uuidTok, uuidSym));
             foreach (var curve in component.Curves)
                 b.AddChild(BuildFpCurve(curve, uuidTok, uuidSym));
-            foreach (var tp in component.TextPrivateRaw)
-                b.AddChild(tp);
-            foreach (var tb2 in component.TextBoxesRaw)
-                b.AddChild(tb2);
         }
-
-        // Images (raw)
-        foreach (var img in component.ImagesRaw)
-            b.AddChild(img);
 
         // Pads
         foreach (var pad in component.Pads.OfType<KiCadPcbPad>())
@@ -213,35 +190,9 @@ public static class FootprintWriter
             b.AddChild(BuildPad(pad, uuidTok, uuidSym));
         }
 
-        // Teardrop (raw)
-        if (component.TeardropRaw is not null)
-            b.AddChild(component.TeardropRaw);
-
-        // Dimensions within footprint (raw)
-        foreach (var dim in component.DimensionsRaw)
-        {
-            b.AddChild(dim);
-        }
-
-        // Zones within footprint (raw)
-        foreach (var zone in component.ZonesRaw)
-        {
-            b.AddChild(zone);
-        }
-
-        // Groups within footprint (raw)
-        foreach (var group in component.GroupsRaw)
-        {
-            b.AddChild(group);
-        }
-
-        // Embedded fonts (KiCad 8+) — emit after groups, before embedded_files
+        // Embedded fonts (KiCad 8+)
         if (component.EmbeddedFonts.HasValue)
             b.AddChild("embedded_fonts", e => e.AddBool(component.EmbeddedFonts.Value));
-
-        // Embedded files (raw)
-        if (component.EmbeddedFilesRaw is not null)
-            b.AddChild(component.EmbeddedFilesRaw);
 
         // 3D models (prefer the list, fall back to single model)
         if (component.Models3D.Count > 0)
@@ -342,10 +293,6 @@ public static class FootprintWriter
 
         if (text.Uuid is not null && text.UuidAfterEffects)
             tb.AddChild(WriterHelper.BuildUuidToken(text.Uuid, uuidToken, uuidIsSymbol));
-
-        // Render cache (raw)
-        if (text.RenderCache is not null)
-            tb.AddChild(text.RenderCache);
 
         return tb.Build();
     }
@@ -467,10 +414,6 @@ public static class FootprintWriter
             s.AddMm(pad.Size.Y);
         });
 
-        // rect_delta (raw) - must come after size, before drill
-        if (pad.RectDeltaRaw is not null)
-            pb.AddChild(pad.RectDeltaRaw);
-
         if (pad.HoleSize != Coord.Zero)
         {
             if (pad.HoleType == PadHoleType.Slot)
@@ -571,22 +514,6 @@ public static class FootprintWriter
             pb.AddChild("thermal_bridge_angle", c => c.AddValue(pad.ThermalBridgeAngle));
         if (pad.ThermalGap != Coord.Zero)
             pb.AddChild("thermal_gap", c => c.AddMm(pad.ThermalGap));
-
-        // Custom pad options (raw)
-        if (pad.OptionsRaw is not null)
-            pb.AddChild(pad.OptionsRaw);
-
-        // Custom pad primitives (raw)
-        if (pad.PrimitivesRaw is not null)
-            pb.AddChild(pad.PrimitivesRaw);
-
-        // Per-pad tenting (raw) - after options/primitives
-        if (pad.TentingRaw is not null)
-            pb.AddChild(pad.TentingRaw);
-
-        // Per-pad teardrops (raw)
-        if (pad.TeardropsRaw is not null)
-            pb.AddChild(pad.TeardropsRaw);
 
         if (pad.IsLocked && pad.LockedIsChildNode)
             pb.AddChild("locked", l => l.AddBool(true));

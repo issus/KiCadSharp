@@ -186,49 +186,6 @@ public class PcbRoundTripTests
         reparsed.GraphicPolys[0].Points.Count.Should().Be(3);
     }
 
-    // -- Phase C: Document metadata --
-
-    [Fact]
-    public async Task RoundTrip_Paper_IsPreserved()
-    {
-        var (orig, _, text) = await RoundTrip("roundtrip.kicad_pcb");
-
-        orig.PaperRaw.Should().NotBeNull();
-        text.Should().Contain("(paper");
-        text.Should().Contain("A4");
-    }
-
-    [Fact]
-    public async Task RoundTrip_TitleBlock_IsPreserved()
-    {
-        var (orig, _, text) = await RoundTrip("roundtrip.kicad_pcb");
-
-        orig.TitleBlockRaw.Should().NotBeNull();
-        text.Should().Contain("title_block");
-        text.Should().Contain("Test Board");
-    }
-
-    [Fact]
-    public async Task RoundTrip_Layers_IsPreserved()
-    {
-        var (orig, _, text) = await RoundTrip("roundtrip.kicad_pcb");
-
-        orig.LayersRaw.Should().NotBeNull();
-        text.Should().Contain("(layers");
-        text.Should().Contain("F.Cu");
-        text.Should().Contain("B.Cu");
-    }
-
-    [Fact]
-    public async Task RoundTrip_Setup_IsPreserved()
-    {
-        var (orig, _, text) = await RoundTrip("roundtrip.kicad_pcb");
-
-        orig.SetupRaw.Should().NotBeNull();
-        text.Should().Contain("(setup");
-        text.Should().Contain("pad_to_mask_clearance");
-    }
-
     // -- Phase C: Net classes --
 
     [Fact]

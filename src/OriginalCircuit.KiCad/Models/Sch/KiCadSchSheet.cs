@@ -2,7 +2,6 @@ using OriginalCircuit.Eda.Enums;
 using OriginalCircuit.Eda.Models;
 using OriginalCircuit.Eda.Models.Sch;
 using OriginalCircuit.Eda.Primitives;
-using SExpr = OriginalCircuit.KiCad.SExpression.SExpression;
 
 namespace OriginalCircuit.KiCad.Models.Sch;
 
@@ -101,11 +100,6 @@ public sealed class KiCadSchSheet : ISchSheet
     /// Gets or sets the value of the <c>(dnp)</c> flag.
     /// </summary>
     public bool Dnp { get; set; }
-
-    /// <summary>
-    /// Gets or sets the raw instances S-expression subtree for round-trip fidelity.
-    /// </summary>
-    public SExpr? Instances { get; set; }
 
     /// <summary>
     /// Gets the UUID of the sheet.

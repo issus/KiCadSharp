@@ -20,7 +20,7 @@ public static class PcbWriter
     /// <param name="ct">Cancellation token.</param>
     public static async ValueTask WriteAsync(KiCadPcb pcb, string path, CancellationToken ct = default)
     {
-        var expr = pcb.SourceTree ?? Build(pcb);
+        var expr = Build(pcb);
         await SExpressionWriter.WriteAsync(expr, path, ct).ConfigureAwait(false);
     }
 
@@ -32,7 +32,7 @@ public static class PcbWriter
     /// <param name="ct">Cancellation token.</param>
     public static async ValueTask WriteAsync(KiCadPcb pcb, Stream stream, CancellationToken ct = default)
     {
-        var expr = pcb.SourceTree ?? Build(pcb);
+        var expr = Build(pcb);
         await SExpressionWriter.WriteAsync(expr, stream, ct).ConfigureAwait(false);
     }
 
@@ -51,30 +51,11 @@ public static class PcbWriter
         if (pcb.GeneratorVersion is not null)
             b.AddChild("generator_version", g => g.AddValue(pcb.GeneratorVersion));
 
-        // General (prefer raw subtree for round-trip, fallback to constructed)
-        if (pcb.GeneralRaw is not null)
-            b.AddChild(pcb.GeneralRaw);
-        else
-            b.AddChild("general", gen =>
-            {
-                gen.AddChild("thickness", t => t.AddMm(pcb.BoardThickness));
-            });
-
-        // Paper (raw)
-        if (pcb.PaperRaw is not null)
-            b.AddChild(pcb.PaperRaw);
-
-        // Title block (raw)
-        if (pcb.TitleBlockRaw is not null)
-            b.AddChild(pcb.TitleBlockRaw);
-
-        // Layers (raw)
-        if (pcb.LayersRaw is not null)
-            b.AddChild(pcb.LayersRaw);
-
-        // Setup (raw)
-        if (pcb.SetupRaw is not null)
-            b.AddChild(pcb.SetupRaw);
+        // General
+        b.AddChild("general", gen =>
+        {
+            gen.AddChild("thickness", t => t.AddMm(pcb.BoardThickness));
+        });
 
         // Nets
         foreach (var (num, name) in pcb.Nets)
@@ -116,7 +97,6 @@ public static class PcbWriter
                     case KiCadPcbVia via: b.AddChild(BuildVia(via)); break;
                     case KiCadPcbArc pcbArc: b.AddChild(BuildArc(pcbArc)); break;
                     case KiCadPcbZone zone: b.AddChild(BuildZoneStructured(zone)); break;
-                    case SExpr raw: b.AddChild(raw); break;
                 }
             }
 
@@ -153,35 +133,11 @@ public static class PcbWriter
                 b.AddChild(BuildZoneStructured(zone));
             foreach (var region in pcb.Regions.OfType<KiCadPcbRegion>())
                 b.AddChild(BuildZoneLegacy(region));
-            foreach (var raw in pcb.RawElementList)
-                b.AddChild(raw);
-            foreach (var gen in pcb.GeneratedElements)
-                b.AddChild(gen);
-
-            // Non-ordered fallback: emit raw passthroughs not in RawElementList
-            foreach (var raw in pcb.GrTextBoxesRaw)
-                b.AddChild(raw);
-            foreach (var raw in pcb.ImagesRaw)
-                b.AddChild(raw);
-            foreach (var raw in pcb.GrBBoxesRaw)
-                b.AddChild(raw);
-            foreach (var raw in pcb.GroupsRaw)
-                b.AddChild(raw);
         }
-
-        // Properties raw (not included in element ordering lists)
-        if (pcb.PropertiesRaw is not null)
-            b.AddChild(pcb.PropertiesRaw);
 
         // Embedded fonts (KiCad 8+) — emit before embedded_files to match KiCad ordering
         if (pcb.EmbeddedFonts.HasValue)
             b.AddChild("embedded_fonts", ef => ef.AddBool(pcb.EmbeddedFonts.Value));
-
-        // Embedded files (raw S-expression pass-through)
-        if (pcb.EmbeddedFilesRaw is not null)
-        {
-            b.AddChild(pcb.EmbeddedFilesRaw);
-        }
 
         return b.Build();
     }
@@ -247,18 +203,6 @@ public static class PcbWriter
             vb.AddChild("locked", l => l.AddBool(true));
         if (via.IsFree)
             vb.AddChild("free", f => f.AddBool(true));
-
-        // KiCad 9+ via tenting/covering/plugging/filling/capping (raw)
-        if (via.TentingRaw is not null) vb.AddChild(via.TentingRaw);
-        if (via.CappingRaw is not null) vb.AddChild(via.CappingRaw);
-        if (via.CoveringRaw is not null) vb.AddChild(via.CoveringRaw);
-        if (via.PluggingRaw is not null) vb.AddChild(via.PluggingRaw);
-        if (via.FillingRaw is not null) vb.AddChild(via.FillingRaw);
-        if (via.ZoneLayerConnectionsRaw is not null) vb.AddChild(via.ZoneLayerConnectionsRaw);
-
-        // Teardrops come before net/uuid in KiCad format
-        if (via.TeardropRaw is not null)
-            vb.AddChild(via.TeardropRaw);
 
         vb.AddChild("net", n => n.AddValue(via.Net));
 
@@ -336,10 +280,6 @@ public static class PcbWriter
             fontColor: text.FontColor,
             boldIsSymbol: text.BoldIsSymbol,
             italicIsSymbol: text.ItalicIsSymbol));
-
-        // Render cache (raw)
-        if (text.RenderCache is not null)
-            tb.AddChild(text.RenderCache);
 
         return tb.Build();
     }
@@ -535,56 +475,80 @@ public static class PcbWriter
         if (zone.Priority > 0)
             zb.AddChild("priority", p => p.AddValue(zone.Priority));
 
-        // attr (raw) - must come after priority, before connect_pads
-        if (zone.AttrRaw is not null)
-            zb.AddChild(zone.AttrRaw);
-
-        // Connect pads (prefer raw)
-        if (zone.ConnectPadsRaw is not null)
-            zb.AddChild(zone.ConnectPadsRaw);
+        // Connect pads
+        if (zone.ConnectPadsMode is not null || zone.ConnectPadsClearance != Coord.Zero)
+        {
+            zb.AddChild("connect_pads", cp =>
+            {
+                if (zone.ConnectPadsMode is not null)
+                    cp.AddSymbol(zone.ConnectPadsMode);
+                if (zone.ConnectPadsClearance != Coord.Zero)
+                    cp.AddChild("clearance", c => c.AddMm(zone.ConnectPadsClearance));
+            });
+        }
 
         if (zone.MinThickness != Coord.Zero)
             zb.AddChild("min_thickness", m => m.AddMm(zone.MinThickness));
 
-        // filled_areas_thickness (raw)
-        if (zone.FilledAreasThicknessRaw is not null)
-            zb.AddChild(zone.FilledAreasThicknessRaw);
-
-        // Keepout (prefer raw)
-        if (zone.KeepoutRaw is not null)
-            zb.AddChild(zone.KeepoutRaw);
-
-        // Placement (raw, between keepout and fill)
-        if (zone.PlacementRaw is not null)
-            zb.AddChild(zone.PlacementRaw);
-
-        // Fill (prefer raw)
-        if (zone.FillRaw is not null)
-            zb.AddChild(zone.FillRaw);
-
-        // Outline polygon (prefer raw for arcs/complex polygons)
-        if (zone.PolygonRaw is not null)
+        // Keepout
+        if (zone.IsKeepout)
         {
-            zb.AddChild(zone.PolygonRaw);
+            zb.AddChild("keepout", k =>
+            {
+                if (zone.KeepoutTracks is not null)
+                    k.AddChild("tracks", t => t.AddSymbol(zone.KeepoutTracks));
+                if (zone.KeepoutVias is not null)
+                    k.AddChild("vias", v => v.AddSymbol(zone.KeepoutVias));
+                if (zone.KeepoutPads is not null)
+                    k.AddChild("pads", p => p.AddSymbol(zone.KeepoutPads));
+                if (zone.KeepoutCopperpour is not null)
+                    k.AddChild("copperpour", c => c.AddSymbol(zone.KeepoutCopperpour));
+                if (zone.KeepoutFootprints is not null)
+                    k.AddChild("footprints", f => f.AddSymbol(zone.KeepoutFootprints));
+            });
         }
-        else if (zone.Outline.Count > 0)
+
+        // Fill
+        {
+            zb.AddChild("fill", f =>
+            {
+                f.AddBool(zone.IsFilled);
+                if (zone.ThermalGap != Coord.Zero)
+                    f.AddChild("thermal_gap", t => t.AddMm(zone.ThermalGap));
+                if (zone.ThermalBridgeWidth != Coord.Zero)
+                    f.AddChild("thermal_bridge_width", t => t.AddMm(zone.ThermalBridgeWidth));
+                if (zone.SmoothingType is not null)
+                    f.AddChild("smoothing", s => s.AddSymbol(zone.SmoothingType));
+                if (zone.SmoothingRadius != Coord.Zero)
+                    f.AddChild("radius", r => r.AddMm(zone.SmoothingRadius));
+                if (zone.IslandRemovalMode is not null)
+                    f.AddChild("island_removal_mode", i => i.AddValue(zone.IslandRemovalMode.Value));
+                if (zone.IslandAreaMin is not null)
+                    f.AddChild("island_area_min", i => i.AddValue(zone.IslandAreaMin.Value));
+                if (zone.HatchThickness != Coord.Zero)
+                    f.AddChild("hatch_thickness", h => h.AddMm(zone.HatchThickness));
+                if (zone.HatchGap != Coord.Zero)
+                    f.AddChild("hatch_gap", h => h.AddMm(zone.HatchGap));
+                if (zone.HatchOrientation != 0)
+                    f.AddChild("hatch_orientation", h => h.AddValue(zone.HatchOrientation));
+                if (zone.HatchSmoothingLevel != 0)
+                    f.AddChild("hatch_smoothing_level", h => h.AddValue(zone.HatchSmoothingLevel));
+                if (zone.HatchSmoothingValue != 0)
+                    f.AddChild("hatch_smoothing_value", h => h.AddValue(zone.HatchSmoothingValue));
+                if (zone.HatchBorderAlgorithm != 0)
+                    f.AddChild("hatch_border_algorithm", h => h.AddValue(zone.HatchBorderAlgorithm));
+                if (zone.HatchMinHoleArea != 0)
+                    f.AddChild("hatch_min_hole_area", h => h.AddValue(zone.HatchMinHoleArea));
+            });
+        }
+
+        // Outline polygon
+        if (zone.Outline.Count > 0)
         {
             zb.AddChild("polygon", p =>
             {
                 p.AddChild(WriterHelper.BuildPoints(zone.Outline));
             });
-        }
-
-        // Filled polygons (raw)
-        foreach (var fp in zone.FilledPolygonsRaw)
-        {
-            zb.AddChild(fp);
-        }
-
-        // Fill segments (raw)
-        foreach (var fs in zone.FillSegmentsRaw)
-        {
-            zb.AddChild(fs);
         }
 
         return zb.Build();

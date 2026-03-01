@@ -3,8 +3,6 @@ using OriginalCircuit.Eda.Models;
 using OriginalCircuit.Eda.Models.Pcb;
 using OriginalCircuit.Eda.Primitives;
 using OriginalCircuit.KiCad.Serialization;
-using OriginalCircuit.KiCad.SExpression;
-using SExpr = OriginalCircuit.KiCad.SExpression.SExpression;
 
 namespace OriginalCircuit.KiCad.Models.Pcb;
 
@@ -15,13 +13,6 @@ public sealed class KiCadPcb : IPcbDocument
 {
     private readonly List<KiCadPcbComponent> _components = [];
 
-    /// <summary>
-    /// The original parsed S-expression tree, if this model was loaded from a file.
-    /// When set and the model has not been modified, the writer will re-emit this tree
-    /// directly for byte-perfect round-trip fidelity.
-    /// Set to <c>null</c> to force the writer to rebuild the tree from the model.
-    /// </summary>
-    public SExpr? SourceTree { get; set; }
     private readonly List<KiCadPcbPad> _pads = [];
     private readonly List<KiCadPcbVia> _vias = [];
     private readonly List<KiCadPcbTrack> _tracks = [];
@@ -38,7 +29,6 @@ public sealed class KiCadPcb : IPcbDocument
     private readonly List<KiCadPcbGraphicBezier> _graphicBeziers = [];
     private readonly List<KiCadPcbZone> _zones = [];
     private readonly List<KiCadPcbNetClass> _netClasses = [];
-    private readonly List<SExpr> _rawElements = [];
     private readonly List<object> _boardElementOrder = [];
 
     /// <summary>
@@ -67,54 +57,6 @@ public sealed class KiCadPcb : IPcbDocument
     /// Null means the token was not present in the source file.
     /// </summary>
     public bool? EmbeddedFonts { get; set; }
-
-    /// <summary>
-    /// Gets the list of raw S-expression nodes for <c>(generated ...)</c> elements.
-    /// These are auto-generated graphical primitives preserved verbatim during round-trip.
-    /// </summary>
-    public List<SExpr> GeneratedElements { get; set; } = [];
-
-    /// <summary>
-    /// Gets the list of raw S-expression nodes for <c>(gr_text_box ...)</c> elements,
-    /// preserved verbatim during round-trip.
-    /// </summary>
-    public List<SExpr> GrTextBoxesRaw { get; } = [];
-
-    /// <summary>
-    /// Gets the list of raw S-expression nodes for <c>(image ...)</c> elements,
-    /// preserved verbatim during round-trip.
-    /// </summary>
-    public List<SExpr> ImagesRaw { get; } = [];
-
-    /// <summary>
-    /// Gets the list of raw S-expression nodes for <c>(gr_bbox ...)</c> elements,
-    /// preserved verbatim during round-trip.
-    /// </summary>
-    public List<SExpr> GrBBoxesRaw { get; } = [];
-
-    /// <summary>
-    /// Gets or sets the raw S-expression for <c>(properties ...)</c> data,
-    /// preserved verbatim during round-trip.
-    /// </summary>
-    public SExpr? PropertiesRaw { get; set; }
-
-    /// <summary>
-    /// Gets the list of raw S-expression nodes for <c>(group ...)</c> elements,
-    /// preserved verbatim during round-trip.
-    /// </summary>
-    public List<SExpr> GroupsRaw { get; } = [];
-
-    /// <summary>
-    /// Gets the list of raw S-expression nodes for <c>(text_box ...)</c> elements
-    /// (footprint-level text boxes), preserved verbatim during round-trip.
-    /// </summary>
-    public List<SExpr> TextBoxesRaw { get; } = [];
-
-    /// <summary>
-    /// Gets or sets the raw S-expression for <c>(embedded_files ...)</c> data,
-    /// preserved verbatim during round-trip.
-    /// </summary>
-    public SExpr? EmbeddedFilesRaw { get; set; }
 
     /// <summary>
     /// Gets the diagnostics collected during parsing.
@@ -208,47 +150,16 @@ public sealed class KiCadPcb : IPcbDocument
     internal List<KiCadPcbNetClass> NetClassList => _netClasses;
 
     /// <summary>
-    /// Gets raw S-expression elements that are stored verbatim for round-trip fidelity.
-    /// </summary>
-    internal List<SExpr> RawElementList => _rawElements;
-
-    /// <summary>
-    /// Gets all board-level elements (graphics, segments, vias, arcs, texts, zones, raw)
+    /// Gets all board-level elements (graphics, segments, vias, arcs, texts, zones)
     /// in their original parse order. Used by the writer for round-trip ordering fidelity.
     /// Each entry is one of: <see cref="KiCadPcbGraphicLine"/>, <see cref="KiCadPcbGraphicArc"/>,
     /// <see cref="KiCadPcbGraphicCircle"/>, <see cref="KiCadPcbGraphicRect"/>,
     /// <see cref="KiCadPcbGraphicPoly"/>, <see cref="KiCadPcbGraphicBezier"/>,
     /// <see cref="KiCadPcbTrack"/>, <see cref="KiCadPcbVia"/>, <see cref="KiCadPcbArc"/>,
-    /// <see cref="KiCadPcbText"/>, <see cref="KiCadPcbZone"/>, or <see cref="SExpression.SExpression"/>
-    /// (for raw elements like dimension, target, group, generated).
+    /// <see cref="KiCadPcbText"/>, or <see cref="KiCadPcbZone"/>.
     /// </summary>
     public IReadOnlyList<object> BoardElementOrder => _boardElementOrder;
     internal List<object> BoardElementOrderList => _boardElementOrder;
-
-    /// <summary>
-    /// Gets the raw <c>(setup ...)</c> S-expression subtree, stored verbatim for round-trip.
-    /// </summary>
-    public SExpr? SetupRaw { get; internal set; }
-
-    /// <summary>
-    /// Gets the raw <c>(layers ...)</c> S-expression subtree, stored verbatim for round-trip.
-    /// </summary>
-    public SExpr? LayersRaw { get; internal set; }
-
-    /// <summary>
-    /// Gets the raw <c>(paper ...)</c> S-expression subtree, stored verbatim for round-trip.
-    /// </summary>
-    public SExpr? PaperRaw { get; internal set; }
-
-    /// <summary>
-    /// Gets the raw <c>(title_block ...)</c> S-expression subtree, stored verbatim for round-trip.
-    /// </summary>
-    public SExpr? TitleBlockRaw { get; internal set; }
-
-    /// <summary>
-    /// Gets the raw <c>(general ...)</c> S-expression subtree, stored verbatim for round-trip.
-    /// </summary>
-    public SExpr? GeneralRaw { get; internal set; }
 
     /// <summary>
     /// Gets the board thickness.

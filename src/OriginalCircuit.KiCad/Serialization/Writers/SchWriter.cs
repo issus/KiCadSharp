@@ -20,7 +20,7 @@ public static class SchWriter
     /// <param name="ct">Cancellation token.</param>
     public static async ValueTask WriteAsync(KiCadSch sch, string path, CancellationToken ct = default)
     {
-        var expr = sch.SourceTree ?? Build(sch);
+        var expr = Build(sch);
         await SExpressionWriter.WriteAsync(expr, path, ct).ConfigureAwait(false);
     }
 
@@ -32,7 +32,7 @@ public static class SchWriter
     /// <param name="ct">Cancellation token.</param>
     public static async ValueTask WriteAsync(KiCadSch sch, Stream stream, CancellationToken ct = default)
     {
-        var expr = sch.SourceTree ?? Build(sch);
+        var expr = Build(sch);
         await SExpressionWriter.WriteAsync(expr, stream, ct).ConfigureAwait(false);
     }
 
@@ -58,10 +58,6 @@ public static class SchWriter
         if (sch.Paper is not null)
             b.AddChild("paper", p => p.AddValue(sch.Paper));
 
-        // Title block
-        if (sch.TitleBlock is not null)
-            b.AddChild(sch.TitleBlock);
-
         // Lib symbols
         if (sch.LibSymbols.Count > 0)
         {
@@ -85,14 +81,6 @@ public static class SchWriter
             // Fallback: emit in type-grouped order for newly created schematics
             EmitElementsGrouped(b, sch);
         }
-
-        // Sheet instances
-        if (sch.SheetInstances is not null)
-            b.AddChild(sch.SheetInstances);
-
-        // Symbol instances
-        if (sch.SymbolInstances is not null)
-            b.AddChild(sch.SymbolInstances);
 
         // embedded_fonts is emitted at the end of the file (KiCad 9+ position)
         if (sch.EmbeddedFonts.HasValue)
@@ -153,9 +141,6 @@ public static class SchWriter
             case KiCadSchBezier bezier:
                 b.AddChild(BuildBezier(bezier));
                 break;
-            case SExpr raw:
-                b.AddChild(raw);
-                break;
         }
     }
 
@@ -191,26 +176,8 @@ public static class SchWriter
             b.AddChild(BuildSheet(sheet));
         foreach (var power in sch.PowerObjects.OfType<KiCadSchPowerObject>())
             b.AddChild(BuildPowerPort(power));
-        foreach (var image in sch.ImagesRaw)
-            b.AddChild(image);
-        foreach (var table in sch.TablesRaw)
-            b.AddChild(table);
-        foreach (var ruleArea in sch.RuleAreasRaw)
-            b.AddChild(ruleArea);
-        foreach (var netclassFlag in sch.NetclassFlagsRaw)
-            b.AddChild(netclassFlag);
-        foreach (var textBox in sch.TextBoxesRaw)
-            b.AddChild(textBox);
-        foreach (var busAlias in sch.BusAliasesRaw)
-            b.AddChild(busAlias);
-        foreach (var group in sch.GroupsRaw)
-            b.AddChild(group);
         foreach (var comp in sch.Components.OfType<KiCadSchComponent>())
             b.AddChild(BuildPlacedSymbol(comp));
-
-        // embedded_files at end
-        if (sch.EmbeddedFilesRaw is not null)
-            b.AddChild(sch.EmbeddedFilesRaw);
     }
 
     private static SExpr BuildWire(KiCadSchWire wire)
@@ -358,10 +325,6 @@ public static class SchWriter
             sb.AddChild(pb.Build());
         }
 
-        // Instances
-        if (sheet.Instances is not null)
-            sb.AddChild(sheet.Instances);
-
         return sb.Build();
     }
 
@@ -488,11 +451,6 @@ public static class SchWriter
 
     private static SExpr BuildPowerPort(KiCadSchPowerObject power)
     {
-        // If we have the raw S-expression node, re-emit it verbatim for perfect round-trip
-        if (power.RawNode is not null)
-            return power.RawNode;
-
-        // Otherwise build from model properties
         var pb = new SExpressionBuilder("power_port")
             .AddValue(power.Text ?? "");
         pb.AddChild(WriterHelper.BuildPosition(power.Location, power.Rotation));
@@ -565,10 +523,6 @@ public static class SchWriter
         {
             sb.AddChild(BuildPlacedPin(pin));
         }
-
-        // Instances
-        if (comp.InstancesRaw is not null)
-            sb.AddChild(comp.InstancesRaw);
 
         return sb.Build();
     }

@@ -448,51 +448,6 @@ public class SExpressionFormatTests
         output.Should().Be(input);
     }
 
-    [Fact]
-    public async Task RoundTrip_MinimalSymbolLibFile_SourceTreeIsStored()
-    {
-        // Tests that the SourceTree is properly stored when reading a file
-        var path = Path.Combine("TestData", "minimal.kicad_sym");
-        if (!File.Exists(path))
-            return; // Skip if test data not available
-
-        // Read the file via SymLibReader which stores SourceTree
-        var lib = await SymLibReader.ReadAsync(path);
-        lib.SourceTree.Should().NotBeNull("Reader should store the SourceTree");
-        lib.SourceTree!.Token.Should().Be("kicad_symbol_lib");
-    }
-
-    [Fact]
-    public async Task RoundTrip_MinimalSymbolLibFile_NumbersPreserved()
-    {
-        // Tests that number formatting is preserved through the SourceTree round-trip
-        var path = Path.Combine("TestData", "minimal.kicad_sym");
-        if (!File.Exists(path))
-            return; // Skip if test data not available
-
-        var originalBytes = await File.ReadAllBytesAsync(path);
-        var originalText = System.Text.Encoding.UTF8.GetString(originalBytes).Replace("\r\n", "\n");
-
-        // Read the file via SymLibReader which stores SourceTree
-        var lib = await SymLibReader.ReadAsync(path);
-
-        // Write via SymLibWriter which uses SourceTree
-        using var ms = new MemoryStream();
-        await SymLibWriter.WriteAsync(lib, ms);
-
-        ms.Position = 0;
-        var outputText = System.Text.Encoding.UTF8.GetString(ms.ToArray()).Replace("\r\n", "\n");
-
-        // Strip BOM if present
-        if (outputText.Length > 0 && outputText[0] == '\uFEFF')
-            outputText = outputText[1..];
-
-        // The output should contain all the same numbers in the same format
-        outputText.Should().Contain("1.27");
-        outputText.Should().Contain("2.032");
-        outputText.Should().Contain("0.254");
-        outputText.Should().Contain("20231120");
-    }
 
     // ── SExprNumber OriginalText property ───────────────────────────
 

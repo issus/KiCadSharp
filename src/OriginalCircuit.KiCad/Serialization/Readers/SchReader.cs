@@ -68,10 +68,7 @@ public static class SchReader
             GeneratorVersion = root.GetChild("generator_version")?.GetString(),
             EmbeddedFonts = root.GetChild("embedded_fonts") is { } ef ? ef.GetBool() : null,
             Uuid = SExpressionHelper.ParseUuid(root),
-            Paper = root.GetChild("paper")?.GetString(),
-            TitleBlock = root.GetChild("title_block"),
-            SheetInstances = root.GetChild("sheet_instances"),
-            SymbolInstances = root.GetChild("symbol_instances")
+            Paper = root.GetChild("paper")?.GetString()
         };
 
         var diagnostics = new List<KiCadDiagnostic>();
@@ -210,35 +207,13 @@ public static class SchReader
                         sch.OrderedElementsList.Add(bez);
                         break;
                     case "image":
-                        sch.ImagesRaw.Add(child);
-                        sch.OrderedElementsList.Add(child);
-                        break;
                     case "table":
-                        sch.TablesRawList.Add(child);
-                        sch.OrderedElementsList.Add(child);
-                        break;
                     case "rule_area":
-                        sch.RuleAreasRawList.Add(child);
-                        sch.OrderedElementsList.Add(child);
-                        break;
                     case "netclass_flag":
-                        sch.NetclassFlagsRawList.Add(child);
-                        sch.OrderedElementsList.Add(child);
-                        break;
                     case "bus_alias":
-                        sch.BusAliasesRawList.Add(child);
-                        sch.OrderedElementsList.Add(child);
-                        break;
                     case "text_box":
-                        sch.TextBoxesRawList.Add(child);
-                        sch.OrderedElementsList.Add(child);
-                        break;
                     case "embedded_files":
-                        sch.EmbeddedFilesRaw = child;
-                        break;
                     case "group":
-                        sch.GroupsRawList.Add(child);
-                        sch.OrderedElementsList.Add(child);
                         break;
                     case "version":
                     case "generator":
@@ -283,7 +258,6 @@ public static class SchReader
         sch.ArcList.AddRange(arcs);
         sch.BezierList.AddRange(beziers);
         sch.DiagnosticList.AddRange(diagnostics);
-        sch.SourceTree = root;
 
         return sch;
     }
@@ -465,7 +439,6 @@ public static class SchReader
             Text = node.GetString(),
             Rotation = angle,
             Uuid = SExpressionHelper.ParseUuid(node),
-            RawNode = node
         };
     }
 
@@ -502,7 +475,6 @@ public static class SchReader
         }
 
         var fieldsAutoplaced = node.GetChild("fields_autoplaced")?.GetBool() ?? false;
-        var instances = node.GetChild("instances");
 
         var sheet = new KiCadSchSheet
         {
@@ -519,7 +491,6 @@ public static class SchReader
             FillColorOnly = fillColorOnly,
             FieldsAutoplaced = fieldsAutoplaced,
             SheetProperties = sheetProperties,
-            Instances = instances,
             Uuid = SExpressionHelper.ParseUuid(node)
         };
 
@@ -674,8 +645,7 @@ public static class SchReader
         // Parse lib_name
         component.LibName = node.GetChild("lib_name")?.GetString();
 
-        // Parse instances
-        component.InstancesRaw = node.GetChild("instances");
+        // instances node is not yet deserialized into typed model
 
         // Parse properties
         var parameters = new List<KiCadSchParameter>();

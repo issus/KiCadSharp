@@ -104,13 +104,6 @@ public static class PcbReader
         }
         pcb.BoardThickness = Coord.FromMm(boardThicknessMm ?? 1.6);
 
-        // Store raw metadata subtrees for round-trip
-        pcb.SetupRaw = root.GetChild("setup");
-        pcb.LayersRaw = root.GetChild("layers");
-        pcb.PaperRaw = root.GetChild("paper");
-        pcb.TitleBlockRaw = root.GetChild("title_block");
-        pcb.GeneralRaw = root.GetChild("general");
-
         foreach (var child in root.Children)
         {
             try
@@ -186,38 +179,17 @@ public static class PcbReader
                         break;
                     case "dimension":
                     case "target":
-                        // Store raw for round-trip
-                        pcb.RawElementList.Add(child);
-                        pcb.BoardElementOrderList.Add(child);
-                        break;
                     case "group":
-                        pcb.GroupsRaw.Add(child);
-                        pcb.BoardElementOrderList.Add(child);
-                        break;
                     case "gr_text_box":
-                        pcb.GrTextBoxesRaw.Add(child);
-                        pcb.BoardElementOrderList.Add(child);
-                        break;
                     case "image":
-                        pcb.ImagesRaw.Add(child);
-                        pcb.BoardElementOrderList.Add(child);
-                        break;
                     case "gr_bbox":
-                        pcb.GrBBoxesRaw.Add(child);
-                        pcb.BoardElementOrderList.Add(child);
-                        break;
                     case "properties":
-                        pcb.PropertiesRaw = child;
                         break;
                     case "embedded_fonts":
                         pcb.EmbeddedFonts = child.GetBool();
                         break;
                     case "generated":
-                        pcb.GeneratedElements.Add(child);
-                        pcb.BoardElementOrderList.Add(child);
-                        break;
                     case "embedded_files":
-                        pcb.EmbeddedFilesRaw = child;
                         break;
                     case "version":
                     case "generator":
@@ -266,7 +238,6 @@ public static class PcbReader
         pcb.ZoneList.AddRange(zones);
         pcb.NetClassList.AddRange(netClasses);
         pcb.DiagnosticList.AddRange(diagnostics);
-        pcb.SourceTree = root;
 
         return pcb;
     }
@@ -367,22 +338,13 @@ public static class PcbReader
             via.KeepEndLayers = keepEndNode.GetBool() ?? true;
         via.Status = node.GetChild("status")?.GetInt();
 
-        // Parse teardrop (store raw for round-trip)
+        // Parse teardrop
         var teardropNode = node.GetChild("teardrops");
         if (teardropNode is null) teardropNode = node.GetChild("teardrop");
         if (teardropNode is not null)
         {
-            via.TeardropRaw = teardropNode;
             via.TeardropEnabled = true;
         }
-
-        // KiCad 9+ via tenting/covering/plugging/filling/capping (store raw for round-trip)
-        via.TentingRaw = node.GetChild("tenting");
-        via.CappingRaw = node.GetChild("capping");
-        via.CoveringRaw = node.GetChild("covering");
-        via.PluggingRaw = node.GetChild("plugging");
-        via.FillingRaw = node.GetChild("filling");
-        via.ZoneLayerConnectionsRaw = node.GetChild("zone_layer_connections");
 
         return via;
     }
@@ -498,11 +460,6 @@ public static class PcbReader
 
         // Check for hide both from effects and as a top-level symbol on the gr_text node
         text.IsHidden = isHidden || node.Values.Any(v => v is SExprSymbol s && s.Value == "hide");
-
-        // Render cache (raw preservation)
-        var renderCache = node.GetChild("render_cache");
-        if (renderCache is not null)
-            text.RenderCache = renderCache;
 
         return text;
     }
@@ -661,18 +618,16 @@ public static class PcbReader
             zone.HatchPitch = hatchNode.GetDouble(1) ?? 0;
         }
 
-        // Connect pads (store raw for complex round-trip)
+        // Connect pads
         var connectPadsNode = node.GetChild("connect_pads");
-        zone.ConnectPadsRaw = connectPadsNode;
         if (connectPadsNode is not null)
         {
             zone.ConnectPadsMode = connectPadsNode.GetString(0);
             zone.ConnectPadsClearance = Coord.FromMm(connectPadsNode.GetChild("clearance")?.GetDouble() ?? 0);
         }
 
-        // Keepout (store raw)
+        // Keepout
         var keepoutNode = node.GetChild("keepout");
-        zone.KeepoutRaw = keepoutNode;
         if (keepoutNode is not null)
         {
             zone.IsKeepout = true;
@@ -683,18 +638,8 @@ public static class PcbReader
             zone.KeepoutFootprints = keepoutNode.GetChild("footprints")?.GetString();
         }
 
-        // filled_areas_thickness (store raw for round-trip)
-        zone.FilledAreasThicknessRaw = node.GetChild("filled_areas_thickness");
-
-        // attr (store raw for round-trip)
-        zone.AttrRaw = node.GetChild("attr");
-
-        // placement (store raw for round-trip)
-        zone.PlacementRaw = node.GetChild("placement");
-
-        // Fill settings (store raw for round-trip)
+        // Fill settings
         var fillNode = node.GetChild("fill");
-        zone.FillRaw = fillNode;
         if (fillNode is not null)
         {
             zone.IsFilled = fillNode.GetBool(0) ?? false;
@@ -722,23 +667,6 @@ public static class PcbReader
             {
                 zone.Outline = pts;
             }
-            else
-            {
-                // Polygon contains arcs or other non-xy elements; store raw for round-trip
-                zone.PolygonRaw = polygon;
-            }
-        }
-
-        // Filled polygons (store raw for round-trip)
-        foreach (var filledPoly in node.GetChildren("filled_polygon"))
-        {
-            zone.FilledPolygonsRaw.Add(filledPoly);
-        }
-
-        // Fill segments (store raw for round-trip)
-        foreach (var fillSeg in node.GetChildren("fill_segments"))
-        {
-            zone.FillSegmentsRaw.Add(fillSeg);
         }
 
         return zone;

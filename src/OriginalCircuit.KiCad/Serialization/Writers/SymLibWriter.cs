@@ -20,7 +20,7 @@ public static class SymLibWriter
     /// <param name="ct">Cancellation token.</param>
     public static async ValueTask WriteAsync(KiCadSymLib lib, string path, CancellationToken ct = default)
     {
-        var expr = lib.SourceTree ?? Build(lib);
+        var expr = Build(lib);
         await SExpressionWriter.WriteAsync(expr, path, ct).ConfigureAwait(false);
     }
 
@@ -32,7 +32,7 @@ public static class SymLibWriter
     /// <param name="ct">Cancellation token.</param>
     public static async ValueTask WriteAsync(KiCadSymLib lib, Stream stream, CancellationToken ct = default)
     {
-        var expr = lib.SourceTree ?? Build(lib);
+        var expr = Build(lib);
         await SExpressionWriter.WriteAsync(expr, stream, ct).ConfigureAwait(false);
     }
 
@@ -56,9 +56,6 @@ public static class SymLibWriter
         {
             b.AddChild(BuildSymbol(comp));
         }
-
-        if (lib.EmbeddedFilesRaw != null)
-            b.AddChild(lib.EmbeddedFilesRaw);
 
         return b.Build();
     }

@@ -454,4 +454,36 @@
       )
     )
   )
+
+  ;; Zone with hatch fill to cover hatch properties
+  (zone
+    (net 2)
+    (net_name "VCC")
+    (layer "B.Cu")
+    (uuid "55555555-5555-5555-5555-555555555502")
+    (hatch full 0.5)
+    (connect_pads
+      (clearance 0.3)
+    )
+    (min_thickness 0.2)
+    (fill yes
+      (thermal_gap 0.4)
+      (thermal_bridge_width 0.4)
+      (hatch_thickness 0.3)
+      (hatch_gap 0.4)
+      (hatch_orientation 45)
+      (hatch_smoothing_level 1)
+      (hatch_smoothing_value 0.2)
+      (hatch_border_algorithm 1)
+      (hatch_min_hole_area 0.5)
+    )
+    (polygon
+      (pts
+        (xy 110 95)
+        (xy 120 95)
+        (xy 120 105)
+        (xy 110 105)
+      )
+    )
+  )
 )

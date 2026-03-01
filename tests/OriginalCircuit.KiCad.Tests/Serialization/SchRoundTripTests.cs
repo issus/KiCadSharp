@@ -241,15 +241,6 @@ public class SchRoundTripTests
         comp.FieldsAutoplaced.Should().BeTrue();
     }
 
-    [Fact]
-    public async Task PlacedSymbol_Instances_Preserved()
-    {
-        var (sch1, sch2) = await RoundTrip("roundtrip.kicad_sch");
-
-        var comp = sch2.Components.OfType<KiCadSchComponent>().First();
-        comp.InstancesRaw.Should().NotBeNull();
-    }
-
     // --- Phase F: Document-level tokens ---
 
     [Fact]
@@ -258,33 +249,6 @@ public class SchRoundTripTests
         var (sch1, sch2) = await RoundTrip("roundtrip.kicad_sch");
 
         sch2.Paper.Should().Be("A4");
-    }
-
-    [Fact]
-    public async Task DocumentLevel_TitleBlock_Preserved()
-    {
-        var (sch1, sch2) = await RoundTrip("roundtrip.kicad_sch");
-
-        sch2.TitleBlock.Should().NotBeNull();
-        sch2.TitleBlock!.Token.Should().Be("title_block");
-    }
-
-    [Fact]
-    public async Task DocumentLevel_SheetInstances_Preserved()
-    {
-        var (sch1, sch2) = await RoundTrip("roundtrip.kicad_sch");
-
-        sch2.SheetInstances.Should().NotBeNull();
-        sch2.SheetInstances!.Token.Should().Be("sheet_instances");
-    }
-
-    [Fact]
-    public async Task DocumentLevel_SymbolInstances_Preserved()
-    {
-        var (sch1, sch2) = await RoundTrip("roundtrip.kicad_sch");
-
-        sch2.SymbolInstances.Should().NotBeNull();
-        sch2.SymbolInstances!.Token.Should().Be("symbol_instances");
     }
 
     // --- Phase G: Graphical shapes ---

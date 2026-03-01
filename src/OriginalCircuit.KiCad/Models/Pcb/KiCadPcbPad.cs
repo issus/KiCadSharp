@@ -2,7 +2,6 @@ using OriginalCircuit.Eda.Enums;
 using OriginalCircuit.Eda.Models;
 using OriginalCircuit.Eda.Models.Pcb;
 using OriginalCircuit.Eda.Primitives;
-using SExpr = OriginalCircuit.KiCad.SExpression.SExpression;
 
 namespace OriginalCircuit.KiCad.Models.Pcb;
 
@@ -186,34 +185,9 @@ public sealed class KiCadPcbPad : IPcbPad
     public Coord ThermalBridgeWidth { get; set; }
 
     /// <summary>
-    /// Gets the raw rect_delta node for round-trip fidelity.
-    /// </summary>
-    public SExpr? RectDeltaRaw { get; set; }
-
-    /// <summary>
     /// Gets the UUID / tstamp.
     /// </summary>
     public string? Uuid { get; set; }
-
-    /// <summary>
-    /// Gets the raw primitives node for custom pad shapes, for round-trip fidelity.
-    /// </summary>
-    public SExpr? PrimitivesRaw { get; set; }
-
-    /// <summary>
-    /// Gets the raw options node for custom pad shapes, for round-trip fidelity.
-    /// </summary>
-    public SExpr? OptionsRaw { get; set; }
-
-    /// <summary>
-    /// Gets the raw teardrops node for pad-level teardrops, for round-trip fidelity.
-    /// </summary>
-    public SExpr? TeardropsRaw { get; set; }
-
-    /// <summary>
-    /// Gets the raw tenting node for pad-level tenting, for round-trip fidelity.
-    /// </summary>
-    public SExpr? TentingRaw { get; set; }
 
     /// <summary>
     /// Gets whether this pad is locked.

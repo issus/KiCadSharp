@@ -96,41 +96,6 @@ public sealed class KiCadPcbVia : IPcbVia
     /// </summary>
     public bool TeardropEnabled { get; set; }
 
-    /// <summary>
-    /// Gets or sets the raw teardrop S-expression subtree for round-trip fidelity.
-    /// </summary>
-    public SExpression.SExpression? TeardropRaw { get; set; }
-
-    /// <summary>
-    /// Gets or sets the raw tenting S-expression subtree for round-trip fidelity (KiCad 9+).
-    /// </summary>
-    public SExpression.SExpression? TentingRaw { get; set; }
-
-    /// <summary>
-    /// Gets or sets the raw capping S-expression subtree for round-trip fidelity (KiCad 9+).
-    /// </summary>
-    public SExpression.SExpression? CappingRaw { get; set; }
-
-    /// <summary>
-    /// Gets or sets the raw covering S-expression subtree for round-trip fidelity (KiCad 9+).
-    /// </summary>
-    public SExpression.SExpression? CoveringRaw { get; set; }
-
-    /// <summary>
-    /// Gets or sets the raw plugging S-expression subtree for round-trip fidelity (KiCad 9+).
-    /// </summary>
-    public SExpression.SExpression? PluggingRaw { get; set; }
-
-    /// <summary>
-    /// Gets or sets the raw filling S-expression subtree for round-trip fidelity (KiCad 9+).
-    /// </summary>
-    public SExpression.SExpression? FillingRaw { get; set; }
-
-    /// <summary>
-    /// Gets or sets the raw zone_layer_connections S-expression subtree for round-trip fidelity (KiCad 9+).
-    /// </summary>
-    public SExpression.SExpression? ZoneLayerConnectionsRaw { get; set; }
-
     /// <inheritdoc />
     public CoordRect Bounds
     {

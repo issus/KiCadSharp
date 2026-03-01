@@ -244,12 +244,7 @@ public static class FootprintReader
                         component.GraphicalItemOrderList.Add(fpText);
                         break;
                     case "fp_text_private":
-                        component.TextPrivateRaw.Add(child);
-                        component.GraphicalItemOrderList.Add(("fp_text_private", child));
-                        break;
                     case "fp_text_box":
-                        component.TextBoxesRaw.Add(child);
-                        component.GraphicalItemOrderList.Add(("fp_text_box", child));
                         break;
                     case "fp_line":
                         var line = ParseFpLine(child);
@@ -283,7 +278,6 @@ public static class FootprintReader
                         break;
                     case "fp_image":
                     case "image":
-                        component.ImagesRaw.Add(child);
                         break;
                     case "model":
                         component.Model3DList.Add(Parse3DModel(child));
@@ -316,28 +310,13 @@ public static class FootprintReader
                         properties.Add(SymLibReader.ParseProperty(child));
                         break;
                     case "teardrop":
-                        component.TeardropRaw = child;
-                        break;
                     case "net_tie_pad_groups":
-                        component.NetTiePadGroupsRaw = child;
-                        break;
                     case "private_layers":
-                        component.PrivateLayersRaw = child;
-                        break;
                     case "zone":
-                        component.ZonesRaw.Add(child);
-                        break;
                     case "group":
-                        component.GroupsRaw.Add(child);
-                        break;
                     case "dimension":
-                        component.DimensionsRaw.Add(child);
-                        break;
                     case "component_classes":
-                        component.ComponentClassesRaw = child;
-                        break;
                     case "embedded_files":
-                        component.EmbeddedFilesRaw = child;
                         break;
                     case "sheetname":
                         component.SheetName = child.GetString();
@@ -529,26 +508,6 @@ public static class FootprintReader
             pad.ThermalBridgeAngle = tbAngleNode.GetDouble() ?? 0;
         }
 
-        // Custom pad primitives
-        var primitivesNode = node.GetChild("primitives");
-        if (primitivesNode is not null)
-            pad.PrimitivesRaw = primitivesNode;
-
-        // Custom pad options (raw)
-        var optionsNode = node.GetChild("options");
-        if (optionsNode is not null)
-            pad.OptionsRaw = optionsNode;
-
-        // Per-pad teardrops (raw)
-        var teardropsNode = node.GetChild("teardrops");
-        if (teardropsNode is not null)
-            pad.TeardropsRaw = teardropsNode;
-
-        // Per-pad tenting (raw)
-        var tentingNode = node.GetChild("tenting");
-        if (tentingNode is not null)
-            pad.TentingRaw = tentingNode;
-
         // Pad locked flag (bare symbol format)
         foreach (var v in node.Values)
         {
@@ -579,11 +538,6 @@ public static class FootprintReader
             pad.HasKeepEndLayers = true;
             pad.KeepEndLayers = keepEndNode.GetBool() ?? true;
         }
-
-        // rect_delta (raw)
-        var rectDeltaNode = node.GetChild("rect_delta");
-        if (rectDeltaNode is not null)
-            pad.RectDeltaRaw = rectDeltaNode;
 
         pad.Uuid = SExpressionHelper.ParseUuid(node);
 
@@ -689,11 +643,6 @@ public static class FootprintReader
         text.FontColor = fontColor;
         text.Justification = justification;
         text.IsMirrored = isMirrored;
-
-        // Render cache (raw preservation)
-        var renderCache = node.GetChild("render_cache");
-        if (renderCache is not null)
-            text.RenderCache = renderCache;
 
         text.Uuid = SExpressionHelper.ParseUuid(node);
 

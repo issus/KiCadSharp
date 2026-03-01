@@ -30,7 +30,6 @@ public class ModelRoundTripVerification
 
         // Read via model
         var lib = await SymLibReader.ReadAsync(path);
-        lib.SourceTree = null; // Force model-based rebuild
 
         // Write back
         using var ms = new MemoryStream();
@@ -61,7 +60,6 @@ public class ModelRoundTripVerification
     {
         var originalText = NormalizeText(await File.ReadAllTextAsync(path));
         var sch = await SchReader.ReadAsync(path);
-        sch.SourceTree = null;
 
         using var ms = new MemoryStream();
         await SchWriter.WriteAsync(sch, ms);
@@ -123,7 +121,6 @@ public class ModelRoundTripVerification
     {
         var originalText = NormalizeText(await File.ReadAllTextAsync(path));
         var pcb = await PcbReader.ReadAsync(path);
-        pcb.SourceTree = null;
 
         using var ms = new MemoryStream();
         await PcbWriter.WriteAsync(pcb, ms);
