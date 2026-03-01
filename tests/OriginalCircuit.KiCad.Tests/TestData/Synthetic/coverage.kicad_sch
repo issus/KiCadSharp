@@ -311,6 +311,15 @@
     (data iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==)
   )
 
+  (embedded_files
+    (file
+      (name "test.png")
+      (type image)
+      (data iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJ)
+      (checksum "ABC123")
+    )
+  )
+
   (sheet_instances
     (path "/"
       (page "1")

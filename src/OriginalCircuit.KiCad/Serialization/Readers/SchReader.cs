@@ -251,8 +251,10 @@ public static class SchReader
                         sch.OrderedElementsList.Add(ba);
                         break;
                     case "text_box":
-                    case "embedded_files":
                     case "group":
+                        break;
+                    case "embedded_files":
+                        sch.EmbeddedFiles = FootprintReader.ParseEmbeddedFiles(child);
                         break;
                     case "title_block":
                         sch.TitleBlock = PcbReader.ParseTitleBlock(child);

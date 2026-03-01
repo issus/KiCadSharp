@@ -103,6 +103,10 @@ public static class SchWriter
             EmitElementsGrouped(b, sch);
         }
 
+        // Embedded files
+        if (sch.EmbeddedFiles is not null)
+            b.AddChild(PcbWriter.BuildEmbeddedFiles(sch.EmbeddedFiles));
+
         // Sheet instances (KiCad 7/8 format, before embedded_fonts)
         if (sch.SheetInstances.Count > 0)
         {
