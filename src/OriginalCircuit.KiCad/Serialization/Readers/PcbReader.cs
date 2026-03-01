@@ -1,6 +1,7 @@
 using OriginalCircuit.Eda.Enums;
 using OriginalCircuit.Eda.Models.Pcb;
 using OriginalCircuit.Eda.Primitives;
+using OriginalCircuit.KiCad.Models;
 using OriginalCircuit.KiCad.Models.Pcb;
 using OriginalCircuit.KiCad.SExpression;
 using SExpr = OriginalCircuit.KiCad.SExpression.SExpression;
@@ -95,14 +96,15 @@ public static class PcbReader
         var zones = new List<KiCadPcbZone>();
         var netClasses = new List<KiCadPcbNetClass>();
 
-        // Parse setup / board thickness
-        var setup = root.GetChild("setup");
-        double? boardThicknessMm = setup?.GetChild("board_thickness")?.GetDouble();
-        if (boardThicknessMm is null)
+        // Board thickness and legacy_teardrops are extracted from general section
+        var generalNode = root.GetChild("general");
+        pcb.BoardThickness = Coord.FromMm(generalNode?.GetChild("thickness")?.GetDouble() ?? 1.6);
+        var ltNode = generalNode?.GetChild("legacy_teardrops");
+        if (ltNode is not null)
         {
-            boardThicknessMm = root.GetChild("general")?.GetChild("thickness")?.GetDouble();
+            pcb.HasLegacyTeardrops = true;
+            pcb.LegacyTeardrops = ltNode.GetBool() ?? false;
         }
-        pcb.BoardThickness = Coord.FromMm(boardThicknessMm ?? 1.6);
 
         foreach (var child in root.Children)
         {
@@ -177,28 +179,58 @@ public static class PcbReader
                     case "net_class":
                         netClasses.Add(ParseNetClass(child));
                         break;
-                    case "dimension":
-                    case "target":
                     case "group":
-                    case "gr_text_box":
-                    case "image":
-                    case "gr_bbox":
-                    case "properties":
+                        var group = FootprintReader.ParseGroup(child);
+                        pcb.GroupList.Add(group);
+                        pcb.BoardElementOrderList.Add(group);
+                        break;
+                    case "embedded_files":
+                        pcb.EmbeddedFiles = FootprintReader.ParseEmbeddedFiles(child);
                         break;
                     case "embedded_fonts":
                         pcb.EmbeddedFonts = child.GetBool();
                         break;
+                    case "dimension":
+                        var dim = ParseDimension(child);
+                        pcb.DimensionList.Add(dim);
+                        pcb.BoardElementOrderList.Add(dim);
+                        break;
                     case "generated":
-                    case "embedded_files":
+                        var gen = ParseGeneratedElement(child);
+                        pcb.GeneratedElementList.Add(gen);
+                        pcb.BoardElementOrderList.Add(gen);
+                        break;
+                    case "target":
+                    case "gr_text_box":
+                    case "image":
+                    case "gr_bbox":
+                        // Not yet fully implemented
+                        break;
+                    case "layers":
+                        ParseLayers(child, pcb);
+                        break;
+                    case "paper":
+                        ParsePaper(child, pcb);
+                        break;
+                    case "title_block":
+                        pcb.TitleBlock = ParseTitleBlock(child);
+                        break;
+                    case "setup":
+                        pcb.Setup = ParseSetup(child);
+                        // Also set board thickness from setup
+                        if (pcb.Setup.HasBoardThickness)
+                            pcb.BoardThickness = pcb.Setup.BoardThickness;
+                        break;
+                    case "property":
+                        var propKey = child.GetString(0);
+                        var propVal = child.GetString(1);
+                        if (propKey is not null && propVal is not null)
+                            pcb.PropertyList.Add(new KeyValuePair<string, string>(propKey, propVal));
                         break;
                     case "version":
                     case "generator":
                     case "generator_version":
                     case "general":
-                    case "paper":
-                    case "title_block":
-                    case "setup":
-                    case "layers":
                         // Known tokens handled elsewhere
                         break;
                     default:
@@ -338,12 +370,89 @@ public static class PcbReader
             via.KeepEndLayers = keepEndNode.GetBool() ?? true;
         via.Status = node.GetChild("status")?.GetInt();
 
-        // Parse teardrop
-        var teardropNode = node.GetChild("teardrops");
-        if (teardropNode is null) teardropNode = node.GetChild("teardrop");
+        // Parse teardrops with full sub-properties
+        var teardropNode = node.GetChild("teardrops") ?? node.GetChild("teardrop");
         if (teardropNode is not null)
         {
             via.TeardropEnabled = true;
+            var enabledNode = teardropNode.GetChild("enabled");
+            if (enabledNode is not null)
+                via.TeardropEnabled = enabledNode.GetBool() ?? true;
+            via.TeardropBestLengthRatio = teardropNode.GetChild("best_length_ratio")?.GetDouble();
+            var maxLenNode = teardropNode.GetChild("max_length");
+            if (maxLenNode is not null)
+                via.TeardropMaxLength = Coord.FromMm(maxLenNode.GetDouble() ?? 0);
+            via.TeardropBestWidthRatio = teardropNode.GetChild("best_width_ratio")?.GetDouble();
+            var maxWidthNode = teardropNode.GetChild("max_width");
+            if (maxWidthNode is not null)
+                via.TeardropMaxWidth = Coord.FromMm(maxWidthNode.GetDouble() ?? 0);
+            via.TeardropCurvedEdges = teardropNode.GetChild("curved_edges")?.GetBool();
+            via.TeardropFilterRatio = teardropNode.GetChild("filter_ratio")?.GetDouble();
+            via.TeardropAllowTwoSegments = teardropNode.GetChild("allow_two_segments")?.GetBool();
+            via.TeardropPreferZoneConnections = teardropNode.GetChild("prefer_zone_connections")?.GetBool();
+        }
+
+        // Parse tenting
+        var tentingNode = node.GetChild("tenting");
+        if (tentingNode is not null)
+        {
+            via.HasTenting = true;
+            var frontNode = tentingNode.GetChild("front");
+            var backNode = tentingNode.GetChild("back");
+            if (frontNode is not null || backNode is not null)
+            {
+                // Child node format: (tenting (front none) (back none))
+                via.TentingIsChildNode = true;
+                if (frontNode is not null) via.TentingFrontValue = frontNode.GetString();
+                if (backNode is not null) via.TentingBackValue = backNode.GetString();
+            }
+            else
+            {
+                // Bare symbol format: (tenting front back)
+                foreach (var tv in tentingNode.Values)
+                {
+                    if (tv is SExprSymbol ts)
+                    {
+                        if (ts.Value == "front") via.TentingFront = true;
+                        else if (ts.Value == "back") via.TentingBack = true;
+                    }
+                }
+            }
+        }
+
+        // Parse capping/filling (simple value tokens)
+        via.Capping = node.GetChild("capping")?.GetString();
+        via.Filling = node.GetChild("filling")?.GetString();
+
+        // Parse covering (front/back children)
+        var coveringViaNode = node.GetChild("covering");
+        if (coveringViaNode is not null)
+        {
+            via.HasCovering = true;
+            via.CoveringFront = coveringViaNode.GetChild("front")?.GetString();
+            via.CoveringBack = coveringViaNode.GetChild("back")?.GetString();
+        }
+
+        // Parse plugging (front/back children)
+        var pluggingViaNode = node.GetChild("plugging");
+        if (pluggingViaNode is not null)
+        {
+            via.HasPlugging = true;
+            via.PluggingFront = pluggingViaNode.GetChild("front")?.GetString();
+            via.PluggingBack = pluggingViaNode.GetChild("back")?.GetString();
+        }
+
+        // Parse zone_layer_connections
+        var zlcNode = node.GetChild("zone_layer_connections");
+        if (zlcNode is not null)
+        {
+            var connections = new List<string>();
+            foreach (var v in zlcNode.Values)
+            {
+                if (v is SExprString s) connections.Add(s.Value);
+                else if (v is SExprSymbol sym) connections.Add(sym.Value);
+            }
+            via.ZoneLayerConnections = connections;
         }
 
         return via;
@@ -569,6 +678,8 @@ public static class PcbReader
 
     // -- Zone structured parser (Phase D) --
 
+    internal static KiCadPcbZone ParseZone(SExpr node) => ParseZoneStructured(node);
+
     private static KiCadPcbZone ParseZoneStructured(SExpr node)
     {
         var (zoneUuid, zoneUuidToken) = SExpressionHelper.ParseUuidWithToken(node);
@@ -622,6 +733,7 @@ public static class PcbReader
         var connectPadsNode = node.GetChild("connect_pads");
         if (connectPadsNode is not null)
         {
+            zone.HasConnectPads = true;
             zone.ConnectPadsMode = connectPadsNode.GetString(0);
             zone.ConnectPadsClearance = Coord.FromMm(connectPadsNode.GetChild("clearance")?.GetDouble() ?? 0);
         }
@@ -636,6 +748,15 @@ public static class PcbReader
             zone.KeepoutPads = keepoutNode.GetChild("pads")?.GetString();
             zone.KeepoutCopperpour = keepoutNode.GetChild("copperpour")?.GetString();
             zone.KeepoutFootprints = keepoutNode.GetChild("footprints")?.GetString();
+        }
+
+        // Placement
+        var placementNode = node.GetChild("placement");
+        if (placementNode is not null)
+        {
+            zone.HasPlacement = true;
+            zone.PlacementEnabled = placementNode.GetChild("enabled")?.GetBool() ?? false;
+            zone.PlacementSheetName = placementNode.GetChild("sheetname")?.GetString();
         }
 
         // Fill settings
@@ -656,6 +777,9 @@ public static class PcbReader
             zone.HatchSmoothingValue = fillNode.GetChild("hatch_smoothing_value")?.GetDouble() ?? 0;
             zone.HatchBorderAlgorithm = fillNode.GetChild("hatch_border_algorithm")?.GetInt() ?? 0;
             zone.HatchMinHoleArea = fillNode.GetChild("hatch_min_hole_area")?.GetDouble() ?? 0;
+
+            // Fill mode
+            zone.FillMode = fillNode.GetChild("mode")?.GetString();
         }
 
         // Zone outline polygon
@@ -667,6 +791,47 @@ public static class PcbReader
             {
                 zone.Outline = pts;
             }
+        }
+
+        // Filled areas thickness
+        var fatNode = node.GetChild("filled_areas_thickness");
+        if (fatNode is not null)
+        {
+            zone.HasFilledAreasThickness = true;
+            zone.FilledAreasThickness = fatNode.GetBool() ?? false;
+        }
+
+        // Zone attr
+        var attrZoneNode = node.GetChild("attr");
+        if (attrZoneNode is not null)
+        {
+            zone.HasAttr = true;
+            var teardropNode = attrZoneNode.GetChild("teardrop");
+            if (teardropNode is not null)
+                zone.AttrTeardropType = teardropNode.GetChild("type")?.GetString();
+        }
+
+        // Filled polygons
+        foreach (var fpChild in node.GetChildren("filled_polygon"))
+        {
+            var fp = new KiCadPcbZoneFilledPolygon
+            {
+                LayerName = fpChild.GetChild("layer")?.GetString() ?? "",
+                Points = SExpressionHelper.ParsePoints(fpChild),
+                IslandIndex = fpChild.GetChild("island")?.GetInt()
+            };
+            zone.FilledPolygons.Add(fp);
+        }
+
+        // Fill segments (legacy)
+        foreach (var fsChild in node.GetChildren("fill_segments"))
+        {
+            var fs = new KiCadPcbZoneFillSegment
+            {
+                LayerName = fsChild.GetChild("layer")?.GetString() ?? "",
+                Points = SExpressionHelper.ParsePoints(fsChild)
+            };
+            zone.FillSegments.Add(fs);
         }
 
         return zone;
@@ -722,5 +887,448 @@ public static class PcbReader
         }
 
         return nc;
+    }
+
+    private static void ParseLayers(SExpr node, KiCadPcb pcb)
+    {
+        foreach (var layerChild in node.Children)
+        {
+            // Token is the ordinal number: (0 "F.Cu" signal)
+            _ = int.TryParse(layerChild.Token, out var ordinal);
+            var canonicalName = layerChild.GetString(0) ?? "";
+            var layerType = layerChild.GetString(1) ?? "";
+            var userName = layerChild.GetString(2);
+            pcb.LayerDefinitionList.Add(new KiCadPcbLayerDefinition
+            {
+                Ordinal = ordinal,
+                CanonicalName = canonicalName,
+                LayerType = layerType,
+                UserName = userName
+            });
+        }
+    }
+
+    private static void ParsePaper(SExpr node, KiCadPcb pcb)
+    {
+        // Can be (paper "A4") or (paper "A4" portrait) or (paper 297 210) or (paper "User" 210.007 229.997)
+        var firstVal = node.GetString(0);
+        if (firstVal is not null)
+        {
+            pcb.Paper = firstVal;
+            // Check for custom dimensions after paper name (e.g. "User" 210.007 229.997)
+            var w = node.GetDouble(1);
+            var h = node.GetDouble(2);
+            if (w.HasValue && h.HasValue)
+            {
+                pcb.PaperWidth = w.Value;
+                pcb.PaperHeight = h.Value;
+            }
+            // Check for portrait
+            foreach (var v in node.Values)
+            {
+                if (v is SExprSymbol sym && sym.Value == "portrait")
+                    pcb.PaperPortrait = true;
+            }
+        }
+        else
+        {
+            // Custom dimensions without a name
+            pcb.PaperWidth = node.GetDouble(0);
+            pcb.PaperHeight = node.GetDouble(1);
+        }
+    }
+
+    internal static KiCadTitleBlock ParseTitleBlock(SExpr node)
+    {
+        var tb = new KiCadTitleBlock
+        {
+            Title = node.GetChild("title")?.GetString(),
+            Date = node.GetChild("date")?.GetString(),
+            Revision = node.GetChild("rev")?.GetString(),
+            Company = node.GetChild("company")?.GetString()
+        };
+
+        foreach (var commentNode in node.GetChildren("comment"))
+        {
+            var num = commentNode.GetInt(0);
+            var text = commentNode.GetString(1);
+            if (num.HasValue && text is not null)
+                tb.Comments[num.Value] = text;
+        }
+
+        return tb;
+    }
+
+    private static KiCadPcbSetup ParseSetup(SExpr node)
+    {
+        var setup = new KiCadPcbSetup();
+
+        var btNode = node.GetChild("board_thickness");
+        if (btNode is not null)
+        {
+            setup.BoardThickness = Coord.FromMm(btNode.GetDouble() ?? 1.6);
+            setup.HasBoardThickness = true;
+        }
+
+        var ptmNode = node.GetChild("pad_to_mask_clearance");
+        if (ptmNode is not null)
+        {
+            setup.PadToMaskClearance = Coord.FromMm(ptmNode.GetDouble() ?? 0);
+            setup.HasPadToMaskClearance = true;
+        }
+
+        var smmwNode = node.GetChild("solder_mask_min_width");
+        if (smmwNode is not null)
+        {
+            setup.SolderMaskMinWidth = Coord.FromMm(smmwNode.GetDouble() ?? 0);
+            setup.HasSolderMaskMinWidth = true;
+        }
+
+        var ptpcNode = node.GetChild("pad_to_paste_clearance");
+        if (ptpcNode is not null)
+        {
+            setup.PadToPasteClearance = Coord.FromMm(ptpcNode.GetDouble() ?? 0);
+            setup.HasPadToPasteClearance = true;
+        }
+
+        var ptpcrNode = node.GetChild("pad_to_paste_clearance_ratio");
+        if (ptpcrNode is not null)
+        {
+            setup.PadToPasteClearanceRatio = ptpcrNode.GetDouble();
+            setup.HasPadToPasteClearanceRatio = true;
+        }
+
+        var asbNode = node.GetChild("allow_soldermask_bridges_in_footprints");
+        if (asbNode is not null)
+        {
+            setup.AllowSolderMaskBridgesInFootprints = asbNode.GetBool();
+            setup.HasAllowSolderMaskBridges = true;
+        }
+
+        var tentingNode = node.GetChild("tenting");
+        if (tentingNode is not null)
+        {
+            setup.HasTenting = true;
+            // Check if child node format (front yes) vs bare symbol (front)
+            var frontChild = tentingNode.GetChild("front");
+            var backChild = tentingNode.GetChild("back");
+            if (frontChild is not null || backChild is not null)
+            {
+                setup.TentingIsChildNode = true;
+                if (frontChild is not null) setup.TentingFront = frontChild.GetBool() ?? true;
+                if (backChild is not null) setup.TentingBack = backChild.GetBool() ?? true;
+            }
+            else
+            {
+                // Bare symbol format: (tenting front back)
+                foreach (var v in tentingNode.Values)
+                {
+                    if (v is SExprSymbol sym)
+                    {
+                        if (sym.Value == "front") setup.TentingFront = true;
+                        else if (sym.Value == "back") setup.TentingBack = true;
+                    }
+                }
+            }
+        }
+
+        // Covering
+        var coveringNode = node.GetChild("covering");
+        if (coveringNode is not null)
+        {
+            setup.HasCovering = true;
+            setup.CoveringFront = coveringNode.GetChild("front")?.GetString();
+            setup.CoveringBack = coveringNode.GetChild("back")?.GetString();
+        }
+
+        // Plugging
+        var pluggingNode = node.GetChild("plugging");
+        if (pluggingNode is not null)
+        {
+            setup.HasPlugging = true;
+            setup.PluggingFront = pluggingNode.GetChild("front")?.GetString();
+            setup.PluggingBack = pluggingNode.GetChild("back")?.GetString();
+        }
+
+        // Capping
+        setup.Capping = node.GetChild("capping")?.GetString();
+
+        // Filling
+        setup.Filling = node.GetChild("filling")?.GetString();
+
+        var aoNode = node.GetChild("aux_axis_origin");
+        if (aoNode is not null)
+        {
+            setup.AuxAxisOrigin = new CoordPoint(
+                Coord.FromMm(aoNode.GetDouble(0) ?? 0),
+                Coord.FromMm(aoNode.GetDouble(1) ?? 0));
+        }
+
+        var goNode = node.GetChild("grid_origin");
+        if (goNode is not null)
+        {
+            setup.GridOrigin = new CoordPoint(
+                Coord.FromMm(goNode.GetDouble(0) ?? 0),
+                Coord.FromMm(goNode.GetDouble(1) ?? 0));
+        }
+
+        // Parse stackup
+        var stackupNode = node.GetChild("stackup");
+        if (stackupNode is not null)
+        {
+            var stackup = new KiCadPcbStackup();
+            stackup.CopperFinish = stackupNode.GetChild("copper_finish")?.GetString();
+            stackup.DielectricConstraints = stackupNode.GetChild("dielectric_constraints")?.GetBool();
+            stackup.EdgeConnector = stackupNode.GetChild("edge_connector")?.GetString();
+            stackup.CastellatedPads = stackupNode.GetChild("castellated_pads")?.GetBool();
+            stackup.EdgePlating = stackupNode.GetChild("edge_plating")?.GetBool();
+
+            foreach (var layerNode in stackupNode.GetChildren("layer"))
+            {
+                var layerName = layerNode.GetString(0) ?? "";
+                // Check for bare "addsublayer" symbol(s) after the layer name
+                var hasAddsublayer = false;
+                for (int vi = 1; vi < layerNode.Values.Count; vi++)
+                {
+                    if (layerNode.Values[vi] is SExprSymbol addSym && addSym.Value == "addsublayer")
+                    {
+                        hasAddsublayer = true;
+                        break;
+                    }
+                }
+
+                var sl = new KiCadPcbStackupLayer
+                {
+                    Name = layerName,
+                    IsDielectric = layerName.StartsWith("dielectric"),
+                    Type = layerNode.GetChild("type")?.GetString(),
+                    Color = layerNode.GetChild("color")?.GetString(),
+                    Material = layerNode.GetChild("material")?.GetString(),
+                };
+                var thickNode = layerNode.GetChild("thickness");
+                if (thickNode is not null)
+                    sl.Thickness = thickNode.GetDouble();
+                var erNode = layerNode.GetChild("epsilon_r");
+                if (erNode is not null)
+                    sl.EpsilonR = erNode.GetDouble();
+                var ltNode = layerNode.GetChild("loss_tangent");
+                if (ltNode is not null)
+                    sl.LossTangent = ltNode.GetDouble();
+
+                // Parse sublayer properties when addsublayer is present.
+                // The children list contains the main layer properties first,
+                // then sublayer properties (which repeat tokens like thickness, material, etc.).
+                if (hasAddsublayer)
+                {
+                    var seenTokens = new HashSet<string>();
+                    KiCadPcbStackupSublayer? currentSublayer = null;
+                    foreach (var child in layerNode.Children)
+                    {
+                        if (!seenTokens.Add(child.Token))
+                        {
+                            // Duplicate token — start a new sublayer if we haven't yet
+                            if (currentSublayer is null || seenTokens.Count == 1)
+                            {
+                                currentSublayer = new KiCadPcbStackupSublayer();
+                                sl.Sublayers.Add(currentSublayer);
+                                seenTokens.Clear();
+                                seenTokens.Add(child.Token);
+                            }
+                        }
+                        if (currentSublayer is not null)
+                        {
+                            switch (child.Token)
+                            {
+                                case "color": currentSublayer.Color = child.GetString(); break;
+                                case "thickness": currentSublayer.Thickness = child.GetDouble(); break;
+                                case "material": currentSublayer.Material = child.GetString(); break;
+                                case "epsilon_r": currentSublayer.EpsilonR = child.GetDouble(); break;
+                                case "loss_tangent": currentSublayer.LossTangent = child.GetDouble(); break;
+                            }
+                        }
+                    }
+                }
+
+                // Check for dielectric number in the name
+                if (sl.IsDielectric && layerName.Contains(' '))
+                {
+                    var parts = layerName.Split(' ');
+                    if (parts.Length >= 2 && int.TryParse(parts[1], out var dielNum))
+                        sl.DielectricNumber = dielNum;
+                }
+
+                stackup.Layers.Add(sl);
+            }
+
+            setup.Stackup = stackup;
+        }
+
+        // Parse pcbplotparams
+        var plotNode = node.GetChild("pcbplotparams");
+        if (plotNode is not null)
+        {
+            var plotParams = new KiCadPcbPlotParams();
+            foreach (var paramChild in plotNode.Children)
+            {
+                var key = paramChild.Token;
+                if (paramChild.Values.Count == 0)
+                {
+                    plotParams.Parameters.Add((key, "", true));
+                    continue;
+                }
+                var firstVal = paramChild.Values[0];
+                var val = firstVal switch
+                {
+                    SExprString s => s.Value,
+                    SExprSymbol s => s.Value,
+                    SExprNumber n => n.Value.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    _ => ""
+                };
+                // Numbers and symbols are bare (unquoted), strings are quoted
+                var isSymbol = firstVal is not SExprString;
+                plotParams.Parameters.Add((key, val, isSymbol));
+            }
+            setup.PlotParams = plotParams;
+        }
+
+        return setup;
+    }
+
+    private static KiCadPcbDimension ParseDimension(SExpr node)
+    {
+        var dim = new KiCadPcbDimension();
+
+        // Locked
+        dim.IsLocked = SExpressionHelper.HasSymbol(node, "locked");
+        var lockedChild = node.GetChild("locked");
+        if (lockedChild is not null)
+        {
+            dim.IsLocked = lockedChild.GetBool() ?? true;
+            dim.LockedIsChildNode = true;
+        }
+
+        dim.DimensionType = node.GetChild("type")?.GetString();
+        dim.LayerName = node.GetChild("layer")?.GetString();
+
+        var (uuid, uuidIsSymbol) = SExpressionHelper.ParseUuidEx(node);
+        dim.Uuid = uuid;
+        dim.UuidIsSymbol = uuidIsSymbol;
+
+        dim.Points = SExpressionHelper.ParsePoints(node);
+        dim.Height = node.GetChild("height")?.GetDouble();
+        dim.Orientation = node.GetChild("orientation")?.GetDouble();
+        dim.LeaderLength = node.GetChild("leader_length")?.GetDouble();
+
+        // Format
+        var fmtNode = node.GetChild("format");
+        if (fmtNode is not null)
+        {
+            dim.HasFormat = true;
+            dim.FormatPrefix = fmtNode.GetChild("prefix")?.GetString();
+            dim.FormatSuffix = fmtNode.GetChild("suffix")?.GetString();
+            dim.FormatUnits = fmtNode.GetChild("units")?.GetInt();
+            dim.FormatUnitsFormat = fmtNode.GetChild("units_format")?.GetInt();
+            dim.FormatPrecision = fmtNode.GetChild("precision")?.GetInt();
+            dim.FormatOverrideValue = fmtNode.GetChild("override_value")?.GetString();
+            dim.FormatSuppressZeroes = fmtNode.GetChild("suppress_zeroes")?.GetBool();
+        }
+
+        // Style
+        var styleNode = node.GetChild("style");
+        if (styleNode is not null)
+        {
+            dim.HasStyle = true;
+            dim.StyleThickness = Coord.FromMm(styleNode.GetChild("thickness")?.GetDouble() ?? 0);
+            dim.StyleArrowLength = styleNode.GetChild("arrow_length")?.GetDouble();
+            dim.StyleTextPositionMode = styleNode.GetChild("text_position_mode")?.GetInt();
+            dim.StyleArrowDirection = styleNode.GetChild("arrow_direction")?.GetString();
+            dim.StyleExtensionHeight = styleNode.GetChild("extension_height")?.GetDouble();
+            dim.StyleTextFrame = styleNode.GetChild("text_frame")?.GetInt();
+            dim.StyleExtensionOffset = styleNode.GetChild("extension_offset")?.GetDouble();
+            dim.StyleKeepTextAligned = styleNode.GetChild("keep_text_aligned")?.GetBool();
+        }
+
+        // Embedded gr_text
+        var grTextNode = node.GetChild("gr_text");
+        if (grTextNode is not null)
+            dim.Text = ParseGrText(grTextNode);
+
+        return dim;
+    }
+
+    private static KiCadPcbGeneratedElement ParseGeneratedElement(SExpr node)
+    {
+        var gen = new KiCadPcbGeneratedElement
+        {
+            Uuid = SExpressionHelper.ParseUuid(node),
+            GeneratedType = node.GetChild("type")?.GetString(),
+            Name = node.GetChild("name")?.GetString(),
+            LayerName = node.GetChild("layer")?.GetString()
+        };
+
+        // Base line
+        var baseLineNode = node.GetChild("base_line");
+        if (baseLineNode is not null)
+            gen.BaseLinePoints = SExpressionHelper.ParsePoints(baseLineNode);
+
+        // Coupled base line
+        var baseCoupledNode = node.GetChild("base_line_coupled");
+        if (baseCoupledNode is not null)
+            gen.BaseLineCoupledPoints = SExpressionHelper.ParsePoints(baseCoupledNode);
+
+        // Origin and end
+        var originNode = node.GetChild("origin");
+        if (originNode is not null)
+        {
+            var xyNode = originNode.GetChild("xy");
+            if (xyNode is not null)
+                gen.Origin = SExpressionHelper.ParseXY(xyNode);
+        }
+
+        var endNode = node.GetChild("end");
+        if (endNode is not null)
+        {
+            var xyNode = endNode.GetChild("xy");
+            if (xyNode is not null)
+                gen.End = SExpressionHelper.ParseXY(xyNode);
+        }
+
+        // Members
+        var membersNode = node.GetChild("members");
+        if (membersNode is not null)
+        {
+            foreach (var v in membersNode.Values)
+            {
+                if (v is SExprString s) gen.Members.Add(s.Value);
+                else if (v is SExprSymbol sym) gen.Members.Add(sym.Value);
+            }
+        }
+
+        // All other simple properties (stored as key-value tuples)
+        var knownTokens = new HashSet<string>
+        {
+            "uuid", "type", "name", "layer", "base_line", "base_line_coupled",
+            "origin", "end", "members"
+        };
+
+        foreach (var child in node.Children)
+        {
+            if (knownTokens.Contains(child.Token)) continue;
+            if (child.Values.Count > 0)
+            {
+                var firstVal = child.Values[0];
+                var val = firstVal switch
+                {
+                    SExprString s => s.Value,
+                    SExprSymbol s => s.Value,
+                    SExprNumber n => n.Value.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    _ => ""
+                };
+                var isSymbol = firstVal is not SExprString;
+                gen.Properties.Add((child.Token, val, isSymbol));
+            }
+        }
+
+        return gen;
     }
 }

@@ -1,6 +1,7 @@
 using OriginalCircuit.Eda.Enums;
 using OriginalCircuit.Eda.Models.Pcb;
 using OriginalCircuit.Eda.Primitives;
+using OriginalCircuit.KiCad.Models;
 using OriginalCircuit.KiCad.Models.Pcb;
 using OriginalCircuit.KiCad.SExpression;
 using SExpr = OriginalCircuit.KiCad.SExpression.SExpression;
@@ -54,8 +55,60 @@ public static class PcbWriter
         // General
         b.AddChild("general", gen =>
         {
-            gen.AddChild("thickness", t => t.AddMm(pcb.BoardThickness));
+            gen.AddChild("thickness", t => t.AddMm(pcb.Setup?.HasBoardThickness == true ? pcb.Setup.BoardThickness : pcb.BoardThickness));
+            if (pcb.HasLegacyTeardrops)
+                gen.AddChild("legacy_teardrops", lt => lt.AddBool(pcb.LegacyTeardrops));
         });
+
+        // Paper (comes before layers in KiCad format)
+        if (pcb.PaperWidth.HasValue && pcb.PaperHeight.HasValue)
+        {
+            b.AddChild("paper", p =>
+            {
+                if (pcb.Paper is not null) p.AddValue(pcb.Paper);
+                p.AddValue(pcb.PaperWidth.Value);
+                p.AddValue(pcb.PaperHeight.Value);
+                if (pcb.PaperPortrait) p.AddSymbol("portrait");
+            });
+        }
+        else if (pcb.Paper is not null)
+        {
+            b.AddChild("paper", p =>
+            {
+                p.AddValue(pcb.Paper);
+                if (pcb.PaperPortrait) p.AddSymbol("portrait");
+            });
+        }
+
+        // Title block (between paper and layers)
+        if (pcb.TitleBlock is not null)
+            b.AddChild(BuildTitleBlock(pcb.TitleBlock));
+
+        // Layers
+        if (pcb.LayerDefinitions.Count > 0)
+        {
+            b.AddChild("layers", layers =>
+            {
+                foreach (var def in pcb.LayerDefinitions)
+                {
+                    layers.AddChild(def.Ordinal.ToString(), lb =>
+                    {
+                        lb.AddValue(def.CanonicalName);
+                        lb.AddSymbol(def.LayerType);
+                        if (def.UserName is not null)
+                            lb.AddValue(def.UserName);
+                    });
+                }
+            });
+        }
+
+        // Setup
+        if (pcb.Setup is not null)
+            b.AddChild(BuildSetup(pcb.Setup));
+
+        // Board-level properties
+        foreach (var prop in pcb.Properties)
+            b.AddChild("property", p => { p.AddValue(prop.Key); p.AddValue(prop.Value); });
 
         // Nets
         foreach (var (num, name) in pcb.Nets)
@@ -97,6 +150,9 @@ public static class PcbWriter
                     case KiCadPcbVia via: b.AddChild(BuildVia(via)); break;
                     case KiCadPcbArc pcbArc: b.AddChild(BuildArc(pcbArc)); break;
                     case KiCadPcbZone zone: b.AddChild(BuildZoneStructured(zone)); break;
+                    case KiCadPcbGroup group: b.AddChild(BuildGroup(group)); break;
+                    case KiCadPcbDimension dim: b.AddChild(BuildDimension(dim)); break;
+                    case KiCadPcbGeneratedElement gen: b.AddChild(BuildGeneratedElement(gen)); break;
                 }
             }
 
@@ -133,11 +189,25 @@ public static class PcbWriter
                 b.AddChild(BuildZoneStructured(zone));
             foreach (var region in pcb.Regions.OfType<KiCadPcbRegion>())
                 b.AddChild(BuildZoneLegacy(region));
+            foreach (var group in pcb.Groups)
+            {
+                // Only emit if not already emitted via order list
+                if (!pcb.BoardElementOrder.Contains(group))
+                    b.AddChild(BuildGroup(group));
+            }
+            foreach (var dim in pcb.Dimensions)
+                b.AddChild(BuildDimension(dim));
+            foreach (var gen in pcb.GeneratedElements)
+                b.AddChild(BuildGeneratedElement(gen));
         }
 
         // Embedded fonts (KiCad 8+) — emit before embedded_files to match KiCad ordering
         if (pcb.EmbeddedFonts.HasValue)
             b.AddChild("embedded_fonts", ef => ef.AddBool(pcb.EmbeddedFonts.Value));
+
+        // Embedded files
+        if (pcb.EmbeddedFiles is not null)
+            b.AddChild(BuildEmbeddedFiles(pcb.EmbeddedFiles));
 
         return b.Build();
     }
@@ -204,6 +274,72 @@ public static class PcbWriter
         if (via.IsFree)
             vb.AddChild("free", f => f.AddBool(true));
 
+        // Teardrops (before net/uuid in KiCad format)
+        if (via.TeardropEnabled || via.TeardropBestLengthRatio.HasValue)
+        {
+            vb.AddChild("teardrops", td =>
+            {
+                if (via.TeardropBestLengthRatio.HasValue) td.AddChild("best_length_ratio", c => c.AddValue(via.TeardropBestLengthRatio.Value));
+                if (via.TeardropMaxLength.HasValue) td.AddChild("max_length", c => c.AddMm(via.TeardropMaxLength.Value));
+                if (via.TeardropBestWidthRatio.HasValue) td.AddChild("best_width_ratio", c => c.AddValue(via.TeardropBestWidthRatio.Value));
+                if (via.TeardropMaxWidth.HasValue) td.AddChild("max_width", c => c.AddMm(via.TeardropMaxWidth.Value));
+                if (via.TeardropCurvedEdges.HasValue) td.AddChild("curved_edges", c => c.AddBool(via.TeardropCurvedEdges.Value));
+                if (via.TeardropFilterRatio.HasValue) td.AddChild("filter_ratio", c => c.AddValue(via.TeardropFilterRatio.Value));
+                td.AddChild("enabled", c => c.AddBool(via.TeardropEnabled));
+                if (via.TeardropAllowTwoSegments.HasValue) td.AddChild("allow_two_segments", c => c.AddBool(via.TeardropAllowTwoSegments.Value));
+                if (via.TeardropPreferZoneConnections.HasValue) td.AddChild("prefer_zone_connections", c => c.AddBool(via.TeardropPreferZoneConnections.Value));
+            });
+        }
+
+        // Tenting (before net/uuid in KiCad format)
+        if (via.HasTenting)
+        {
+            if (via.TentingIsChildNode)
+            {
+                vb.AddChild("tenting", t =>
+                {
+                    if (via.TentingFrontValue is not null) t.AddChild("front", f => f.AddSymbol(via.TentingFrontValue));
+                    if (via.TentingBackValue is not null) t.AddChild("back", bk => bk.AddSymbol(via.TentingBackValue));
+                });
+            }
+            else
+            {
+                vb.AddChild("tenting", t =>
+                {
+                    if (via.TentingFront == true) t.AddSymbol("front");
+                    if (via.TentingBack == true) t.AddSymbol("back");
+                });
+            }
+        }
+
+        // Capping (before net/uuid in KiCad format)
+        if (via.Capping is not null)
+            vb.AddChild("capping", c => c.AddSymbol(via.Capping));
+
+        // Covering (before net/uuid in KiCad format)
+        if (via.HasCovering)
+        {
+            vb.AddChild("covering", c =>
+            {
+                if (via.CoveringFront is not null) c.AddChild("front", f => f.AddSymbol(via.CoveringFront));
+                if (via.CoveringBack is not null) c.AddChild("back", bk => bk.AddSymbol(via.CoveringBack));
+            });
+        }
+
+        // Plugging (before net/uuid in KiCad format)
+        if (via.HasPlugging)
+        {
+            vb.AddChild("plugging", p =>
+            {
+                if (via.PluggingFront is not null) p.AddChild("front", f => f.AddSymbol(via.PluggingFront));
+                if (via.PluggingBack is not null) p.AddChild("back", bk => bk.AddSymbol(via.PluggingBack));
+            });
+        }
+
+        // Filling (before net/uuid in KiCad format)
+        if (via.Filling is not null)
+            vb.AddChild("filling", f => f.AddSymbol(via.Filling));
+
         vb.AddChild("net", n => n.AddValue(via.Net));
 
         if (via.Uuid is not null)
@@ -211,6 +347,16 @@ public static class PcbWriter
 
         if (via.Status.HasValue)
             vb.AddChild("status", s => s.AddValue(via.Status.Value));
+
+        // Zone layer connections
+        if (via.ZoneLayerConnections is { Count: > 0 })
+        {
+            vb.AddChild("zone_layer_connections", z =>
+            {
+                foreach (var layer in via.ZoneLayerConnections)
+                    z.AddValue(layer);
+            });
+        }
 
         return vb.Build();
     }
@@ -428,7 +574,7 @@ public static class PcbWriter
 
     // -- Zone structured builder --
 
-    private static SExpr BuildZoneStructured(KiCadPcbZone zone)
+    internal static SExpr BuildZoneStructured(KiCadPcbZone zone)
     {
         var zb = new SExpressionBuilder("zone");
 
@@ -475,20 +621,38 @@ public static class PcbWriter
         if (zone.Priority > 0)
             zb.AddChild("priority", p => p.AddValue(zone.Priority));
 
+        // Attr (must come after hatch/priority, before connect_pads)
+        if (zone.HasAttr)
+        {
+            zb.AddChild("attr", a =>
+            {
+                if (zone.AttrTeardropType is not null)
+                {
+                    a.AddChild("teardrop", t =>
+                    {
+                        t.AddChild("type", ty => ty.AddSymbol(zone.AttrTeardropType));
+                    });
+                }
+            });
+        }
+
         // Connect pads
-        if (zone.ConnectPadsMode is not null || zone.ConnectPadsClearance != Coord.Zero)
+        if (zone.HasConnectPads || zone.ConnectPadsMode is not null || zone.ConnectPadsClearance != Coord.Zero)
         {
             zb.AddChild("connect_pads", cp =>
             {
                 if (zone.ConnectPadsMode is not null)
                     cp.AddSymbol(zone.ConnectPadsMode);
-                if (zone.ConnectPadsClearance != Coord.Zero)
-                    cp.AddChild("clearance", c => c.AddMm(zone.ConnectPadsClearance));
+                cp.AddChild("clearance", c => c.AddMm(zone.ConnectPadsClearance));
             });
         }
 
         if (zone.MinThickness != Coord.Zero)
             zb.AddChild("min_thickness", m => m.AddMm(zone.MinThickness));
+
+        // Filled areas thickness (must come before keepout)
+        if (zone.HasFilledAreasThickness)
+            zb.AddChild("filled_areas_thickness", f => f.AddBool(zone.FilledAreasThickness));
 
         // Keepout
         if (zone.IsKeepout)
@@ -508,11 +672,24 @@ public static class PcbWriter
             });
         }
 
+        // Placement
+        if (zone.HasPlacement)
+        {
+            zb.AddChild("placement", p =>
+            {
+                p.AddChild("enabled", e => e.AddBool(zone.PlacementEnabled));
+                if (zone.PlacementSheetName is not null)
+                    p.AddChild("sheetname", s => s.AddValue(zone.PlacementSheetName));
+            });
+        }
+
         // Fill
         {
             zb.AddChild("fill", f =>
             {
                 f.AddBool(zone.IsFilled);
+                if (zone.FillMode is not null)
+                    f.AddChild("mode", m => m.AddSymbol(zone.FillMode));
                 if (zone.ThermalGap != Coord.Zero)
                     f.AddChild("thermal_gap", t => t.AddMm(zone.ThermalGap));
                 if (zone.ThermalBridgeWidth != Coord.Zero)
@@ -551,6 +728,379 @@ public static class PcbWriter
             });
         }
 
+        // Filled polygons
+        foreach (var fp in zone.FilledPolygons)
+        {
+            zb.AddChild("filled_polygon", fpb =>
+            {
+                fpb.AddChild("layer", l => l.AddValue(fp.LayerName));
+                if (fp.IslandIndex.HasValue)
+                    fpb.AddChild("island", i => i.AddValue(fp.IslandIndex.Value));
+                fpb.AddChild(WriterHelper.BuildPoints(fp.Points));
+            });
+        }
+
+        // Fill segments (legacy)
+        foreach (var fs in zone.FillSegments)
+        {
+            zb.AddChild("fill_segments", fsb =>
+            {
+                fsb.AddChild("layer", l => l.AddValue(fs.LayerName));
+                fsb.AddChild(WriterHelper.BuildPoints(fs.Points));
+            });
+        }
+
         return zb.Build();
+    }
+
+    private static SExpr BuildSetup(KiCadPcbSetup setup)
+    {
+        var sb = new SExpressionBuilder("setup");
+
+        // Stackup
+        if (setup.Stackup is not null)
+        {
+            sb.AddChild("stackup", st =>
+            {
+                foreach (var layer in setup.Stackup.Layers)
+                {
+                    st.AddChild("layer", l =>
+                    {
+                        l.AddValue(layer.Name);
+                        if (layer.Sublayers.Count > 0) l.AddSymbol("addsublayer");
+                        if (layer.Type is not null) l.AddChild("type", t => t.AddValue(layer.Type));
+                        if (layer.Color is not null) l.AddChild("color", c => c.AddValue(layer.Color));
+                        if (layer.Thickness.HasValue) l.AddChild("thickness", t => t.AddValue(layer.Thickness.Value));
+                        if (layer.Material is not null) l.AddChild("material", m => m.AddValue(layer.Material));
+                        if (layer.EpsilonR.HasValue) l.AddChild("epsilon_r", e => e.AddValue(layer.EpsilonR.Value));
+                        if (layer.LossTangent.HasValue) l.AddChild("loss_tangent", lt => lt.AddValue(layer.LossTangent.Value));
+                        // Emit sublayer properties
+                        foreach (var sub in layer.Sublayers)
+                        {
+                            if (sub.Color is not null) l.AddChild("color", c => c.AddValue(sub.Color));
+                            if (sub.Thickness.HasValue) l.AddChild("thickness", t => t.AddValue(sub.Thickness.Value));
+                            if (sub.Material is not null) l.AddChild("material", m => m.AddValue(sub.Material));
+                            if (sub.EpsilonR.HasValue) l.AddChild("epsilon_r", e => e.AddValue(sub.EpsilonR.Value));
+                            if (sub.LossTangent.HasValue) l.AddChild("loss_tangent", lt => lt.AddValue(sub.LossTangent.Value));
+                        }
+                    });
+                }
+                if (setup.Stackup.CopperFinish is not null)
+                    st.AddChild("copper_finish", c => c.AddValue(setup.Stackup.CopperFinish));
+                if (setup.Stackup.DielectricConstraints.HasValue)
+                    st.AddChild("dielectric_constraints", d => d.AddBool(setup.Stackup.DielectricConstraints.Value));
+                if (setup.Stackup.EdgeConnector is not null)
+                    st.AddChild("edge_connector", e => e.AddSymbol(setup.Stackup.EdgeConnector));
+                if (setup.Stackup.CastellatedPads.HasValue)
+                    st.AddChild("castellated_pads", c => c.AddBool(setup.Stackup.CastellatedPads.Value));
+                if (setup.Stackup.EdgePlating.HasValue)
+                    st.AddChild("edge_plating", e => e.AddBool(setup.Stackup.EdgePlating.Value));
+            });
+        }
+
+        if (setup.HasPadToMaskClearance || setup.PadToMaskClearance != Coord.Zero)
+            sb.AddChild("pad_to_mask_clearance", c => c.AddMm(setup.PadToMaskClearance));
+        if (setup.HasSolderMaskMinWidth || setup.SolderMaskMinWidth != Coord.Zero)
+            sb.AddChild("solder_mask_min_width", c => c.AddMm(setup.SolderMaskMinWidth));
+        if (setup.HasPadToPasteClearance || setup.PadToPasteClearance != Coord.Zero)
+            sb.AddChild("pad_to_paste_clearance", c => c.AddMm(setup.PadToPasteClearance));
+        if (setup.PadToPasteClearanceRatio.HasValue)
+            sb.AddChild("pad_to_paste_clearance_ratio", c => c.AddValue(setup.PadToPasteClearanceRatio.Value));
+        if (setup.AllowSolderMaskBridgesInFootprints.HasValue)
+            sb.AddChild("allow_soldermask_bridges_in_footprints", a => a.AddBool(setup.AllowSolderMaskBridgesInFootprints.Value));
+
+        // Tenting
+        if (setup.HasTenting)
+        {
+            if (setup.TentingIsChildNode)
+            {
+                sb.AddChild("tenting", t =>
+                {
+                    if (setup.TentingFront) t.AddChild("front", f => f.AddBool(true));
+                    if (setup.TentingBack) t.AddChild("back", bk => bk.AddBool(true));
+                });
+            }
+            else
+            {
+                sb.AddChild("tenting", t =>
+                {
+                    if (setup.TentingFront) t.AddSymbol("front");
+                    if (setup.TentingBack) t.AddSymbol("back");
+                });
+            }
+        }
+
+        // Covering
+        if (setup.HasCovering)
+        {
+            sb.AddChild("covering", c =>
+            {
+                if (setup.CoveringFront is not null) c.AddChild("front", f => f.AddSymbol(setup.CoveringFront));
+                if (setup.CoveringBack is not null) c.AddChild("back", bk => bk.AddSymbol(setup.CoveringBack));
+            });
+        }
+
+        // Plugging
+        if (setup.HasPlugging)
+        {
+            sb.AddChild("plugging", p =>
+            {
+                if (setup.PluggingFront is not null) p.AddChild("front", f => f.AddSymbol(setup.PluggingFront));
+                if (setup.PluggingBack is not null) p.AddChild("back", bk => bk.AddSymbol(setup.PluggingBack));
+            });
+        }
+
+        // Capping
+        if (setup.Capping is not null)
+            sb.AddChild("capping", c => c.AddSymbol(setup.Capping));
+
+        // Filling
+        if (setup.Filling is not null)
+            sb.AddChild("filling", f => f.AddSymbol(setup.Filling));
+
+        if (setup.HasBoardThickness)
+            sb.AddChild("board_thickness", t => t.AddMm(setup.BoardThickness));
+        if (setup.AuxAxisOrigin.HasValue)
+            sb.AddChild("aux_axis_origin", a => { a.AddMm(setup.AuxAxisOrigin.Value.X); a.AddMm(setup.AuxAxisOrigin.Value.Y); });
+        if (setup.GridOrigin.HasValue)
+            sb.AddChild("grid_origin", g => { g.AddMm(setup.GridOrigin.Value.X); g.AddMm(setup.GridOrigin.Value.Y); });
+
+        // Plot params
+        if (setup.PlotParams is not null)
+        {
+            sb.AddChild("pcbplotparams", pp =>
+            {
+                foreach (var (key, value, isSymbol) in setup.PlotParams.Parameters)
+                {
+                    pp.AddChild(key, p =>
+                    {
+                        if (isSymbol)
+                            p.AddSymbol(value);
+                        else
+                            p.AddValue(value);
+                    });
+                }
+            });
+        }
+
+        return sb.Build();
+    }
+
+    internal static SExpr BuildGroup(KiCadPcbGroup group)
+    {
+        var gb = new SExpressionBuilder("group").AddValue(group.Name);
+        if (group.IsLocked && !group.LockedIsChildNode)
+            gb.AddSymbol("locked");
+        if (group.Id is not null)
+            gb.AddChild("uuid", id => id.AddValue(group.Id));
+        gb.AddChild("members", m =>
+        {
+            foreach (var member in group.Members)
+                m.AddValue(member);
+        });
+        if (group.IsLocked && group.LockedIsChildNode)
+            gb.AddChild("locked", l => l.AddBool(true));
+        return gb.Build();
+    }
+
+    internal static SExpr BuildTitleBlock(KiCadTitleBlock tb)
+    {
+        var b = new SExpressionBuilder("title_block");
+        if (tb.Title is not null) b.AddChild("title", t => t.AddValue(tb.Title));
+        if (tb.Date is not null) b.AddChild("date", d => d.AddValue(tb.Date));
+        if (tb.Revision is not null) b.AddChild("rev", r => r.AddValue(tb.Revision));
+        if (tb.Company is not null) b.AddChild("company", c => c.AddValue(tb.Company));
+        foreach (var (num, text) in tb.Comments.OrderBy(kv => kv.Key))
+            b.AddChild("comment", c => { c.AddValue(num); c.AddValue(text); });
+        return b.Build();
+    }
+
+    internal static SExpr BuildEmbeddedFiles(KiCadEmbeddedFiles ef)
+    {
+        var b = new SExpressionBuilder("embedded_files");
+        foreach (var file in ef.Files)
+        {
+            b.AddChild("file", f =>
+            {
+                f.AddChild("name", n => n.AddValue(file.Name));
+                f.AddChild("type", t => t.AddSymbol(file.Type));
+                if (file.Checksum is not null)
+                    f.AddChild("checksum", c => c.AddValue(file.Checksum));
+                if (file.Data.Length > 0)
+                    f.AddChild("data", d => d.AddValue(file.Data));
+            });
+        }
+        return b.Build();
+    }
+
+    internal static SExpr BuildDimension(KiCadPcbDimension dim)
+    {
+        var db = new SExpressionBuilder("dimension");
+
+        if (dim.IsLocked && !dim.LockedIsChildNode)
+            db.AddSymbol("locked");
+
+        if (dim.DimensionType is not null)
+            db.AddChild("type", t => t.AddSymbol(dim.DimensionType));
+
+        if (dim.LayerName is not null)
+            db.AddChild("layer", l => l.AddValue(dim.LayerName));
+
+        if (dim.Uuid is not null)
+            db.AddChild(WriterHelper.BuildUuid(dim.Uuid, dim.UuidIsSymbol));
+
+        if (dim.Points.Count > 0)
+            db.AddChild(WriterHelper.BuildPoints(dim.Points));
+
+        if (dim.Height.HasValue)
+            db.AddChild("height", h => h.AddValue(dim.Height.Value));
+
+        if (dim.Orientation.HasValue)
+            db.AddChild("orientation", o => o.AddValue(dim.Orientation.Value));
+
+        if (dim.LeaderLength.HasValue)
+            db.AddChild("leader_length", l => l.AddValue(dim.LeaderLength.Value));
+
+        // Format
+        if (dim.HasFormat)
+        {
+            db.AddChild("format", f =>
+            {
+                if (dim.FormatPrefix is not null)
+                    f.AddChild("prefix", p => p.AddValue(dim.FormatPrefix));
+                if (dim.FormatSuffix is not null)
+                    f.AddChild("suffix", s => s.AddValue(dim.FormatSuffix));
+                if (dim.FormatUnits.HasValue)
+                    f.AddChild("units", u => u.AddValue(dim.FormatUnits.Value));
+                if (dim.FormatUnitsFormat.HasValue)
+                    f.AddChild("units_format", uf => uf.AddValue(dim.FormatUnitsFormat.Value));
+                if (dim.FormatPrecision.HasValue)
+                    f.AddChild("precision", p => p.AddValue(dim.FormatPrecision.Value));
+                if (dim.FormatOverrideValue is not null)
+                    f.AddChild("override_value", ov => ov.AddValue(dim.FormatOverrideValue));
+                if (dim.FormatSuppressZeroes.HasValue)
+                    f.AddChild("suppress_zeroes", sz => sz.AddBool(dim.FormatSuppressZeroes.Value));
+            });
+        }
+
+        // Style
+        if (dim.HasStyle)
+        {
+            db.AddChild("style", s =>
+            {
+                s.AddChild("thickness", t => t.AddMm(dim.StyleThickness));
+                if (dim.StyleArrowLength.HasValue)
+                    s.AddChild("arrow_length", a => a.AddValue(dim.StyleArrowLength.Value));
+                if (dim.StyleTextPositionMode.HasValue)
+                    s.AddChild("text_position_mode", m => m.AddValue(dim.StyleTextPositionMode.Value));
+                if (dim.StyleArrowDirection is not null)
+                    s.AddChild("arrow_direction", d => d.AddSymbol(dim.StyleArrowDirection));
+                if (dim.StyleExtensionHeight.HasValue)
+                    s.AddChild("extension_height", h => h.AddValue(dim.StyleExtensionHeight.Value));
+                if (dim.StyleTextFrame.HasValue)
+                    s.AddChild("text_frame", tf => tf.AddValue(dim.StyleTextFrame.Value));
+                if (dim.StyleExtensionOffset.HasValue)
+                    s.AddChild("extension_offset", eo => eo.AddValue(dim.StyleExtensionOffset.Value));
+                if (dim.StyleKeepTextAligned.HasValue)
+                    s.AddChild("keep_text_aligned", k => k.AddBool(dim.StyleKeepTextAligned.Value));
+            });
+        }
+
+        // Embedded gr_text
+        if (dim.Text is not null)
+            db.AddChild(BuildGrText(dim.Text));
+
+        if (dim.IsLocked && dim.LockedIsChildNode)
+            db.AddChild("locked", l => l.AddBool(true));
+
+        return db.Build();
+    }
+
+    internal static SExpr BuildGeneratedElement(KiCadPcbGeneratedElement gen)
+    {
+        var gb = new SExpressionBuilder("generated");
+
+        if (gen.Uuid is not null)
+            gb.AddChild(WriterHelper.BuildUuid(gen.Uuid));
+
+        if (gen.GeneratedType is not null)
+            gb.AddChild("type", t => t.AddSymbol(gen.GeneratedType));
+
+        if (gen.Name is not null)
+            gb.AddChild("name", n => n.AddValue(gen.Name));
+
+        if (gen.LayerName is not null)
+            gb.AddChild("layer", l => l.AddValue(gen.LayerName));
+
+        // Base line
+        if (gen.BaseLinePoints.Count > 0)
+        {
+            gb.AddChild("base_line", bl =>
+            {
+                bl.AddChild(WriterHelper.BuildPoints(gen.BaseLinePoints));
+            });
+        }
+
+        // Coupled base line
+        if (gen.BaseLineCoupledPoints.Count > 0)
+        {
+            gb.AddChild("base_line_coupled", blc =>
+            {
+                blc.AddChild(WriterHelper.BuildPoints(gen.BaseLineCoupledPoints));
+            });
+        }
+
+        // Build sorted list of property-like entries including origin/end
+        var entries = new List<(string Key, Action<SExpressionBuilder> Emit)>();
+
+        foreach (var (key, value, isSymbol) in gen.Properties)
+        {
+            var k = key;
+            var v = value;
+            var isSym = isSymbol;
+            entries.Add((k, p =>
+            {
+                if (isSym)
+                    p.AddSymbol(v);
+                else
+                    p.AddValue(v);
+            }));
+        }
+
+        if (gen.End.HasValue)
+        {
+            var endVal = gen.End.Value;
+            entries.Add(("end", e =>
+            {
+                e.AddChild(WriterHelper.BuildXY(endVal));
+            }));
+        }
+
+        if (gen.Origin.HasValue)
+        {
+            var originVal = gen.Origin.Value;
+            entries.Add(("origin", o =>
+            {
+                o.AddChild(WriterHelper.BuildXY(originVal));
+            }));
+        }
+
+        // Emit all entries in alphabetical order (KiCad sorts them)
+        foreach (var (key, emit) in entries.OrderBy(e => e.Key, StringComparer.Ordinal))
+        {
+            gb.AddChild(key, emit);
+        }
+
+        // Members
+        if (gen.Members.Count > 0)
+        {
+            gb.AddChild("members", m =>
+            {
+                foreach (var member in gen.Members)
+                    m.AddValue(member);
+            });
+        }
+
+        return gb.Build();
     }
 }

@@ -1,6 +1,7 @@
 using OriginalCircuit.Eda.Enums;
 using OriginalCircuit.Eda.Models.Pcb;
 using OriginalCircuit.Eda.Primitives;
+using OriginalCircuit.KiCad.Models;
 using OriginalCircuit.KiCad.Models.Pcb;
 using OriginalCircuit.KiCad.Models.Sch;
 using OriginalCircuit.KiCad.SExpression;
@@ -309,14 +310,39 @@ public static class FootprintReader
                     case "property":
                         properties.Add(SymLibReader.ParseProperty(child));
                         break;
-                    case "teardrop":
                     case "net_tie_pad_groups":
+                        foreach (var v in child.Values)
+                        {
+                            if (v is SExprString s) component.NetTiePadGroupList.Add(s.Value);
+                        }
+                        break;
                     case "private_layers":
-                    case "zone":
+                        foreach (var v in child.Values)
+                        {
+                            if (v is SExprString s) component.PrivateLayerList.Add(s.Value);
+                            else if (v is SExprSymbol sym) component.PrivateLayerList.Add(sym.Value);
+                        }
+                        break;
                     case "group":
-                    case "dimension":
+                        component.GroupList.Add(ParseGroup(child));
+                        break;
                     case "component_classes":
+                        foreach (var classChild in child.GetChildren("class"))
+                        {
+                            var className = classChild.GetString();
+                            if (className is not null)
+                                component.ComponentClassList.Add(className);
+                        }
+                        break;
                     case "embedded_files":
+                        component.EmbeddedFiles = ParseEmbeddedFiles(child);
+                        break;
+                    case "zone":
+                        component.ZoneList.Add(PcbReader.ParseZone(child));
+                        break;
+                    case "teardrop":
+                    case "dimension":
+                        // Not yet fully implemented
                         break;
                     case "sheetname":
                         component.SheetName = child.GetString();
@@ -541,6 +567,95 @@ public static class FootprintReader
 
         pad.Uuid = SExpressionHelper.ParseUuid(node);
 
+        // Rect delta (trapezoidal pads)
+        var rectDeltaNode = node.GetChild("rect_delta");
+        if (rectDeltaNode is not null)
+        {
+            pad.RectDelta = new CoordPoint(
+                Coord.FromMm(rectDeltaNode.GetDouble(0) ?? 0),
+                Coord.FromMm(rectDeltaNode.GetDouble(1) ?? 0));
+        }
+
+        // Custom pad options
+        var optionsNode = node.GetChild("options");
+        if (optionsNode is not null)
+        {
+            pad.CustomClearanceType = optionsNode.GetChild("clearance")?.GetString();
+            pad.CustomAnchorShape = optionsNode.GetChild("anchor")?.GetString();
+        }
+
+        // Custom pad primitives
+        var primitivesNode = node.GetChild("primitives");
+        if (primitivesNode is not null)
+        {
+            foreach (var primChild in primitivesNode.Children)
+            {
+                switch (primChild.Token)
+                {
+                    case "gr_line":
+                        pad.Primitives.Add(ParseFpLine(primChild));
+                        break;
+                    case "gr_circle":
+                        pad.Primitives.Add(ParseFpCircle(primChild));
+                        break;
+                    case "gr_rect":
+                        pad.Primitives.Add(ParseFpRect(primChild));
+                        break;
+                    case "gr_arc":
+                        pad.Primitives.Add(ParseFpArc(primChild));
+                        break;
+                    case "gr_poly":
+                        pad.Primitives.Add(ParseFpPoly(primChild));
+                        break;
+                    case "gr_curve":
+                        pad.Primitives.Add(ParseFpCurve(primChild));
+                        break;
+                }
+            }
+        }
+
+        // Teardrops
+        var padTeardropNode = node.GetChild("teardrops") ?? node.GetChild("teardrop");
+        if (padTeardropNode is not null)
+        {
+            pad.HasTeardrops = true;
+            pad.TeardropEnabled = padTeardropNode.GetChild("enabled")?.GetBool();
+            pad.TeardropBestLengthRatio = padTeardropNode.GetChild("best_length_ratio")?.GetDouble();
+            var maxLenNode = padTeardropNode.GetChild("max_length");
+            if (maxLenNode is not null)
+                pad.TeardropMaxLength = Coord.FromMm(maxLenNode.GetDouble() ?? 0);
+            pad.TeardropBestWidthRatio = padTeardropNode.GetChild("best_width_ratio")?.GetDouble();
+            var maxWidthNode = padTeardropNode.GetChild("max_width");
+            if (maxWidthNode is not null)
+                pad.TeardropMaxWidth = Coord.FromMm(maxWidthNode.GetDouble() ?? 0);
+            pad.TeardropCurvedEdges = padTeardropNode.GetChild("curved_edges")?.GetBool();
+            pad.TeardropFilterRatio = padTeardropNode.GetChild("filter_ratio")?.GetDouble();
+            pad.TeardropAllowTwoSegments = padTeardropNode.GetChild("allow_two_segments")?.GetBool();
+            pad.TeardropPreferZoneConnections = padTeardropNode.GetChild("prefer_zone_connections")?.GetBool();
+        }
+
+        // Tenting
+        var padTentingNode = node.GetChild("tenting");
+        if (padTentingNode is not null)
+        {
+            pad.HasTenting = true;
+            // Check for child node format: (tenting (front none) (back none))
+            pad.TentingFront = padTentingNode.GetChild("front")?.GetString();
+            pad.TentingBack = padTentingNode.GetChild("back")?.GetString();
+            // Also check for bare symbols: (tenting front back)
+            if (pad.TentingFront is null && pad.TentingBack is null)
+            {
+                foreach (var v in padTentingNode.Values)
+                {
+                    if (v is SExprSymbol sym)
+                    {
+                        if (sym.Value == "front") pad.TentingFront = "front";
+                        else if (sym.Value == "back") pad.TentingBack = "back";
+                    }
+                }
+            }
+        }
+
         return pad;
     }
 
@@ -645,6 +760,28 @@ public static class FootprintReader
         text.IsMirrored = isMirrored;
 
         text.Uuid = SExpressionHelper.ParseUuid(node);
+
+        // Parse render_cache
+        var renderCacheNode = node.GetChild("render_cache");
+        if (renderCacheNode is not null)
+        {
+            var rc = new KiCadTextRenderCache
+            {
+                FontName = renderCacheNode.GetString(0),
+            };
+            // Second value is the font size/rotation
+            var sizeVal = renderCacheNode.GetDouble(1);
+            if (sizeVal.HasValue)
+                rc.FontSize = new CoordPoint(Coord.FromMm(sizeVal.Value), Coord.Zero);
+
+            foreach (var polyNode in renderCacheNode.GetChildren("polygon"))
+            {
+                var pts = SExpressionHelper.ParsePoints(polyNode);
+                if (pts.Count > 0)
+                    rc.Polygons.Add(pts);
+            }
+            text.RenderCache = rc;
+        }
 
         return text;
     }
@@ -914,5 +1051,53 @@ public static class FootprintReader
         }
 
         return model;
+    }
+
+    internal static KiCadPcbGroup ParseGroup(SExpr node)
+    {
+        var group = new KiCadPcbGroup
+        {
+            Name = node.GetString() ?? "",
+            Id = SExpressionHelper.ParseUuid(node)
+        };
+
+        // Parse locked
+        group.IsLocked = SExpressionHelper.HasSymbol(node, "locked");
+        var lockedChild = node.GetChild("locked");
+        if (lockedChild is not null)
+        {
+            group.IsLocked = lockedChild.GetBool() ?? true;
+            group.LockedIsChildNode = true;
+        }
+
+        // Parse members
+        var membersNode = node.GetChild("members");
+        if (membersNode is not null)
+        {
+            foreach (var v in membersNode.Values)
+            {
+                if (v is SExprString s) group.Members.Add(s.Value);
+                else if (v is SExprSymbol sym) group.Members.Add(sym.Value);
+            }
+        }
+
+        return group;
+    }
+
+    internal static KiCadEmbeddedFiles ParseEmbeddedFiles(SExpr node)
+    {
+        var embedded = new KiCadEmbeddedFiles();
+        foreach (var fileNode in node.GetChildren("file"))
+        {
+            var file = new KiCadEmbeddedFile
+            {
+                Name = fileNode.GetChild("name")?.GetString() ?? "",
+                Type = fileNode.GetChild("type")?.GetString() ?? "",
+                Checksum = fileNode.GetChild("checksum")?.GetString(),
+                Data = fileNode.GetChild("data")?.GetString() ?? ""
+            };
+            embedded.Files.Add(file);
+        }
+        return embedded;
     }
 }

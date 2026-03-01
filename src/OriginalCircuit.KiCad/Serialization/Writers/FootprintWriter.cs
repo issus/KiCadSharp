@@ -190,9 +190,51 @@ public static class FootprintWriter
             b.AddChild(BuildPad(pad, uuidTok, uuidSym));
         }
 
+        // Net tie pad groups
+        if (component.NetTiePadGroups.Count > 0)
+        {
+            b.AddChild("net_tie_pad_groups", n =>
+            {
+                foreach (var group in component.NetTiePadGroups)
+                    n.AddValue(group);
+            });
+        }
+
+        // Private layers
+        if (component.PrivateLayers.Count > 0)
+        {
+            b.AddChild("private_layers", p =>
+            {
+                foreach (var layer in component.PrivateLayers)
+                    p.AddValue(layer);
+            });
+        }
+
+        // Zones
+        foreach (var zone in component.Zones)
+            b.AddChild(PcbWriter.BuildZoneStructured(zone));
+
+        // Groups
+        foreach (var group in component.Groups)
+            b.AddChild(PcbWriter.BuildGroup(group));
+
+        // Component classes (KiCad 9+)
+        if (component.ComponentClasses.Count > 0)
+        {
+            b.AddChild("component_classes", cc =>
+            {
+                foreach (var cls in component.ComponentClasses)
+                    cc.AddChild("class", c => c.AddValue(cls));
+            });
+        }
+
         // Embedded fonts (KiCad 8+)
         if (component.EmbeddedFonts.HasValue)
             b.AddChild("embedded_fonts", e => e.AddBool(component.EmbeddedFonts.Value));
+
+        // Embedded files
+        if (component.EmbeddedFiles is not null)
+            b.AddChild(PcbWriter.BuildEmbeddedFiles(component.EmbeddedFiles));
 
         // 3D models (prefer the list, fall back to single model)
         if (component.Models3D.Count > 0)
@@ -414,6 +456,10 @@ public static class FootprintWriter
             s.AddMm(pad.Size.Y);
         });
 
+        // Rect delta (trapezoidal pads) — must come after size, before drill
+        if (pad.RectDelta.HasValue)
+            pb.AddChild("rect_delta", r => { r.AddMm(pad.RectDelta.Value.X); r.AddMm(pad.RectDelta.Value.Y); });
+
         if (pad.HoleSize != Coord.Zero)
         {
             if (pad.HoleType == PadHoleType.Slot)
@@ -515,8 +561,79 @@ public static class FootprintWriter
         if (pad.ThermalGap != Coord.Zero)
             pb.AddChild("thermal_gap", c => c.AddMm(pad.ThermalGap));
 
+        // Custom pad options
+        if (pad.CustomClearanceType is not null || pad.CustomAnchorShape is not null)
+        {
+            pb.AddChild("options", o =>
+            {
+                if (pad.CustomClearanceType is not null)
+                    o.AddChild("clearance", c => c.AddSymbol(pad.CustomClearanceType));
+                if (pad.CustomAnchorShape is not null)
+                    o.AddChild("anchor", a => a.AddSymbol(pad.CustomAnchorShape));
+            });
+        }
+
+        // Custom pad primitives
+        if (pad.Primitives.Count > 0)
+        {
+            pb.AddChild("primitives", p =>
+            {
+                foreach (var prim in pad.Primitives)
+                {
+                    switch (prim)
+                    {
+                        case KiCadPcbTrack track: p.AddChild(BuildGrLine(track, uuidToken, uuidIsSymbol)); break;
+                        case KiCadPcbRectangle rect: p.AddChild(BuildGrRect(rect, uuidToken, uuidIsSymbol)); break;
+                        case KiCadPcbCircle circle: p.AddChild(BuildGrCircle(circle, uuidToken, uuidIsSymbol)); break;
+                        case KiCadPcbArc arc: p.AddChild(BuildGrArc(arc, uuidToken, uuidIsSymbol)); break;
+                        case KiCadPcbPolygon poly: p.AddChild(BuildGrPoly(poly, uuidToken, uuidIsSymbol)); break;
+                        case KiCadPcbCurve curve: p.AddChild(BuildGrCurve(curve, uuidToken, uuidIsSymbol)); break;
+                    }
+                }
+            });
+        }
+
         if (pad.IsLocked && pad.LockedIsChildNode)
             pb.AddChild("locked", l => l.AddBool(true));
+
+        // Tenting
+        if (pad.HasTenting)
+        {
+            pb.AddChild("tenting", t =>
+            {
+                if (pad.TentingFront is not null)
+                {
+                    if (pad.TentingFront == "yes")
+                        t.AddSymbol("front");
+                    else
+                        t.AddChild("front", f => f.AddSymbol(pad.TentingFront));
+                }
+                if (pad.TentingBack is not null)
+                {
+                    if (pad.TentingBack == "yes")
+                        t.AddSymbol("back");
+                    else
+                        t.AddChild("back", bk => bk.AddSymbol(pad.TentingBack));
+                }
+            });
+        }
+
+        // Teardrops
+        if (pad.HasTeardrops)
+        {
+            pb.AddChild("teardrops", td =>
+            {
+                if (pad.TeardropBestLengthRatio.HasValue) td.AddChild("best_length_ratio", c => c.AddValue(pad.TeardropBestLengthRatio.Value));
+                if (pad.TeardropMaxLength.HasValue) td.AddChild("max_length", c => c.AddMm(pad.TeardropMaxLength.Value));
+                if (pad.TeardropBestWidthRatio.HasValue) td.AddChild("best_width_ratio", c => c.AddValue(pad.TeardropBestWidthRatio.Value));
+                if (pad.TeardropMaxWidth.HasValue) td.AddChild("max_width", c => c.AddMm(pad.TeardropMaxWidth.Value));
+                if (pad.TeardropCurvedEdges.HasValue) td.AddChild("curved_edges", c => c.AddBool(pad.TeardropCurvedEdges.Value));
+                if (pad.TeardropFilterRatio.HasValue) td.AddChild("filter_ratio", c => c.AddValue(pad.TeardropFilterRatio.Value));
+                if (pad.TeardropEnabled.HasValue) td.AddChild("enabled", c => c.AddBool(pad.TeardropEnabled.Value));
+                if (pad.TeardropAllowTwoSegments.HasValue) td.AddChild("allow_two_segments", c => c.AddBool(pad.TeardropAllowTwoSegments.Value));
+                if (pad.TeardropPreferZoneConnections.HasValue) td.AddChild("prefer_zone_connections", c => c.AddBool(pad.TeardropPreferZoneConnections.Value));
+            });
+        }
 
         if (pad.Uuid is not null)
             pb.AddChild(WriterHelper.BuildUuidToken(pad.Uuid, uuidToken, uuidIsSymbol));
@@ -568,6 +685,96 @@ public static class FootprintWriter
         if (curve.Uuid is not null)
             cb.AddChild(WriterHelper.BuildUuidToken(curve.Uuid, uuidToken, uuidIsSymbol));
 
+        return cb.Build();
+    }
+
+    // Gr_* builders for custom pad primitives — use legacy (width N) format, not (stroke ...)
+    private static SExpr BuildGrLine(KiCadPcbTrack track, string uuidToken = "uuid", bool uuidIsSymbol = false)
+    {
+        var lb = new SExpressionBuilder("gr_line");
+        lb.AddChild("start", s => { s.AddMm(track.Start.X); s.AddMm(track.Start.Y); })
+            .AddChild("end", e => { e.AddMm(track.End.X); e.AddMm(track.End.Y); })
+            .AddChild("width", w => w.AddMm(track.Width));
+        if (track.LayerName is not null)
+            lb.AddChild("layer", l => l.AddValue(track.LayerName));
+        if (track.Uuid is not null)
+            lb.AddChild(WriterHelper.BuildUuidToken(track.Uuid, uuidToken, uuidIsSymbol));
+        return lb.Build();
+    }
+
+    private static SExpr BuildGrRect(KiCadPcbRectangle rect, string uuidToken = "uuid", bool uuidIsSymbol = false)
+    {
+        var rb = new SExpressionBuilder("gr_rect");
+        rb.AddChild("start", s => { s.AddMm(rect.Start.X); s.AddMm(rect.Start.Y); })
+            .AddChild("end", e => { e.AddMm(rect.End.X); e.AddMm(rect.End.Y); })
+            .AddChild("width", w => w.AddMm(rect.Width));
+        if (rect.UsePcbFillFormat)
+            rb.AddChild(WriterHelper.BuildPcbFill(rect.FillType));
+        else if (rect.FillType != SchFillType.None)
+            rb.AddChild(WriterHelper.BuildFill(rect.FillType, rect.FillColor));
+        if (rect.LayerName is not null)
+            rb.AddChild("layer", l => l.AddValue(rect.LayerName));
+        if (rect.Uuid is not null)
+            rb.AddChild(WriterHelper.BuildUuidToken(rect.Uuid, uuidToken, uuidIsSymbol));
+        return rb.Build();
+    }
+
+    private static SExpr BuildGrCircle(KiCadPcbCircle circle, string uuidToken = "uuid", bool uuidIsSymbol = false)
+    {
+        var cb = new SExpressionBuilder("gr_circle");
+        cb.AddChild("center", c => { c.AddMm(circle.Center.X); c.AddMm(circle.Center.Y); })
+            .AddChild("end", e => { e.AddMm(circle.End.X); e.AddMm(circle.End.Y); })
+            .AddChild("width", w => w.AddMm(circle.Width));
+        if (circle.UsePcbFillFormat)
+            cb.AddChild(WriterHelper.BuildPcbFill(circle.FillType));
+        else if (circle.FillType != SchFillType.None)
+            cb.AddChild(WriterHelper.BuildFill(circle.FillType, circle.FillColor));
+        if (circle.LayerName is not null)
+            cb.AddChild("layer", l => l.AddValue(circle.LayerName));
+        if (circle.Uuid is not null)
+            cb.AddChild(WriterHelper.BuildUuidToken(circle.Uuid, uuidToken, uuidIsSymbol));
+        return cb.Build();
+    }
+
+    private static SExpr BuildGrArc(KiCadPcbArc arc, string uuidToken = "uuid", bool uuidIsSymbol = false)
+    {
+        var ab = new SExpressionBuilder("gr_arc");
+        ab.AddChild("start", s => { s.AddMm(arc.ArcStart.X); s.AddMm(arc.ArcStart.Y); })
+            .AddChild("mid", m => { m.AddMm(arc.ArcMid.X); m.AddMm(arc.ArcMid.Y); })
+            .AddChild("end", e => { e.AddMm(arc.ArcEnd.X); e.AddMm(arc.ArcEnd.Y); })
+            .AddChild("width", w => w.AddMm(arc.Width));
+        if (arc.LayerName is not null)
+            ab.AddChild("layer", l => l.AddValue(arc.LayerName));
+        if (arc.Uuid is not null)
+            ab.AddChild(WriterHelper.BuildUuidToken(arc.Uuid, uuidToken, uuidIsSymbol));
+        return ab.Build();
+    }
+
+    private static SExpr BuildGrPoly(KiCadPcbPolygon poly, string uuidToken = "uuid", bool uuidIsSymbol = false)
+    {
+        var pb = new SExpressionBuilder("gr_poly");
+        pb.AddChild(WriterHelper.BuildPoints(poly.Points));
+        pb.AddChild("width", w => w.AddMm(poly.Width));
+        if (poly.UsePcbFillFormat)
+            pb.AddChild(WriterHelper.BuildPcbFill(poly.FillType));
+        else if (poly.FillType != SchFillType.None)
+            pb.AddChild(WriterHelper.BuildFill(poly.FillType, poly.FillColor));
+        if (poly.LayerName is not null)
+            pb.AddChild("layer", l => l.AddValue(poly.LayerName));
+        if (poly.Uuid is not null)
+            pb.AddChild(WriterHelper.BuildUuidToken(poly.Uuid, uuidToken, uuidIsSymbol));
+        return pb.Build();
+    }
+
+    private static SExpr BuildGrCurve(KiCadPcbCurve curve, string uuidToken = "uuid", bool uuidIsSymbol = false)
+    {
+        var cb = new SExpressionBuilder("gr_curve");
+        cb.AddChild(WriterHelper.BuildPoints(curve.Points));
+        cb.AddChild("width", w => w.AddMm(curve.Width));
+        if (curve.LayerName is not null)
+            cb.AddChild("layer", l => l.AddValue(curve.LayerName));
+        if (curve.Uuid is not null)
+            cb.AddChild(WriterHelper.BuildUuidToken(curve.Uuid, uuidToken, uuidIsSymbol));
         return cb.Build();
     }
 
