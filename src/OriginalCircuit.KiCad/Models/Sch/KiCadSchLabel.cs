@@ -119,6 +119,11 @@ public sealed class KiCadSchLabel : ISchLabel
     public bool ExcludeFromSim { get; set; }
 
     /// <summary>
+    /// Gets or sets the line spacing multiplier.
+    /// </summary>
+    public double? LineSpacing { get; set; }
+
+    /// <summary>
     /// Gets the UUID of the text label.
     /// </summary>
     public string? Uuid { get; set; }

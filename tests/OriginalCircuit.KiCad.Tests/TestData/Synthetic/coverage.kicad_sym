@@ -142,6 +142,7 @@
           )
           (hide yes)
           (justify mirror)
+          (line_spacing 1.2)
         )
         (uuid "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaa005")
       )

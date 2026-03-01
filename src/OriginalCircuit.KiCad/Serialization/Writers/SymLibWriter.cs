@@ -314,6 +314,10 @@ public static class SymLibWriter
             });
         }
 
+        // UUID (KiCad 9+)
+        if (pin.Uuid is not null)
+            b.AddChild(WriterHelper.BuildUuid(pin.Uuid));
+
         return b.Build();
     }
 
@@ -392,14 +396,18 @@ public static class SymLibWriter
         var fontH = label.FontSizeHeight != Coord.Zero ? label.FontSizeHeight : WriterHelper.DefaultTextSize;
         var fontW = label.FontSizeWidth != Coord.Zero ? label.FontSizeWidth : WriterHelper.DefaultTextSize;
         var b = new SExpressionBuilder("text")
-            .AddValue(label.Text)
-            .AddChild(WriterHelper.BuildPosition(label.Location, label.Rotation));
+            .AddValue(label.Text);
+
+        if (label.ExcludeFromSimPresent)
+            b.AddChild("exclude_from_sim", e => e.AddBool(label.ExcludeFromSim));
+
+        b.AddChild(WriterHelper.BuildPosition(label.Location, label.Rotation));
 
         // Write stroke only if it was present in the source file
         if (label.HasStroke)
             b.AddChild(WriterHelper.BuildStroke(label.StrokeWidth, label.StrokeLineStyle, label.StrokeColor));
 
-        b.AddChild(WriterHelper.BuildTextEffects(fontH, fontW, label.Justification, label.IsHidden, label.IsMirrored, label.IsBold, label.IsItalic, fontFace: label.FontFace, fontThickness: label.FontThickness, fontColor: label.FontColor, href: label.Href, boldIsSymbol: label.BoldIsSymbol, italicIsSymbol: label.ItalicIsSymbol));
+        b.AddChild(WriterHelper.BuildTextEffects(fontH, fontW, label.Justification, label.IsHidden, label.IsMirrored, label.IsBold, label.IsItalic, fontFace: label.FontFace, fontThickness: label.FontThickness, fontColor: label.FontColor, href: label.Href, boldIsSymbol: label.BoldIsSymbol, italicIsSymbol: label.ItalicIsSymbol, lineSpacing: label.LineSpacing));
 
         if (label.Uuid != null)
             b.AddChild(WriterHelper.BuildUuid(label.Uuid, label.UuidIsSymbol));

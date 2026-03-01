@@ -202,7 +202,7 @@ internal static class WriterHelper
     /// <summary>
     /// Builds an <c>(effects (font (size H W)))</c> node.
     /// </summary>
-    public static SExpr BuildTextEffects(Coord fontH, Coord fontW, TextJustification justification = TextJustification.MiddleCenter, bool hide = false, bool isMirrored = false, bool isBold = false, bool isItalic = false, string? fontFace = null, Coord fontThickness = default, EdaColor fontColor = default, string? href = null, bool boldIsSymbol = false, bool italicIsSymbol = false)
+    public static SExpr BuildTextEffects(Coord fontH, Coord fontW, TextJustification justification = TextJustification.MiddleCenter, bool hide = false, bool isMirrored = false, bool isBold = false, bool isItalic = false, string? fontFace = null, Coord fontThickness = default, EdaColor fontColor = default, string? href = null, bool boldIsSymbol = false, bool italicIsSymbol = false, double? lineSpacing = null)
     {
         var b = new SExpressionBuilder("effects")
             .AddChild("font", f =>
@@ -271,6 +271,9 @@ internal static class WriterHelper
 
         if (href is not null)
             b.AddChild("href", h => h.AddValue(href));
+
+        if (lineSpacing.HasValue)
+            b.AddChild("line_spacing", ls => ls.AddValue(lineSpacing.Value));
 
         if (hide)
             b.AddChild("hide", h => h.AddBool(true));

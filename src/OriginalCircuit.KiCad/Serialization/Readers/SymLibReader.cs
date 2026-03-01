@@ -380,6 +380,9 @@ public static class SymLibReader
             });
         }
 
+        // Parse UUID (KiCad 9+)
+        pin.Uuid = SExpressionHelper.ParseUuid(node);
+
         return pin;
     }
 
@@ -485,6 +488,8 @@ public static class SymLibReader
         var (fillType, isFilled, fillColor) = SExpressionHelper.ParseFill(node);
         var (uuid, uuidIsSymbol) = SExpressionHelper.ParseUuidEx(node);
 
+        var hasFill = node.GetChild("fill") is not null;
+
         if (isFilled && pts.Count >= 3)
         {
             polygons.Add(new KiCadSchPolygon
@@ -512,6 +517,7 @@ public static class SymLibReader
                 HasStrokeColor = hasColor,
                 FillType = fillType,
                 FillColor = fillColor,
+                HasFill = hasFill,
                 Uuid = uuid,
                 UuidIsSymbol = uuidIsSymbol
             });
@@ -572,6 +578,7 @@ public static class SymLibReader
             HasStrokeColor = hasColor,
             FillType = fillType,
             FillColor = fillColor,
+            HasFill = node.GetChild("fill") is not null,
             ArcStart = start,
             ArcMid = mid,
             ArcEnd = end,
@@ -600,6 +607,7 @@ public static class SymLibReader
             HasStrokeColor = hasColor,
             IsFilled = isFilled,
             FillType = fillType,
+            HasFill = node.GetChild("fill") is not null,
             Uuid = uuid,
             UuidIsSymbol = uuidIsSymbol
         };
@@ -621,6 +629,7 @@ public static class SymLibReader
             HasStrokeColor = hasColor,
             FillType = fillType,
             FillColor = fillColor,
+            HasFill = node.GetChild("fill") is not null,
             Uuid = uuid,
             UuidIsSymbol = uuidIsSymbol
         };
@@ -637,10 +646,16 @@ public static class SymLibReader
         var effectsNode = node.GetChild("effects");
         var hrefNode = effectsNode?.GetChild("href");
 
+        // Parse exclude_from_sim
+        var efsNode = node.GetChild("exclude_from_sim");
+
+        // Parse line_spacing from effects
+        var lineSpacingNode = effectsNode?.GetChild("line_spacing");
+
         // Parse UUID
         var (uuid, uuidIsSymbol) = SExpressionHelper.ParseUuidEx(node);
 
-        return new KiCadSchLabel
+        var label = new KiCadSchLabel
         {
             Text = node.GetString() ?? "",
             Location = loc,
@@ -665,5 +680,16 @@ public static class SymLibReader
             Uuid = uuid,
             UuidIsSymbol = uuidIsSymbol
         };
+
+        if (efsNode is not null)
+        {
+            label.ExcludeFromSimPresent = true;
+            label.ExcludeFromSim = efsNode.GetBool() ?? false;
+        }
+
+        if (lineSpacingNode is not null)
+            label.LineSpacing = lineSpacingNode.GetDouble();
+
+        return label;
     }
 }
