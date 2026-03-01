@@ -251,7 +251,14 @@ public static class SchReader
                         sch.OrderedElementsList.Add(ba);
                         break;
                     case "text_box":
+                        var schTextBox = ParseSchTextBox(child);
+                        sch.TextBoxList.Add(schTextBox);
+                        sch.OrderedElementsList.Add(schTextBox);
+                        break;
                     case "group":
+                        var schGroup = ParseSchGroup(child);
+                        sch.GroupList.Add(schGroup);
+                        sch.OrderedElementsList.Add(schGroup);
                         break;
                     case "embedded_files":
                         sch.EmbeddedFiles = FootprintReader.ParseEmbeddedFiles(child);
@@ -1251,5 +1258,109 @@ public static class SchReader
             }
         }
         return ba;
+    }
+
+    private static KiCadSchTextBox ParseSchTextBox(SExpr node)
+    {
+        var tb = new KiCadSchTextBox
+        {
+            Text = node.GetString() ?? ""
+        };
+
+        var efsNode = node.GetChild("exclude_from_sim");
+        if (efsNode is not null)
+        {
+            tb.ExcludeFromSimPresent = true;
+            tb.ExcludeFromSim = efsNode.GetBool() ?? false;
+        }
+
+        var atNode = node.GetChild("at");
+        if (atNode is not null)
+        {
+            tb.Location = SExpressionHelper.ParseXY(atNode);
+            tb.Rotation = atNode.GetDouble(2) ?? 0;
+            tb.PositionIncludesAngle = atNode.Values.Count >= 3;
+        }
+
+        var sizeNode = node.GetChild("size");
+        if (sizeNode is not null)
+        {
+            var w = Coord.FromMm(sizeNode.GetDouble(0) ?? 0);
+            var h = Coord.FromMm(sizeNode.GetDouble(1) ?? 0);
+            tb.Size = new CoordPoint(w, h);
+        }
+
+        var strokeNode = node.GetChild("stroke");
+        if (strokeNode is not null)
+        {
+            tb.HasStroke = true;
+            tb.StrokeWidth = Coord.FromMm(strokeNode.GetChild("width")?.GetDouble() ?? 0);
+            tb.StrokeType = strokeNode.GetChild("type")?.GetString();
+            var colorNode = strokeNode.GetChild("color");
+            if (colorNode is not null)
+            {
+                tb.StrokeColor = SExpressionHelper.ParseColor(colorNode);
+            }
+        }
+
+        var fillNode = node.GetChild("fill");
+        if (fillNode is not null)
+        {
+            tb.FillType = fillNode.GetChild("type")?.GetString();
+            var colorNode = fillNode.GetChild("color");
+            if (colorNode is not null)
+                tb.FillColor = SExpressionHelper.ParseColor(colorNode);
+        }
+
+        var marginsNode = node.GetChild("margins");
+        if (marginsNode is not null)
+        {
+            var vals = marginsNode.Values;
+            if (vals.Count >= 4)
+            {
+                tb.Margins = (
+                    Coord.FromMm(marginsNode.GetDouble(0) ?? 0),
+                    Coord.FromMm(marginsNode.GetDouble(1) ?? 0),
+                    Coord.FromMm(marginsNode.GetDouble(2) ?? 0),
+                    Coord.FromMm(marginsNode.GetDouble(3) ?? 0)
+                );
+            }
+        }
+
+        var (fontH, fontW, justification, _, isMirrored, isBold, isItalic, fontFace, _, fontColor, _, _, _) = SExpressionHelper.ParseTextEffectsEx(node);
+        tb.FontHeight = fontH;
+        tb.FontWidth = fontW;
+        tb.FontBold = isBold;
+        tb.FontItalic = isItalic;
+        tb.FontName = fontFace;
+        tb.FontColor = fontColor;
+        tb.Justification = justification;
+        tb.IsMirrored = isMirrored;
+
+        tb.Uuid = SExpressionHelper.ParseUuid(node);
+
+        return tb;
+    }
+
+    private static KiCadSchGroup ParseSchGroup(SExpr node)
+    {
+        var group = new KiCadSchGroup
+        {
+            Name = node.GetString() ?? ""
+        };
+
+        group.Uuid = SExpressionHelper.ParseUuid(node);
+
+        var membersNode = node.GetChild("members");
+        if (membersNode is not null)
+        {
+            foreach (var v in membersNode.Values)
+            {
+                if (v is SExprString s) group.Members.Add(s.Value);
+                else if (v is SExprSymbol sym) group.Members.Add(sym.Value);
+            }
+        }
+
+        return group;
     }
 }

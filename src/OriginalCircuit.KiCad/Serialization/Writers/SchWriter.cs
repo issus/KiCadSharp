@@ -216,6 +216,12 @@ public static class SchWriter
             case KiCadSchBusAlias busAlias:
                 b.AddChild(BuildBusAlias(busAlias));
                 break;
+            case KiCadSchTextBox textBox:
+                b.AddChild(BuildSchTextBox(textBox));
+                break;
+            case KiCadSchGroup group:
+                b.AddChild(BuildSchGroup(group));
+                break;
         }
     }
 
@@ -263,6 +269,10 @@ public static class SchWriter
             b.AddChild(BuildNetclassFlag(ncf));
         foreach (var ba in sch.BusAliases)
             b.AddChild(BuildBusAlias(ba));
+        foreach (var textBox in sch.TextBoxes)
+            b.AddChild(BuildSchTextBox(textBox));
+        foreach (var group in sch.Groups)
+            b.AddChild(BuildSchGroup(group));
     }
 
     private static SExpr BuildWire(KiCadSchWire wire)
@@ -880,5 +890,108 @@ public static class SchWriter
                 m.AddValue(member);
         });
         return bb.Build();
+    }
+
+    private static SExpr BuildSchTextBox(KiCadSchTextBox tb)
+    {
+        var b = new SExpressionBuilder("text_box").AddValue(tb.Text);
+
+        if (tb.ExcludeFromSimPresent)
+            b.AddChild("exclude_from_sim", e => e.AddBool(tb.ExcludeFromSim));
+
+        if (tb.PositionIncludesAngle)
+            b.AddChild(WriterHelper.BuildPosition(tb.Location, tb.Rotation));
+        else
+            b.AddChild(WriterHelper.BuildPositionCompact(tb.Location));
+
+        b.AddChild("size", s =>
+        {
+            s.AddMm(tb.Size.X);
+            s.AddMm(tb.Size.Y);
+        });
+
+        if (tb.HasStroke)
+        {
+            b.AddChild("stroke", s =>
+            {
+                s.AddChild("width", w => w.AddMm(tb.StrokeWidth));
+                if (tb.StrokeType is not null)
+                    s.AddChild("type", t => t.AddSymbol(tb.StrokeType));
+                if (tb.StrokeColor != default)
+                {
+                    s.AddChild("color", c =>
+                    {
+                        c.AddValue((int)tb.StrokeColor.R);
+                        c.AddValue((int)tb.StrokeColor.G);
+                        c.AddValue((int)tb.StrokeColor.B);
+                        c.AddValue(tb.StrokeColor.A / 255.0);
+                    });
+                }
+            });
+        }
+
+        if (tb.FillType is not null)
+        {
+            b.AddChild("fill", f =>
+            {
+                f.AddChild("type", t => t.AddSymbol(tb.FillType));
+                if (tb.FillColor != default)
+                {
+                    f.AddChild("color", c =>
+                    {
+                        c.AddValue((int)tb.FillColor.R);
+                        c.AddValue((int)tb.FillColor.G);
+                        c.AddValue((int)tb.FillColor.B);
+                        c.AddValue(tb.FillColor.A / 255.0);
+                    });
+                }
+            });
+        }
+
+        if (tb.Margins.HasValue)
+        {
+            var m = tb.Margins.Value;
+            b.AddChild("margins", mg =>
+            {
+                mg.AddMm(m.Left);
+                mg.AddMm(m.Top);
+                mg.AddMm(m.Right);
+                mg.AddMm(m.Bottom);
+            });
+        }
+
+        var fontW = tb.FontWidth != Coord.Zero ? tb.FontWidth : tb.FontHeight;
+        b.AddChild(WriterHelper.BuildTextEffects(
+            tb.FontHeight, fontW,
+            justification: tb.Justification,
+            isMirrored: tb.IsMirrored,
+            isBold: tb.FontBold,
+            isItalic: tb.FontItalic,
+            fontFace: tb.FontName,
+            fontColor: tb.FontColor));
+
+        if (tb.Uuid is not null)
+            b.AddChild(WriterHelper.BuildUuid(tb.Uuid));
+
+        return b.Build();
+    }
+
+    private static SExpr BuildSchGroup(KiCadSchGroup group)
+    {
+        var gb = new SExpressionBuilder("group").AddValue(group.Name);
+
+        if (group.Uuid is not null)
+            gb.AddChild(WriterHelper.BuildUuid(group.Uuid));
+
+        if (group.Members.Count > 0)
+        {
+            gb.AddChild("members", m =>
+            {
+                foreach (var member in group.Members)
+                    m.AddValue(member);
+            });
+        }
+
+        return gb.Build();
     }
 }

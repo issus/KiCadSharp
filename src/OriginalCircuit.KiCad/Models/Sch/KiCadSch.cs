@@ -35,6 +35,8 @@ public sealed class KiCadSch : ISchDocument
     private readonly List<KiCadSchTable> _tables = [];
     private readonly List<KiCadSchRuleArea> _ruleAreas = [];
     private readonly List<KiCadSchNetclassFlag> _netclassFlags = [];
+    private readonly List<KiCadSchTextBox> _textBoxes = [];
+    private readonly List<KiCadSchGroup> _groups = [];
     private readonly List<KiCadDiagnostic> _diagnostics = [];
     private readonly List<object> _orderedElements = [];
     private readonly List<KiCadSchSheetInstance> _sheetInstances = [];
@@ -109,6 +111,14 @@ public sealed class KiCadSch : ISchDocument
     /// <summary>Gets the netclass flags.</summary>
     public IReadOnlyList<KiCadSchNetclassFlag> NetclassFlags => _netclassFlags;
     internal List<KiCadSchNetclassFlag> NetclassFlagList => _netclassFlags;
+
+    /// <summary>Gets the text boxes.</summary>
+    public IReadOnlyList<KiCadSchTextBox> TextBoxes => _textBoxes;
+    internal List<KiCadSchTextBox> TextBoxList => _textBoxes;
+
+    /// <summary>Gets the groups.</summary>
+    public IReadOnlyList<KiCadSchGroup> Groups => _groups;
+    internal List<KiCadSchGroup> GroupList => _groups;
 
     /// <summary>
     /// Gets the ordered list of all content elements in their original file order.
