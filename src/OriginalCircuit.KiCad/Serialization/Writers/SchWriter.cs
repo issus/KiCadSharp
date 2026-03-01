@@ -571,8 +571,22 @@ public static class SchWriter
     {
         var pb = new SExpressionBuilder("power_port")
             .AddValue(power.Text ?? "");
-        pb.AddChild(WriterHelper.BuildPosition(power.Location, power.Rotation));
-        pb.AddChild(WriterHelper.BuildTextEffects(WriterHelper.DefaultTextSize, WriterHelper.DefaultTextSize));
+
+        if (power.PositionIncludesAngle)
+            pb.AddChild(WriterHelper.BuildPosition(power.Location, power.Rotation));
+        else
+            pb.AddChild(WriterHelper.BuildPositionCompact(power.Location, power.Rotation));
+
+        if (power.IsMirrored)
+            pb.AddChild("mirror", m => m.AddSymbol("x"));
+
+        if (power.HasEffects)
+        {
+            var fontH = power.FontHeight != Coord.Zero ? power.FontHeight : WriterHelper.DefaultTextSize;
+            var fontW = power.FontWidth != Coord.Zero ? power.FontWidth : fontH;
+            pb.AddChild(WriterHelper.BuildTextEffects(fontH, fontW, fontColor: power.Color));
+        }
+
         if (power.Uuid is not null) pb.AddChild(WriterHelper.BuildUuid(power.Uuid));
         return pb.Build();
     }

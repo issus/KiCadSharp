@@ -36,6 +36,18 @@ public sealed class KiCadSchPowerObject : ISchPowerObject
     /// </summary>
     public string? Uuid { get; set; }
 
+    /// <summary>Gets or sets whether text effects were present in the source.</summary>
+    public bool HasEffects { get; set; }
+
+    /// <summary>Gets or sets whether the position includes the angle.</summary>
+    public bool PositionIncludesAngle { get; set; } = true;
+
+    /// <summary>Gets or sets the font height for round-trip fidelity.</summary>
+    public Coord FontHeight { get; set; }
+
+    /// <summary>Gets or sets the font width for round-trip fidelity.</summary>
+    public Coord FontWidth { get; set; }
+
     /// <inheritdoc />
     public CoordRect Bounds => new(Location, Location);
 }

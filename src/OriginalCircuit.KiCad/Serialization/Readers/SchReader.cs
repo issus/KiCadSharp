@@ -487,13 +487,39 @@ public static class SchReader
     {
         var (loc, angle) = SExpressionHelper.ParsePosition(node);
 
-        return new KiCadSchPowerObject
+        var power = new KiCadSchPowerObject
         {
             Location = loc,
             Text = node.GetString(),
             Rotation = angle,
             Uuid = SExpressionHelper.ParseUuid(node),
         };
+
+        // Parse mirror
+        var mirrorNode = node.GetChild("mirror");
+        if (mirrorNode is not null)
+        {
+            var mirrorVal = mirrorNode.GetString();
+            power.IsMirrored = mirrorVal is "x" or "y" or "xy";
+        }
+
+        // Parse text effects to extract font properties
+        var (fontH, fontW, _, _, _, _, _, _, _, fontColor, _, _, _) = SExpressionHelper.ParseTextEffectsEx(node);
+        if (fontColor != default)
+            power.Color = fontColor;
+
+        // Detect whether effects were present (so we can re-emit them faithfully)
+        power.HasEffects = node.GetChild("effects") is not null;
+
+        // Detect position angle presence
+        var atNode = node.GetChild("at");
+        power.PositionIncludesAngle = atNode is not null && atNode.Values.Count >= 3;
+
+        // Font size for round-trip
+        power.FontHeight = fontH;
+        power.FontWidth = fontW;
+
+        return power;
     }
 
     private static KiCadSchSheet ParseSheet(SExpr node)
