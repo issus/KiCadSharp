@@ -33,6 +33,9 @@ public sealed class KiCadPcbComponent : IPcbComponent
     private readonly List<string> _componentClasses = [];
     private readonly List<string> _netTiePadGroups = [];
     private readonly List<string> _privateLayers = [];
+    private readonly List<KiCadPcbTextBox> _textBoxes = [];
+    private readonly List<KiCadPcbText> _textPrivates = [];
+    private readonly List<KiCadPcbImage> _images = [];
 
     /// <inheritdoc />
     public string Name { get; set; } = "";
@@ -344,6 +347,15 @@ public sealed class KiCadPcbComponent : IPcbComponent
     /// <summary>Gets the private layers.</summary>
     public IReadOnlyList<string> PrivateLayers => _privateLayers;
     internal List<string> PrivateLayerList => _privateLayers;
+    /// <summary>Gets the footprint-level text boxes.</summary>
+    public IReadOnlyList<KiCadPcbTextBox> TextBoxes => _textBoxes;
+    internal List<KiCadPcbTextBox> TextBoxList => _textBoxes;
+    /// <summary>Gets the footprint-level private texts.</summary>
+    public IReadOnlyList<KiCadPcbText> TextPrivates => _textPrivates;
+    internal List<KiCadPcbText> TextPrivateList => _textPrivates;
+    /// <summary>Gets the footprint-level images.</summary>
+    public IReadOnlyList<KiCadPcbImage> Images => _images;
+    internal List<KiCadPcbImage> ImageList => _images;
     /// <summary>Gets or sets the embedded files.</summary>
     public KiCadEmbeddedFiles? EmbeddedFiles { get; set; }
     /// <summary>Gets the UUID / tstamp.</summary>

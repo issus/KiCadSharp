@@ -153,6 +153,9 @@ public static class PcbWriter
                     case KiCadPcbGroup group: b.AddChild(BuildGroup(group)); break;
                     case KiCadPcbDimension dim: b.AddChild(BuildDimension(dim)); break;
                     case KiCadPcbGeneratedElement gen: b.AddChild(BuildGeneratedElement(gen)); break;
+                    case KiCadPcbTarget target: b.AddChild(BuildTarget(target)); break;
+                    case KiCadPcbTextBox textBox: b.AddChild(BuildGrTextBox(textBox)); break;
+                    case KiCadPcbImage image: b.AddChild(BuildPcbImage(image)); break;
                 }
             }
 
@@ -199,6 +202,12 @@ public static class PcbWriter
                 b.AddChild(BuildDimension(dim));
             foreach (var gen in pcb.GeneratedElements)
                 b.AddChild(BuildGeneratedElement(gen));
+            foreach (var target in pcb.Targets)
+                b.AddChild(BuildTarget(target));
+            foreach (var textBox in pcb.TextBoxes)
+                b.AddChild(BuildGrTextBox(textBox));
+            foreach (var image in pcb.Images)
+                b.AddChild(BuildPcbImage(image));
         }
 
         // Embedded fonts (KiCad 8+) — emit before embedded_files to match KiCad ordering
@@ -553,6 +562,128 @@ public static class PcbWriter
         gb.AddChild(WriterHelper.BuildPoints(bezier.Points));
         AddGraphicCommon(gb, bezier);
         return gb.Build();
+    }
+
+    // -- Target builder --
+
+    private static SExpr BuildTarget(KiCadPcbTarget target)
+    {
+        var tb = new SExpressionBuilder("target")
+            .AddSymbol(target.Shape);
+
+        tb.AddChild(WriterHelper.BuildPositionCompact(target.Location));
+        tb.AddChild("size", s => s.AddValue(target.Size));
+        tb.AddChild("width", w => w.AddMm(target.Width));
+
+        if (target.LayerName is not null)
+            tb.AddChild("layer", l => l.AddValue(target.LayerName));
+
+        if (target.Uuid is not null)
+            tb.AddChild(WriterHelper.BuildUuidToken(target.Uuid, target.UuidToken ?? "uuid", target.UuidIsSymbol));
+
+        return tb.Build();
+    }
+
+    // -- Text box builder --
+
+    internal static SExpr BuildGrTextBox(KiCadPcbTextBox textBox, string tokenName = "gr_text_box")
+    {
+        var tb = new SExpressionBuilder(tokenName)
+            .AddValue(textBox.Text);
+
+        if (textBox.IsLocked && !textBox.LockedIsChildNode) tb.AddSymbol("locked");
+
+        if (textBox.Start.HasValue && textBox.End.HasValue)
+        {
+            tb.AddChild("start", s => { s.AddMm(textBox.Start.Value.X); s.AddMm(textBox.Start.Value.Y); })
+              .AddChild("end", e => { e.AddMm(textBox.End.Value.X); e.AddMm(textBox.End.Value.Y); });
+        }
+        else if (textBox.Points is not null)
+        {
+            tb.AddChild(WriterHelper.BuildPoints(textBox.Points));
+        }
+
+        if (textBox.PositionIncludesAngle)
+            tb.AddChild("angle", a => a.AddValue(textBox.Angle));
+
+        if (textBox.IsLocked && textBox.LockedIsChildNode)
+            tb.AddChild("locked", l => l.AddBool(true));
+
+        if (textBox.HasStroke || textBox.StrokeWidth != Coord.Zero || textBox.StrokeStyle != LineStyle.Solid)
+            tb.AddChild(WriterHelper.BuildStroke(textBox.StrokeWidth, textBox.StrokeStyle, textBox.StrokeColor, emitColor: textBox.HasStrokeColor));
+
+        if (textBox.LayerName is not null)
+            tb.AddChild("layer", l => l.AddValue(textBox.LayerName));
+
+        if (textBox.Uuid is not null)
+            tb.AddChild(WriterHelper.BuildUuidToken(textBox.Uuid, textBox.UuidToken ?? "uuid", textBox.UuidIsSymbol));
+
+        if (textBox.Margins.HasValue)
+        {
+            var m = textBox.Margins.Value;
+            tb.AddChild("margins", mg =>
+            {
+                mg.AddMm(m.Left);
+                mg.AddMm(m.Top);
+                mg.AddMm(m.Right);
+                mg.AddMm(m.Bottom);
+            });
+        }
+
+        var fontW = textBox.FontWidth != Coord.Zero ? textBox.FontWidth : textBox.FontHeight;
+        tb.AddChild(WriterHelper.BuildPcbTextEffects(
+            textBox.FontHeight, fontW,
+            justification: textBox.Justification,
+            isBold: textBox.FontBold,
+            isItalic: textBox.FontItalic,
+            isMirrored: textBox.IsMirrored,
+            thickness: textBox.FontThickness,
+            fontFace: textBox.FontName,
+            fontColor: textBox.FontColor,
+            boldIsSymbol: textBox.BoldIsSymbol,
+            italicIsSymbol: textBox.ItalicIsSymbol));
+
+        if (textBox.RenderCache is not null)
+            tb.AddChild(BuildRenderCache(textBox.RenderCache));
+
+        return tb.Build();
+    }
+
+    // -- PCB image builder --
+
+    internal static SExpr BuildPcbImage(KiCadPcbImage image, string tokenName = "image")
+    {
+        var ib = new SExpressionBuilder(tokenName);
+
+        if (image.PositionIncludesAngle)
+            ib.AddChild(WriterHelper.BuildPosition(image.Location, image.Rotation));
+        else
+            ib.AddChild(WriterHelper.BuildPositionCompact(image.Location));
+
+        if (image.LayerName is not null)
+            ib.AddChild("layer", l => l.AddValue(image.LayerName));
+
+        if (image.Scale != 1.0)
+            ib.AddChild("scale", s => s.AddValue(image.Scale));
+
+        if (image.Uuid is not null)
+            ib.AddChild(WriterHelper.BuildUuidToken(image.Uuid, image.UuidToken ?? "uuid", image.UuidIsSymbol));
+
+        if (image.DataString is not null)
+        {
+            ib.AddChild("data", d =>
+            {
+                foreach (var line in image.DataString.Split('\n'))
+                {
+                    if (image.DataAreSymbols)
+                        d.AddSymbol(line);
+                    else
+                        d.AddValue(line);
+                }
+            });
+        }
+
+        return ib.Build();
     }
 
     // -- Net class builder --

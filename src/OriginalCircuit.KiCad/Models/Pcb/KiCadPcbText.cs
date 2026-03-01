@@ -124,6 +124,11 @@ public sealed class KiCadPcbText : IPcbText
     public bool IsKnockout { get; set; }
 
     /// <summary>
+    /// Gets or sets whether this is a private text element (fp_text_private).
+    /// </summary>
+    public bool IsPrivate { get; set; }
+
+    /// <summary>
     /// Gets whether the position node included the angle value in the original file.
     /// When false, <c>(at X Y)</c> is emitted; when true, <c>(at X Y ANGLE)</c> is emitted.
     /// </summary>

@@ -183,6 +183,8 @@ public static class FootprintWriter
                     case KiCadPcbPolygon poly: b.AddChild(BuildFpPoly(poly, uuidTok, uuidSym)); break;
                     case KiCadPcbCurve curve: b.AddChild(BuildFpCurve(curve, uuidTok, uuidSym)); break;
                     case KiCadPcbText text: b.AddChild(BuildFpText(text, uuidTok, uuidSym)); break;
+                    case KiCadPcbTextBox textBox: b.AddChild(PcbWriter.BuildGrTextBox(textBox, "fp_text_box")); break;
+                    case KiCadPcbImage image: b.AddChild(PcbWriter.BuildPcbImage(image)); break;
                 }
             }
         }
@@ -202,6 +204,12 @@ public static class FootprintWriter
                 b.AddChild(BuildFpPoly(poly, uuidTok, uuidSym));
             foreach (var curve in component.Curves)
                 b.AddChild(BuildFpCurve(curve, uuidTok, uuidSym));
+            foreach (var textPriv in component.TextPrivates)
+                b.AddChild(BuildFpText(textPriv, uuidTok, uuidSym));
+            foreach (var textBox in component.TextBoxes)
+                b.AddChild(PcbWriter.BuildGrTextBox(textBox, "fp_text_box"));
+            foreach (var image in component.Images)
+                b.AddChild(PcbWriter.BuildPcbImage(image));
         }
 
         // Pads
@@ -279,9 +287,11 @@ public static class FootprintWriter
 
     private static SExpr BuildFpText(KiCadPcbText text, string uuidToken = "uuid", bool uuidIsSymbol = false)
     {
-        var tb = new SExpressionBuilder("fp_text")
-            .AddSymbol(text.TextType ?? "user")
-            .AddValue(text.Text);
+        var tokenName = text.IsPrivate ? "fp_text_private" : "fp_text";
+        var tb = new SExpressionBuilder(tokenName);
+        if (!text.IsPrivate)
+            tb.AddSymbol(text.TextType ?? "user");
+        tb.AddValue(text.Text);
 
         if (text.IsHidden && !text.HideIsChildNode)
             tb.AddSymbol("hide");

@@ -201,10 +201,22 @@ public static class PcbReader
                         pcb.BoardElementOrderList.Add(gen);
                         break;
                     case "target":
+                        var target = ParseTarget(child);
+                        pcb.TargetList.Add(target);
+                        pcb.BoardElementOrderList.Add(target);
+                        break;
                     case "gr_text_box":
+                        var textBox = ParseGrTextBox(child);
+                        pcb.TextBoxList.Add(textBox);
+                        pcb.BoardElementOrderList.Add(textBox);
+                        break;
                     case "image":
+                        var image = ParsePcbImage(child);
+                        pcb.ImageList.Add(image);
+                        pcb.BoardElementOrderList.Add(image);
+                        break;
                     case "gr_bbox":
-                        // Not yet fully implemented
+                        // Annotation bounding box — rare, no model yet
                         break;
                     case "layers":
                         ParseLayers(child, pcb);
@@ -695,6 +707,188 @@ public static class PcbReader
         bezier.Points = SExpressionHelper.ParsePoints(node);
         ParseGraphicCommon(node, bezier);
         return bezier;
+    }
+
+    // -- Target parser --
+
+    private static KiCadPcbTarget ParseTarget(SExpr node)
+    {
+        var target = new KiCadPcbTarget();
+
+        // Shape is first value: (target plus ...) or (target x ...)
+        target.Shape = node.GetString() ?? "plus";
+
+        var (loc, angle) = SExpressionHelper.ParsePosition(node);
+        target.Location = loc;
+
+        target.Size = node.GetChild("size")?.GetDouble() ?? 0;
+        target.Width = Coord.FromMm(node.GetChild("width")?.GetDouble() ?? 0);
+        target.LayerName = node.GetChild("layer")?.GetString();
+
+        var (uuid, uuidToken) = SExpressionHelper.ParseUuidWithToken(node);
+        var uuidNode = node.GetChild("uuid") ?? node.GetChild("tstamp");
+        target.Uuid = uuid;
+        target.UuidToken = uuidToken;
+        target.UuidIsSymbol = uuidNode?.Values.Count > 0 && uuidNode.Values[0] is SExprSymbol;
+
+        return target;
+    }
+
+    // -- Text box parser --
+
+    internal static KiCadPcbTextBox ParseGrTextBox(SExpr node)
+    {
+        var tb = new KiCadPcbTextBox
+        {
+            Text = node.GetString() ?? ""
+        };
+
+        // Locked
+        tb.IsLocked = node.Values.Any(v => v is SExprSymbol s && s.Value == "locked");
+        var lockedChild = node.GetChild("locked");
+        if (lockedChild is not null)
+        {
+            tb.IsLocked = lockedChild.GetBool() ?? true;
+            tb.LockedIsChildNode = true;
+        }
+
+        // Position — either start/end or pts
+        var startNode = node.GetChild("start");
+        var endNode = node.GetChild("end");
+        if (startNode is not null && endNode is not null)
+        {
+            tb.Start = SExpressionHelper.ParseXY(startNode);
+            tb.End = SExpressionHelper.ParseXY(endNode);
+        }
+        else
+        {
+            tb.Points = SExpressionHelper.ParsePoints(node).ToList();
+        }
+
+        // Angle
+        var angleNode = node.GetChild("angle");
+        if (angleNode is not null)
+        {
+            tb.Angle = angleNode.GetDouble() ?? 0;
+            tb.PositionIncludesAngle = true;
+        }
+
+        // Layer
+        tb.LayerName = node.GetChild("layer")?.GetString();
+
+        // UUID
+        var (uuid, uuidToken) = SExpressionHelper.ParseUuidWithToken(node);
+        var uuidNode = node.GetChild("uuid") ?? node.GetChild("tstamp");
+        tb.Uuid = uuid;
+        tb.UuidToken = uuidToken;
+        tb.UuidIsSymbol = uuidNode?.Values.Count > 0 && uuidNode.Values[0] is SExprSymbol;
+
+        // Text effects
+        var (fontH, fontW, justification, _, isMirrored, isBold, isItalic, fontFace, fontThickness, fontColor, _, boldIsSymbol, italicIsSymbol) = SExpressionHelper.ParseTextEffectsEx(node);
+        tb.FontHeight = fontH;
+        tb.FontWidth = fontW;
+        tb.FontBold = isBold;
+        tb.FontItalic = isItalic;
+        tb.BoldIsSymbol = boldIsSymbol;
+        tb.ItalicIsSymbol = italicIsSymbol;
+        tb.FontName = fontFace;
+        tb.FontThickness = fontThickness;
+        tb.FontColor = fontColor;
+        tb.Justification = justification;
+        tb.IsMirrored = isMirrored;
+
+        // Stroke
+        var strokeNode = node.GetChild("stroke");
+        if (strokeNode is not null)
+            tb.HasStroke = true;
+        var (strokeWidth, strokeStyle, strokeColor) = SExpressionHelper.ParseStroke(node);
+        tb.StrokeWidth = strokeWidth;
+        tb.StrokeStyle = strokeStyle;
+        tb.StrokeColor = strokeColor;
+
+        // Margins
+        var marginsNode = node.GetChild("margins");
+        if (marginsNode is not null)
+        {
+            var vals = marginsNode.Values;
+            if (vals.Count >= 4)
+            {
+                tb.Margins = (
+                    Coord.FromMm(marginsNode.GetDouble(0) ?? 0),
+                    Coord.FromMm(marginsNode.GetDouble(1) ?? 0),
+                    Coord.FromMm(marginsNode.GetDouble(2) ?? 0),
+                    Coord.FromMm(marginsNode.GetDouble(3) ?? 0)
+                );
+            }
+        }
+
+        // Render cache
+        var renderCacheNode = node.GetChild("render_cache");
+        if (renderCacheNode is not null)
+        {
+            var rc = new KiCadTextRenderCache
+            {
+                FontName = renderCacheNode.GetString(0),
+            };
+            var sizeVal = renderCacheNode.GetDouble(1);
+            if (sizeVal.HasValue)
+                rc.FontSize = new CoordPoint(Coord.FromMm(sizeVal.Value), Coord.Zero);
+
+            foreach (var polyNode in renderCacheNode.GetChildren("polygon"))
+            {
+                var pts = SExpressionHelper.ParsePoints(polyNode);
+                if (pts.Count > 0)
+                    rc.Polygons.Add(pts);
+            }
+            tb.RenderCache = rc;
+        }
+
+        return tb;
+    }
+
+    // -- PCB image parser --
+
+    internal static KiCadPcbImage ParsePcbImage(SExpr node)
+    {
+        var img = new KiCadPcbImage();
+
+        var (loc, angle) = SExpressionHelper.ParsePosition(node);
+        img.Location = loc;
+        img.Rotation = angle;
+
+        var atNode = node.GetChild("at");
+        img.PositionIncludesAngle = atNode is not null && atNode.Values.Count >= 3;
+
+        img.LayerName = node.GetChild("layer")?.GetString();
+
+        var scaleNode = node.GetChild("scale");
+        if (scaleNode is not null)
+            img.Scale = scaleNode.GetDouble() ?? 1.0;
+
+        var (uuid, uuidToken) = SExpressionHelper.ParseUuidWithToken(node);
+        var uuidNode = node.GetChild("uuid") ?? node.GetChild("tstamp");
+        img.Uuid = uuid;
+        img.UuidToken = uuidToken;
+        img.UuidIsSymbol = uuidNode?.Values.Count > 0 && uuidNode.Values[0] is SExprSymbol;
+
+        // Parse image data
+        var dataNode = node.GetChild("data");
+        if (dataNode is not null)
+        {
+            var parts = new List<string>();
+            var hasSymbol = false;
+            foreach (var v in dataNode.Values)
+            {
+                if (v is SExprString s) parts.Add(s.Value);
+                else if (v is SExprSymbol sym) { parts.Add(sym.Value); hasSymbol = true; }
+            }
+            img.DataAreSymbols = hasSymbol;
+            img.DataString = string.Join("\n", parts);
+            try { img.ImageData = Convert.FromBase64String(string.Concat(parts)); }
+            catch (FormatException) { }
+        }
+
+        return img;
     }
 
     // -- Zone structured parser (Phase D) --

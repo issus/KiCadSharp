@@ -34,6 +34,9 @@ public sealed class KiCadPcb : IPcbDocument
     private readonly List<KiCadPcbGroup> _groups = [];
     private readonly List<KiCadPcbDimension> _dimensions = [];
     private readonly List<KiCadPcbGeneratedElement> _generatedElements = [];
+    private readonly List<KiCadPcbTarget> _targets = [];
+    private readonly List<KiCadPcbTextBox> _textBoxes = [];
+    private readonly List<KiCadPcbImage> _images = [];
     private readonly List<object> _boardElementOrder = [];
     private readonly List<KiCadPcbLayerDefinition> _layerDefinitions = [];
     private readonly List<KeyValuePair<string, string>> _properties = [];
@@ -206,6 +209,18 @@ public sealed class KiCadPcb : IPcbDocument
     /// <summary>Gets the board-level generated elements.</summary>
     public IReadOnlyList<KiCadPcbGeneratedElement> GeneratedElements => _generatedElements;
     internal List<KiCadPcbGeneratedElement> GeneratedElementList => _generatedElements;
+
+    /// <summary>Gets the board-level targets.</summary>
+    public IReadOnlyList<KiCadPcbTarget> Targets => _targets;
+    internal List<KiCadPcbTarget> TargetList => _targets;
+
+    /// <summary>Gets the board-level text boxes.</summary>
+    public IReadOnlyList<KiCadPcbTextBox> TextBoxes => _textBoxes;
+    internal List<KiCadPcbTextBox> TextBoxList => _textBoxes;
+
+    /// <summary>Gets the board-level images.</summary>
+    public IReadOnlyList<KiCadPcbImage> Images => _images;
+    internal List<KiCadPcbImage> ImageList => _images;
 
     /// <summary>Gets or sets whether legacy teardrops were present in the general section.</summary>
     public bool LegacyTeardrops { get; set; }

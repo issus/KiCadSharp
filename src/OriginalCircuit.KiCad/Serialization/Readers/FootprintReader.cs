@@ -245,7 +245,14 @@ public static class FootprintReader
                         component.GraphicalItemOrderList.Add(fpText);
                         break;
                     case "fp_text_private":
+                        var fpTextPriv = ParseFpTextPrivate(child);
+                        component.TextPrivateList.Add(fpTextPriv);
+                        component.GraphicalItemOrderList.Add(fpTextPriv);
+                        break;
                     case "fp_text_box":
+                        var fpTextBox = PcbReader.ParseGrTextBox(child);
+                        component.TextBoxList.Add(fpTextBox);
+                        component.GraphicalItemOrderList.Add(fpTextBox);
                         break;
                     case "fp_line":
                         var line = ParseFpLine(child);
@@ -279,6 +286,9 @@ public static class FootprintReader
                         break;
                     case "fp_image":
                     case "image":
+                        var fpImage = PcbReader.ParsePcbImage(child);
+                        component.ImageList.Add(fpImage);
+                        component.GraphicalItemOrderList.Add(fpImage);
                         break;
                     case "model":
                         component.Model3DList.Add(Parse3DModel(child));
@@ -776,6 +786,118 @@ public static class FootprintReader
             if (sizeVal.HasValue)
                 rc.FontSize = new CoordPoint(Coord.FromMm(sizeVal.Value), Coord.Zero);
 
+            foreach (var polyNode in renderCacheNode.GetChildren("polygon"))
+            {
+                var pts = SExpressionHelper.ParsePoints(polyNode);
+                if (pts.Count > 0)
+                    rc.Polygons.Add(pts);
+            }
+            text.RenderCache = rc;
+        }
+
+        return text;
+    }
+
+    private static KiCadPcbText ParseFpTextPrivate(SExpr node)
+    {
+        // fp_text_private has format: (fp_text_private "TEXT" ...) — no TextType field
+        var text = new KiCadPcbText
+        {
+            TextType = null,
+            Text = node.GetString(0) ?? "",
+            IsPrivate = true
+        };
+
+        var (loc, angle) = SExpressionHelper.ParsePosition(node);
+        text.Location = loc;
+        text.Rotation = angle;
+
+        var atNode = node.GetChild("at");
+        if (atNode is not null)
+        {
+            int numericCount = 0;
+            foreach (var v in atNode.Values)
+            {
+                if (v is SExprSymbol sym && sym.Value == "unlocked")
+                {
+                    text.IsUnlocked = true;
+                    text.UnlockedInAtNode = true;
+                }
+                else
+                {
+                    numericCount++;
+                }
+            }
+            text.PositionIncludesAngle = numericCount >= 3;
+        }
+
+        var effectsIdx = -1;
+        var uuidIdx = -1;
+        for (int i = 0; i < node.Children.Count; i++)
+        {
+            if (node.Children[i].Token == "effects") effectsIdx = i;
+            else if (node.Children[i].Token is "uuid" or "tstamp") uuidIdx = i;
+        }
+        text.UuidAfterEffects = effectsIdx >= 0 && uuidIdx > effectsIdx;
+
+        var layerNode = node.GetChild("layer");
+        text.LayerName = layerNode?.GetString();
+
+        if (layerNode is not null)
+        {
+            foreach (var v in layerNode.Values)
+            {
+                if (v is SExprSymbol s && s.Value == "knockout")
+                {
+                    text.IsKnockout = true;
+                    break;
+                }
+            }
+        }
+
+        var hideChild = node.GetChild("hide");
+        if (hideChild is not null)
+        {
+            text.IsHidden = hideChild.GetBool() ?? true;
+            text.HideIsChildNode = true;
+        }
+        else
+        {
+            foreach (var v in node.Values)
+            {
+                if (v is SExprSymbol s && s.Value == "hide")
+                {
+                    text.IsHidden = true;
+                    break;
+                }
+            }
+        }
+
+        var (fontH, fontW, justification, _, isMirrored, isBold, isItalic, fontFace, fontThickness, fontColor, _, boldIsSymbol, italicIsSymbol) = SExpressionHelper.ParseTextEffectsEx(node);
+        text.Height = fontH;
+        text.FontWidth = fontW;
+        text.FontBold = isBold;
+        text.FontItalic = isItalic;
+        text.BoldIsSymbol = boldIsSymbol;
+        text.ItalicIsSymbol = italicIsSymbol;
+        text.FontName = fontFace;
+        text.FontThickness = fontThickness;
+        text.FontColor = fontColor;
+        text.Justification = justification;
+        text.IsMirrored = isMirrored;
+
+        text.Uuid = SExpressionHelper.ParseUuid(node);
+
+        var renderCacheNode = node.GetChild("render_cache");
+        if (renderCacheNode is not null)
+        {
+            var rc = new KiCadTextRenderCache
+            {
+                FontName = renderCacheNode.GetString(0),
+            };
+            var sizeVal = renderCacheNode.GetDouble(1);
+            if (sizeVal.HasValue)
+                rc.FontSize = new CoordPoint(Coord.FromMm(sizeVal.Value), Coord.Zero);
             foreach (var polyNode in renderCacheNode.GetChildren("polygon"))
             {
                 var pts = SExpressionHelper.ParsePoints(polyNode);
