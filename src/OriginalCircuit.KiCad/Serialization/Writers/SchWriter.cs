@@ -56,8 +56,24 @@ public static class SchWriter
             b.AddChild(WriterHelper.BuildUuid(sch.Uuid));
 
         // Paper size
-        if (sch.Paper is not null)
-            b.AddChild("paper", p => p.AddValue(sch.Paper));
+        if (sch.PaperWidth.HasValue && sch.PaperHeight.HasValue)
+        {
+            b.AddChild("paper", p =>
+            {
+                if (sch.Paper is not null) p.AddValue(sch.Paper);
+                p.AddValue(sch.PaperWidth.Value);
+                p.AddValue(sch.PaperHeight.Value);
+                if (sch.PaperPortrait) p.AddSymbol("portrait");
+            });
+        }
+        else if (sch.Paper is not null)
+        {
+            b.AddChild("paper", p =>
+            {
+                p.AddValue(sch.Paper);
+                if (sch.PaperPortrait) p.AddSymbol("portrait");
+            });
+        }
 
         // Title block
         if (sch.TitleBlock is not null)

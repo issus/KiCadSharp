@@ -975,6 +975,14 @@ public static class SchReader
                 else if (v is SExprSymbol sym) parts.Add(sym.Value);
             }
             img.DataString = string.Join("\n", parts);
+            try
+            {
+                img.ImageData = Convert.FromBase64String(string.Concat(parts));
+            }
+            catch (FormatException)
+            {
+                // Not valid base64 — leave ImageData null
+            }
         }
 
         return img;
@@ -1215,7 +1223,8 @@ public static class SchReader
                         else if (v is SExprString s) prop.Justification.Add(s.Value);
                     }
                 }
-                prop.IsHidden = SExpressionHelper.HasSymbol(propEffects, "hide");
+                prop.IsHidden = SExpressionHelper.HasSymbol(propEffects, "hide")
+                    || propEffects.GetChild("hide")?.GetBool() == true;
             }
             prop.Uuid = SExpressionHelper.ParseUuid(propNode);
             ncf.Properties.Add(prop);

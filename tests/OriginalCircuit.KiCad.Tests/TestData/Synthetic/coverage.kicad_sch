@@ -3,7 +3,7 @@
   (generator "eeschema")
   (generator_version "8.0")
   (uuid "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb00")
-  (paper "A4")
+  (paper 420 297 portrait)
 
   (lib_symbols
   )
@@ -139,6 +139,176 @@
         (hide yes)
       )
     )
+  )
+
+  ;; Netclass flag with non-default name and rotation
+  (netclass_flag "HighSpeed"
+    (length 3.81)
+    (shape round)
+    (at 200 100 90)
+    (effects
+      (font
+        (size 1.27 1.27)
+      )
+    )
+    (uuid "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb40")
+    (property "Netclass" "HighSpeed"
+      (at 203.81 100 90)
+      (show_name)
+      (effects
+        (font
+          (size 1.27 1.27)
+        )
+        (justify left)
+        (hide yes)
+      )
+      (uuid "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb41")
+    )
+    (property "Netclass1" "FastSignals"
+      (at 203.81 100 90)
+      (effects
+        (font
+          (size 1.27 1.27)
+        )
+        (justify left)
+        (hide yes)
+      )
+      (uuid "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb42")
+    )
+  )
+
+  ;; Rule area with non-zero stroke width
+  (rule_area
+    (polyline
+      (pts
+        (xy 210 90)
+        (xy 230 90)
+        (xy 230 110)
+        (xy 210 110)
+        (xy 210 90)
+      )
+      (stroke
+        (width 0.15)
+        (type default)
+      )
+      (fill
+        (type outline)
+      )
+      (uuid "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb50")
+    )
+  )
+
+  ;; Table with non-default stroke widths and cell spans
+  (table
+    (column_count 3)
+    (border
+      (external yes)
+      (header yes)
+      (stroke
+        (width 0.2)
+        (type default)
+      )
+    )
+    (separators
+      (rows yes)
+      (cols yes)
+      (stroke
+        (width 0.1)
+        (type default)
+      )
+    )
+    (column_widths 20 30 20)
+    (row_heights 5 5 5)
+    (cells
+      (table_cell
+        (at 0 0 0)
+        (size 20 5)
+        (effects
+          (font
+            (size 1.27 1.27)
+          )
+        )
+        (uuid "cccccccc-cccc-cccc-cccc-cccccccccc01")
+        "Header 1"
+      )
+      (table_cell
+        (at 20 0 0)
+        (size 30 5)
+        (effects
+          (font
+            (size 1.27 1.27)
+          )
+        )
+        (uuid "cccccccc-cccc-cccc-cccc-cccccccccc02")
+        "Header 2"
+      )
+      (table_cell
+        (at 50 0 0)
+        (size 20 5)
+        (effects
+          (font
+            (size 1.27 1.27)
+          )
+        )
+        (uuid "cccccccc-cccc-cccc-cccc-cccccccccc03")
+        "Header 3"
+      )
+      (table_cell
+        (at 0 5 45)
+        (size 50 5)
+        (span 2 1)
+        (effects
+          (font
+            (size 1.27 1.27)
+          )
+        )
+        (uuid "cccccccc-cccc-cccc-cccc-cccccccccc04")
+        "Span 2 cols"
+      )
+      (table_cell
+        (at 50 5 0)
+        (size 20 10)
+        (span 1 2)
+        (effects
+          (font
+            (size 1.27 1.27)
+          )
+        )
+        (uuid "cccccccc-cccc-cccc-cccc-cccccccccc05")
+        "Span 2 rows"
+      )
+      (table_cell
+        (at 0 10 0)
+        (size 20 5)
+        (effects
+          (font
+            (size 1.27 1.27)
+          )
+        )
+        (uuid "cccccccc-cccc-cccc-cccc-cccccccccc06")
+        "Cell 3-1"
+      )
+      (table_cell
+        (at 20 10 0)
+        (size 30 5)
+        (effects
+          (font
+            (size 1.27 1.27)
+          )
+        )
+        (uuid "cccccccc-cccc-cccc-cccc-cccccccccc07")
+        "Cell 3-2"
+      )
+    )
+    (uuid "cccccccc-cccc-cccc-cccc-cccccccccc00")
+  )
+
+  ;; Image with base64 data (tiny 1x1 PNG)
+  (image
+    (at 240 100)
+    (scale 1.0)
+    (uuid "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb60")
+    (data iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==)
   )
 
   (sheet_instances

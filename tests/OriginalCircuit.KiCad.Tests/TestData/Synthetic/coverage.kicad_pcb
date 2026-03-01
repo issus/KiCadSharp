@@ -5,7 +5,7 @@
   (general
     (thickness 1.6)
   )
-  (paper "A4")
+  (paper "A4" portrait)
   (layers
     (0 "F.Cu" signal)
     (31 "B.Cu" signal)
@@ -26,7 +26,51 @@
     (47 "F.CrtYd" user "F.Courtyard")
   )
   (setup
+    (stackup
+      (layer "F.SilkS"
+        (type "Top Silk Screen")
+      )
+      (layer "F.Paste"
+        (type "Top Solder Paste")
+      )
+      (layer "F.Mask"
+        (type "Top Solder Mask")
+        (thickness 0.01)
+      )
+      (layer "F.Cu"
+        (type "copper")
+        (thickness 0.035)
+      )
+      (layer "dielectric 1"
+        (type "core")
+        (thickness 1.51)
+        (material "FR4")
+        (epsilon_r 4.5)
+        (loss_tangent 0.02)
+      )
+      (layer "B.Cu"
+        (type "copper")
+        (thickness 0.035)
+      )
+      (layer "B.Mask"
+        (type "Bottom Solder Mask")
+        (thickness 0.01)
+      )
+      (layer "B.Paste"
+        (type "Bottom Solder Paste")
+      )
+      (layer "B.SilkS"
+        (type "Bottom Silk Screen")
+      )
+      (copper_finish "HAL lead-free")
+      (edge_connector bevelled)
+      (edge_plating yes)
+    )
+    (board_thickness 1.6)
     (pad_to_mask_clearance 0)
+    (pad_to_paste_clearance -0.01)
+    (pad_to_paste_clearance_ratio -0.25)
+    (solder_mask_min_width 0.1)
     (allow_soldermask_bridges_in_footprints no)
     (pcbplotparams
       (layerselection 0x00010fc_ffffffff)
@@ -300,6 +344,7 @@
     (size 0.8)
     (drill 0.4)
     (layers "F.Cu" "B.Cu")
+    (tenting front back)
     (net 1)
     (uuid "33333333-3333-3333-3333-333333333310")
     (status 2)
@@ -467,6 +512,7 @@
     )
     (min_thickness 0.2)
     (fill yes
+      (mode hatch)
       (thermal_gap 0.4)
       (thermal_bridge_width 0.4)
       (hatch_thickness 0.3)
@@ -484,6 +530,67 @@
         (xy 120 105)
         (xy 110 105)
       )
+    )
+    (filled_polygon
+      (layer "B.Cu")
+      (island 0)
+      (pts
+        (xy 110 95)
+        (xy 120 95)
+        (xy 120 105)
+        (xy 110 105)
+      )
+    )
+    (fill_segments
+      (layer "B.Cu")
+      (pts
+        (xy 110 100)
+        (xy 120 100)
+      )
+    )
+  )
+
+  ;; Locked dimension with style text frame
+  (dimension locked
+    (type aligned)
+    (layer "Dwgs.User")
+    (uuid "66666666-6666-6666-6666-666666666601")
+    (pts
+      (xy 95 110)
+      (xy 105 110)
+    )
+    (height 5)
+    (gr_text "10 mm"
+      (at 100 105)
+      (layer "Dwgs.User")
+      (uuid "66666666-6666-6666-6666-666666666602")
+      (effects
+        (font
+          (size 1 1)
+          (thickness 0.15)
+        )
+      )
+    )
+    (format
+      (units 3)
+      (units_format 1)
+      (precision 2)
+    )
+    (style
+      (thickness 0.12)
+      (arrow_length 1.27)
+      (text_position_mode 0)
+      (extension_height 0.58642)
+      (text_frame 2)
+      (extension_offset 0.5)
+    )
+  )
+
+  ;; Named and locked group
+  (group "TestGroup" locked
+    (id "77777777-7777-7777-7777-777777777701")
+    (members
+      "33333333-3333-3333-3333-333333333310"
     )
   )
 )
