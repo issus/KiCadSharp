@@ -148,6 +148,11 @@ public sealed class KiCadSchPin : ISchPin
     /// </summary>
     public string? Uuid { get; set; }
 
+    /// <summary>
+    /// Gets or sets whether this pin is marked as private (KiCad 9+).
+    /// </summary>
+    public bool IsPrivate { get; set; }
+
     /// <inheritdoc />
     public CoordRect Bounds
     {

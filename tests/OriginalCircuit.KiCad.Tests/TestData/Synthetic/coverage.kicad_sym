@@ -200,6 +200,153 @@
     )
   )
 
+  ;; Symbol with KiCad 9+ features: body_styles, in_pos_files, jumper_pin_groups, private
+  (symbol "CoverageKiCad9"
+    (pin_names
+      (offset 1.016)
+    )
+    (exclude_from_sim no)
+    (in_bom yes)
+    (on_board yes)
+    (body_styles "normal" "demorgan")
+    (in_pos_files yes)
+    (jumper_pin_groups
+      (pins "1" "2")
+      (pins "3" "4")
+    )
+    (property "Reference" "J"
+      (at 0 8 0)
+      (effects
+        (font
+          (size 1.27 1.27)
+        )
+      )
+    )
+    (property "Value" "CoverageKiCad9"
+      (at 0 -8 0)
+      (effects
+        (font
+          (size 1.27 1.27)
+        )
+      )
+    )
+    (property "Footprint" ""
+      (at 0 0 0)
+      (effects
+        (font
+          (size 1.27 1.27)
+        )
+        (hide yes)
+      )
+    )
+    (property "Datasheet" ""
+      (at 0 0 0)
+      (effects
+        (font
+          (size 1.27 1.27)
+        )
+        (hide yes)
+      )
+    )
+    (symbol "CoverageKiCad9_0_1"
+      ;; Private rectangle
+      (rectangle private
+        (start -5 5)
+        (end 5 -5)
+        (stroke
+          (width 0.254)
+          (type solid)
+        )
+        (fill
+          (type none)
+        )
+      )
+      ;; Private arc
+      (arc private
+        (start 0 3)
+        (mid 3 0)
+        (end 0 -3)
+        (stroke
+          (width 0.254)
+          (type solid)
+        )
+        (fill
+          (type none)
+        )
+      )
+      ;; Private circle
+      (circle private
+        (center 0 0)
+        (radius 1.5)
+        (stroke
+          (width 0.254)
+          (type solid)
+        )
+        (fill
+          (type none)
+        )
+      )
+      ;; Private polygon (filled polyline)
+      (polyline private
+        (pts
+          (xy -2 -2)
+          (xy 2 -2)
+          (xy 0 2)
+          (xy -2 -2)
+        )
+        (stroke
+          (width 0.254)
+          (type solid)
+        )
+        (fill
+          (type background)
+        )
+      )
+      ;; Private polyline (unfilled)
+      (polyline private
+        (pts
+          (xy -3 0)
+          (xy 3 0)
+        )
+        (stroke
+          (width 0.254)
+          (type solid)
+        )
+        (fill
+          (type none)
+        )
+      )
+      ;; Private text
+      (text private "PrivateNote"
+        (at 0 7 0)
+        (effects
+          (font
+            (size 1.27 1.27)
+          )
+        )
+      )
+      ;; Private pin
+      (pin passive line private
+        (at -8 0 0)
+        (length 2.54)
+        (name "P1"
+          (effects
+            (font
+              (size 1.27 1.27)
+            )
+          )
+        )
+        (number "1"
+          (effects
+            (font
+              (size 1.27 1.27)
+            )
+          )
+        )
+      )
+    )
+  )
+
   ;; Derived symbol extending CoverageBase
   (symbol "CoverageDerived"
     (extends "CoverageBase")

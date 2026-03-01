@@ -65,6 +65,11 @@ public sealed class KiCadSchArc : ISchArc
     public bool HasFill { get; set; }
 
     /// <summary>
+    /// Gets or sets whether this item is marked as private (KiCad 9+).
+    /// </summary>
+    public bool IsPrivate { get; set; }
+
+    /// <summary>
     /// Gets the original start point from the KiCad file.
     /// </summary>
     public CoordPoint ArcStart { get; set; }

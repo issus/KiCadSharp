@@ -220,6 +220,30 @@ public sealed class KiCadSchComponent : ISchComponent
     public string? Extends { get; set; }
 
     /// <summary>
+    /// Gets or sets the body_styles list (KiCad 9+).
+    /// Null means the token was not present in the source file.
+    /// </summary>
+    public List<string>? BodyStyles { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the symbol appears in position files (KiCad 9+).
+    /// Null means the token was not present in the source file.
+    /// </summary>
+    public bool? InPosFiles { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the <c>in_pos_files</c> node was present in the source file.
+    /// </summary>
+    public bool InPosFilesPresent { get; set; }
+
+    /// <summary>
+    /// Gets or sets the jumper pin groups (KiCad 9+).
+    /// Each inner list contains the pin numbers in a group.
+    /// Null means the token was not present in the source file.
+    /// </summary>
+    public List<List<string>>? JumperPinGroups { get; set; }
+
+    /// <summary>
     /// Gets or sets whether the pin_names node was present in the source file.
     /// Null means not tracked (will always emit for KiCad 8+ files).
     /// </summary>

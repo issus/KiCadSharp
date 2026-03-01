@@ -126,6 +126,36 @@ public static class SymLibWriter
             if (component.DuplicatePinNumbersAreJumpersPresent)
                 b.AddChild("duplicate_pin_numbers_are_jumpers", v => v.AddBool(component.DuplicatePinNumbersAreJumpers));
 
+            // body_styles (KiCad 9+)
+            if (component.BodyStyles is not null)
+            {
+                b.AddChild("body_styles", bs =>
+                {
+                    foreach (var style in component.BodyStyles)
+                        bs.AddValue(style);
+                });
+            }
+
+            // in_pos_files (KiCad 9+)
+            if (component.InPosFilesPresent)
+                b.AddChild("in_pos_files", v => v.AddBool(component.InPosFiles ?? false));
+
+            // jumper_pin_groups (KiCad 9+)
+            if (component.JumperPinGroups is not null)
+            {
+                b.AddChild("jumper_pin_groups", jpg =>
+                {
+                    foreach (var group in component.JumperPinGroups)
+                    {
+                        jpg.AddChild("pins", p =>
+                        {
+                            foreach (var pin in group)
+                                p.AddValue(pin);
+                        });
+                    }
+                });
+            }
+
             // Properties
             foreach (var param in component.Parameters.OfType<KiCadSchParameter>())
             {
@@ -160,7 +190,7 @@ public static class SymLibWriter
                         b.AddChild(BuildPolyline([line.Start, line.End], line.Width, line.LineStyle, line.Color, emitColor: line.HasStrokeColor));
                         break;
                     case KiCadSchPolyline poly:
-                        b.AddChild(BuildPolyline(poly.Vertices, poly.LineWidth, poly.LineStyle, poly.Color, poly.FillType, poly.FillColor, emitColor: poly.HasStrokeColor, uuid: poly.Uuid, uuidIsSymbol: poly.UuidIsSymbol));
+                        b.AddChild(BuildPolyline(poly.Vertices, poly.LineWidth, poly.LineStyle, poly.Color, poly.FillType, poly.FillColor, emitColor: poly.HasStrokeColor, uuid: poly.Uuid, uuidIsSymbol: poly.UuidIsSymbol, isPrivate: poly.IsPrivate));
                         break;
                     case KiCadSchPolygon polygon:
                         b.AddChild(BuildPolygon(polygon));
@@ -190,7 +220,7 @@ public static class SymLibWriter
             foreach (var line in component.Lines.OfType<KiCadSchLine>())
                 b.AddChild(BuildPolyline([line.Start, line.End], line.Width, line.LineStyle, line.Color, emitColor: line.HasStrokeColor));
             foreach (var poly in component.Polylines.OfType<KiCadSchPolyline>())
-                b.AddChild(BuildPolyline(poly.Vertices, poly.LineWidth, poly.LineStyle, poly.Color, poly.FillType, poly.FillColor, emitColor: poly.HasStrokeColor, uuid: poly.Uuid, uuidIsSymbol: poly.UuidIsSymbol));
+                b.AddChild(BuildPolyline(poly.Vertices, poly.LineWidth, poly.LineStyle, poly.Color, poly.FillType, poly.FillColor, emitColor: poly.HasStrokeColor, uuid: poly.Uuid, uuidIsSymbol: poly.UuidIsSymbol, isPrivate: poly.IsPrivate));
             foreach (var poly in component.Polygons.OfType<KiCadSchPolygon>())
                 b.AddChild(BuildPolygon(poly));
             foreach (var arc in component.Arcs.OfType<KiCadSchArc>())
@@ -266,6 +296,7 @@ public static class SymLibWriter
         var b = new SExpressionBuilder("pin")
             .AddSymbol(SExpressionHelper.PinElectricalTypeToString(pin.ElectricalType))
             .AddSymbol(SExpressionHelper.PinGraphicStyleToString(pin.GraphicStyle));
+        if (pin.IsPrivate) b.AddSymbol("private");
 
         b.AddChild(WriterHelper.BuildPosition(pin.Location, SExpressionHelper.PinOrientationToAngle(pin.Orientation)))
          .AddChild("length", l => l.AddMm(pin.Length));
@@ -323,8 +354,9 @@ public static class SymLibWriter
 
     private static SExpr BuildRectangle(KiCadSchRectangle rect)
     {
-        var b = new SExpressionBuilder("rectangle")
-            .AddChild("start", s => { s.AddMm(rect.Corner1.X); s.AddMm(rect.Corner1.Y); })
+        var b = new SExpressionBuilder("rectangle");
+        if (rect.IsPrivate) b.AddSymbol("private");
+        b.AddChild("start", s => { s.AddMm(rect.Corner1.X); s.AddMm(rect.Corner1.Y); })
             .AddChild("end", e => { e.AddMm(rect.Corner2.X); e.AddMm(rect.Corner2.Y); })
             .AddChild(WriterHelper.BuildStroke(rect.LineWidth, rect.LineStyle, rect.Color, emitColor: rect.HasStrokeColor))
             .AddChild(WriterHelper.BuildFill(rect.FillType, rect.FillColor));
@@ -333,10 +365,11 @@ public static class SymLibWriter
         return b.Build();
     }
 
-    private static SExpr BuildPolyline(IReadOnlyList<CoordPoint> vertices, Coord width, LineStyle style, EdaColor color = default, SchFillType fillType = SchFillType.None, EdaColor fillColor = default, bool emitColor = false, string? uuid = null, bool uuidIsSymbol = false)
+    private static SExpr BuildPolyline(IReadOnlyList<CoordPoint> vertices, Coord width, LineStyle style, EdaColor color = default, SchFillType fillType = SchFillType.None, EdaColor fillColor = default, bool emitColor = false, string? uuid = null, bool uuidIsSymbol = false, bool isPrivate = false)
     {
-        var b = new SExpressionBuilder("polyline")
-            .AddChild(WriterHelper.BuildPoints(vertices))
+        var b = new SExpressionBuilder("polyline");
+        if (isPrivate) b.AddSymbol("private");
+        b.AddChild(WriterHelper.BuildPoints(vertices))
             .AddChild(WriterHelper.BuildStroke(width, style, color, emitColor: emitColor))
             .AddChild(WriterHelper.BuildFill(fillType, fillColor));
         if (uuid != null)
@@ -346,8 +379,9 @@ public static class SymLibWriter
 
     private static SExpr BuildPolygon(KiCadSchPolygon poly)
     {
-        var b = new SExpressionBuilder("polyline")
-            .AddChild(WriterHelper.BuildPoints(poly.Vertices))
+        var b = new SExpressionBuilder("polyline");
+        if (poly.IsPrivate) b.AddSymbol("private");
+        b.AddChild(WriterHelper.BuildPoints(poly.Vertices))
             .AddChild(WriterHelper.BuildStroke(poly.LineWidth, poly.LineStyle, poly.Color, emitColor: poly.HasStrokeColor))
             .AddChild(WriterHelper.BuildFill(poly.FillType, poly.FillColor));
         if (poly.Uuid != null)
@@ -357,8 +391,9 @@ public static class SymLibWriter
 
     private static SExpr BuildArc(KiCadSchArc arc)
     {
-        var b = new SExpressionBuilder("arc")
-            .AddChild("start", s => { s.AddMm(arc.ArcStart.X); s.AddMm(arc.ArcStart.Y); })
+        var b = new SExpressionBuilder("arc");
+        if (arc.IsPrivate) b.AddSymbol("private");
+        b.AddChild("start", s => { s.AddMm(arc.ArcStart.X); s.AddMm(arc.ArcStart.Y); })
             .AddChild("mid", m => { m.AddMm(arc.ArcMid.X); m.AddMm(arc.ArcMid.Y); })
             .AddChild("end", e => { e.AddMm(arc.ArcEnd.X); e.AddMm(arc.ArcEnd.Y); })
             .AddChild(WriterHelper.BuildStroke(arc.LineWidth, arc.LineStyle, arc.Color, emitColor: arc.HasStrokeColor))
@@ -370,8 +405,9 @@ public static class SymLibWriter
 
     private static SExpr BuildCircle(KiCadSchCircle circle)
     {
-        var b = new SExpressionBuilder("circle")
-            .AddChild("center", c => { c.AddMm(circle.Center.X); c.AddMm(circle.Center.Y); })
+        var b = new SExpressionBuilder("circle");
+        if (circle.IsPrivate) b.AddSymbol("private");
+        b.AddChild("center", c => { c.AddMm(circle.Center.X); c.AddMm(circle.Center.Y); })
             .AddChild("radius", r => r.AddMm(circle.Radius))
             .AddChild(WriterHelper.BuildStroke(circle.LineWidth, circle.LineStyle, circle.Color, emitColor: circle.HasStrokeColor))
             .AddChild(WriterHelper.BuildFill(circle.FillType, circle.FillColor));
@@ -382,8 +418,9 @@ public static class SymLibWriter
 
     private static SExpr BuildBezier(KiCadSchBezier bezier)
     {
-        var b = new SExpressionBuilder("bezier")
-            .AddChild(WriterHelper.BuildPoints(bezier.ControlPoints))
+        var b = new SExpressionBuilder("bezier");
+        if (bezier.IsPrivate) b.AddSymbol("private");
+        b.AddChild(WriterHelper.BuildPoints(bezier.ControlPoints))
             .AddChild(WriterHelper.BuildStroke(bezier.LineWidth, bezier.LineStyle, bezier.Color, emitColor: bezier.HasStrokeColor))
             .AddChild(WriterHelper.BuildFill(bezier.FillType, bezier.FillColor));
         if (bezier.Uuid != null)
@@ -395,8 +432,9 @@ public static class SymLibWriter
     {
         var fontH = label.FontSizeHeight != Coord.Zero ? label.FontSizeHeight : WriterHelper.DefaultTextSize;
         var fontW = label.FontSizeWidth != Coord.Zero ? label.FontSizeWidth : WriterHelper.DefaultTextSize;
-        var b = new SExpressionBuilder("text")
-            .AddValue(label.Text);
+        var b = new SExpressionBuilder("text");
+        if (label.IsPrivate) b.AddSymbol("private");
+        b.AddValue(label.Text);
 
         if (label.ExcludeFromSimPresent)
             b.AddChild("exclude_from_sim", e => e.AddBool(label.ExcludeFromSim));

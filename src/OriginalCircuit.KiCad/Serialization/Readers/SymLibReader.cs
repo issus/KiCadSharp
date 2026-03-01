@@ -153,6 +153,47 @@ public static class SymLibReader
             component.PowerType = powerNode.GetString();
         component.Extends = node.GetChild("extends")?.GetString();
 
+        // Parse body_styles (KiCad 9+)
+        var bodyStylesNode = node.GetChild("body_styles");
+        if (bodyStylesNode is not null)
+        {
+            component.BodyStyles = [];
+            foreach (var val in bodyStylesNode.Values)
+            {
+                if (val is SExprString s)
+                    component.BodyStyles.Add(s.Value);
+                else if (val is SExprSymbol sym)
+                    component.BodyStyles.Add(sym.Value);
+            }
+        }
+
+        // Parse in_pos_files (KiCad 9+)
+        var inPosFilesNode = node.GetChild("in_pos_files");
+        if (inPosFilesNode is not null)
+        {
+            component.InPosFilesPresent = true;
+            component.InPosFiles = inPosFilesNode.GetBool() ?? false;
+        }
+
+        // Parse jumper_pin_groups (KiCad 9+)
+        var jumperPinGroupsNode = node.GetChild("jumper_pin_groups");
+        if (jumperPinGroupsNode is not null)
+        {
+            component.JumperPinGroups = [];
+            foreach (var groupNode in jumperPinGroupsNode.Children)
+            {
+                var group = new List<string>();
+                foreach (var val in groupNode.Values)
+                {
+                    if (val is SExprString s)
+                        group.Add(s.Value);
+                    else if (val is SExprSymbol sym)
+                        group.Add(sym.Value);
+                }
+                component.JumperPinGroups.Add(group);
+            }
+        }
+
         // Parse properties
         var parameters = new List<KiCadSchParameter>();
         foreach (var propNode in node.GetChildren("property"))
@@ -250,6 +291,9 @@ public static class SymLibReader
                 case "power":
                 case "extends":
                 case "duplicate_pin_numbers_are_jumpers":
+                case "body_styles":
+                case "in_pos_files":
+                case "jumper_pin_groups":
                     // Known tokens handled elsewhere
                     break;
                 default:
@@ -383,6 +427,9 @@ public static class SymLibReader
         // Parse UUID (KiCad 9+)
         pin.Uuid = SExpressionHelper.ParseUuid(node);
 
+        // Parse private flag (KiCad 9+)
+        pin.IsPrivate = HasPrivateSymbol(node);
+
         return pin;
     }
 
@@ -480,6 +527,9 @@ public static class SymLibReader
         return param;
     }
 
+    private static bool HasPrivateSymbol(SExpr node)
+        => node.Values.Any(v => v is SExprSymbol s && s.Value == "private");
+
     private static void ParsePolylineOrPolygon(SExpr node,
         List<KiCadSchPolyline> polylines, List<KiCadSchPolygon> polygons)
     {
@@ -487,6 +537,7 @@ public static class SymLibReader
         var (width, lineStyle, color, hasColor) = SExpressionHelper.ParseStrokeEx(node);
         var (fillType, isFilled, fillColor) = SExpressionHelper.ParseFill(node);
         var (uuid, uuidIsSymbol) = SExpressionHelper.ParseUuidEx(node);
+        var isPrivate = HasPrivateSymbol(node);
 
         var hasFill = node.GetChild("fill") is not null;
 
@@ -502,6 +553,7 @@ public static class SymLibReader
                 HasStrokeColor = hasColor,
                 IsFilled = true,
                 FillType = fillType,
+                IsPrivate = isPrivate,
                 Uuid = uuid,
                 UuidIsSymbol = uuidIsSymbol
             });
@@ -518,6 +570,7 @@ public static class SymLibReader
                 FillType = fillType,
                 FillColor = fillColor,
                 HasFill = hasFill,
+                IsPrivate = isPrivate,
                 Uuid = uuid,
                 UuidIsSymbol = uuidIsSymbol
             });
@@ -548,7 +601,8 @@ public static class SymLibReader
             FillType = fillType,
             Uuid = uuid,
             UuidIsSymbol = uuidIsSymbol,
-            HasFill = fillNode is not null
+            HasFill = fillNode is not null,
+            IsPrivate = HasPrivateSymbol(node)
         };
     }
 
@@ -579,6 +633,7 @@ public static class SymLibReader
             FillType = fillType,
             FillColor = fillColor,
             HasFill = node.GetChild("fill") is not null,
+            IsPrivate = HasPrivateSymbol(node),
             ArcStart = start,
             ArcMid = mid,
             ArcEnd = end,
@@ -608,6 +663,7 @@ public static class SymLibReader
             IsFilled = isFilled,
             FillType = fillType,
             HasFill = node.GetChild("fill") is not null,
+            IsPrivate = HasPrivateSymbol(node),
             Uuid = uuid,
             UuidIsSymbol = uuidIsSymbol
         };
@@ -630,6 +686,7 @@ public static class SymLibReader
             FillType = fillType,
             FillColor = fillColor,
             HasFill = node.GetChild("fill") is not null,
+            IsPrivate = HasPrivateSymbol(node),
             Uuid = uuid,
             UuidIsSymbol = uuidIsSymbol
         };
@@ -677,6 +734,7 @@ public static class SymLibReader
             FontFace = fontFace,
             FontColor = fontColor,
             Href = hrefNode?.GetString(),
+            IsPrivate = HasPrivateSymbol(node),
             Uuid = uuid,
             UuidIsSymbol = uuidIsSymbol
         };

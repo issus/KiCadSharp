@@ -54,6 +54,11 @@ public sealed class KiCadSchBezier : ISchBezier
     /// </summary>
     public bool HasFill { get; set; }
 
+    /// <summary>
+    /// Gets or sets whether this item is marked as private (KiCad 9+).
+    /// </summary>
+    public bool IsPrivate { get; set; }
+
     /// <inheritdoc />
     public CoordRect Bounds => PointsBounds.Compute(ControlPoints);
 }

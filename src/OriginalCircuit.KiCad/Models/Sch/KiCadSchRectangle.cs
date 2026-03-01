@@ -58,6 +58,11 @@ public sealed class KiCadSchRectangle : ISchRectangle
     /// </summary>
     public bool UuidIsSymbol { get; set; }
 
+    /// <summary>
+    /// Gets or sets whether this item is marked as private (KiCad 9+).
+    /// </summary>
+    public bool IsPrivate { get; set; }
+
     /// <inheritdoc />
     public CoordRect Bounds => new(Corner1, Corner2);
 }
