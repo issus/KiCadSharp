@@ -2,6 +2,7 @@ using OriginalCircuit.Eda.Enums;
 using OriginalCircuit.Eda.Models;
 using OriginalCircuit.Eda.Models.Sch;
 using OriginalCircuit.Eda.Primitives;
+using OriginalCircuit.KiCad.Models;
 using OriginalCircuit.KiCad.Serialization;
 
 namespace OriginalCircuit.KiCad.Models.Sch;
@@ -29,8 +30,15 @@ public sealed class KiCadSch : ISchDocument
     private readonly List<KiCadSchArc> _arcs = [];
     private readonly List<KiCadSchBezier> _beziers = [];
     private readonly List<KiCadSchLine> _lines = [];
+    private readonly List<KiCadSchImage> _images = [];
+    private readonly List<KiCadSchBusAlias> _busAliases = [];
+    private readonly List<KiCadSchTable> _tables = [];
+    private readonly List<KiCadSchRuleArea> _ruleAreas = [];
+    private readonly List<KiCadSchNetclassFlag> _netclassFlags = [];
     private readonly List<KiCadDiagnostic> _diagnostics = [];
     private readonly List<object> _orderedElements = [];
+    private readonly List<KiCadSchSheetInstance> _sheetInstances = [];
+    private readonly List<KiCadSchSymbolInstance> _symbolInstances = [];
 
     /// <summary>
     /// Gets the file format version number.
@@ -63,10 +71,44 @@ public sealed class KiCadSch : ISchDocument
     /// </summary>
     public string? Uuid { get; set; }
 
-    /// <summary>
-    /// Gets or sets the paper size (e.g., "A4", "A3", "USLetter").
-    /// </summary>
+    /// <summary>Gets or sets the paper size.</summary>
     public string? Paper { get; set; }
+    /// <summary>Gets or sets the paper width for custom sizes.</summary>
+    public double? PaperWidth { get; set; }
+    /// <summary>Gets or sets the paper height for custom sizes.</summary>
+    public double? PaperHeight { get; set; }
+    /// <summary>Gets or sets whether paper is portrait.</summary>
+    public bool PaperPortrait { get; set; }
+    /// <summary>Gets or sets the title block.</summary>
+    public KiCadTitleBlock? TitleBlock { get; set; }
+    /// <summary>Gets the top-level sheet instances.</summary>
+    public IReadOnlyList<KiCadSchSheetInstance> SheetInstances => _sheetInstances;
+    internal List<KiCadSchSheetInstance> SheetInstanceList => _sheetInstances;
+    /// <summary>Gets the top-level symbol instances.</summary>
+    public IReadOnlyList<KiCadSchSymbolInstance> SymbolInstances => _symbolInstances;
+    internal List<KiCadSchSymbolInstance> SymbolInstanceList => _symbolInstances;
+    /// <summary>Gets or sets the embedded files.</summary>
+    public KiCadEmbeddedFiles? EmbeddedFiles { get; set; }
+
+    /// <summary>Gets the schematic-level images.</summary>
+    public IReadOnlyList<KiCadSchImage> Images => _images;
+    internal List<KiCadSchImage> ImageList => _images;
+
+    /// <summary>Gets the bus aliases.</summary>
+    public IReadOnlyList<KiCadSchBusAlias> BusAliases => _busAliases;
+    internal List<KiCadSchBusAlias> BusAliasList => _busAliases;
+
+    /// <summary>Gets the tables.</summary>
+    public IReadOnlyList<KiCadSchTable> Tables => _tables;
+    internal List<KiCadSchTable> TableList => _tables;
+
+    /// <summary>Gets the rule areas.</summary>
+    public IReadOnlyList<KiCadSchRuleArea> RuleAreas => _ruleAreas;
+    internal List<KiCadSchRuleArea> RuleAreaList => _ruleAreas;
+
+    /// <summary>Gets the netclass flags.</summary>
+    public IReadOnlyList<KiCadSchNetclassFlag> NetclassFlags => _netclassFlags;
+    internal List<KiCadSchNetclassFlag> NetclassFlagList => _netclassFlags;
 
     /// <summary>
     /// Gets the ordered list of all content elements in their original file order.

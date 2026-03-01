@@ -1,6 +1,7 @@
 using OriginalCircuit.Eda.Enums;
 using OriginalCircuit.Eda.Models.Sch;
 using OriginalCircuit.Eda.Primitives;
+using OriginalCircuit.KiCad.Models;
 using OriginalCircuit.KiCad.Models.Sch;
 using OriginalCircuit.KiCad.SExpression;
 using SExpr = OriginalCircuit.KiCad.SExpression.SExpression;
@@ -70,6 +71,24 @@ public static class SchReader
             Uuid = SExpressionHelper.ParseUuid(root),
             Paper = root.GetChild("paper")?.GetString()
         };
+
+        // Parse paper dimensions
+        var paperNode = root.GetChild("paper");
+        if (paperNode is not null)
+        {
+            // Check for custom dimensions: (paper 297 210)
+            if (sch.Paper is null)
+            {
+                sch.PaperWidth = paperNode.GetDouble(0);
+                sch.PaperHeight = paperNode.GetDouble(1);
+            }
+            // Check for portrait flag
+            foreach (var v in paperNode.Values)
+            {
+                if (v is SExprSymbol sym && sym.Value == "portrait")
+                    sch.PaperPortrait = true;
+            }
+        }
 
         var diagnostics = new List<KiCadDiagnostic>();
 
@@ -207,13 +226,36 @@ public static class SchReader
                         sch.OrderedElementsList.Add(bez);
                         break;
                     case "image":
+                        var img = ParseSchImage(child);
+                        sch.ImageList.Add(img);
+                        sch.OrderedElementsList.Add(img);
+                        break;
                     case "table":
+                        var tbl = ParseSchTable(child);
+                        sch.TableList.Add(tbl);
+                        sch.OrderedElementsList.Add(tbl);
+                        break;
                     case "rule_area":
+                        var ra = ParseSchRuleArea(child);
+                        sch.RuleAreaList.Add(ra);
+                        sch.OrderedElementsList.Add(ra);
+                        break;
                     case "netclass_flag":
+                        var ncf = ParseSchNetclassFlag(child);
+                        sch.NetclassFlagList.Add(ncf);
+                        sch.OrderedElementsList.Add(ncf);
+                        break;
                     case "bus_alias":
+                        var ba = ParseSchBusAlias(child);
+                        sch.BusAliasList.Add(ba);
+                        sch.OrderedElementsList.Add(ba);
+                        break;
                     case "text_box":
                     case "embedded_files":
                     case "group":
+                        break;
+                    case "title_block":
+                        sch.TitleBlock = PcbReader.ParseTitleBlock(child);
                         break;
                     case "version":
                     case "generator":
@@ -222,10 +264,13 @@ public static class SchReader
                     case "uuid":
                     case "lib_symbols":
                     case "paper":
-                    case "title_block":
+                        // Known tokens handled elsewhere
+                        break;
                     case "sheet_instances":
+                        ParseSheetInstances(child, sch);
+                        break;
                     case "symbol_instances":
-                        // Known tokens handled elsewhere or intentionally skipped
+                        ParseSymbolInstances(child, sch);
                         break;
                     default:
                         diagnostics.Add(new KiCadDiagnostic(DiagnosticSeverity.Warning,
@@ -523,6 +568,26 @@ public static class SchReader
             sheet.Dnp = dnpNode.GetBool() ?? false;
         }
 
+        // Parse instances (KiCad 9+)
+        var instancesNode = node.GetChild("instances");
+        if (instancesNode is not null)
+        {
+            foreach (var projNode in instancesNode.GetChildren("project"))
+            {
+                var projectName = projNode.GetString() ?? "";
+                foreach (var pathNode in projNode.GetChildren("path"))
+                {
+                    var entry = new KiCadSchSheetInstanceEntry
+                    {
+                        ProjectName = projectName,
+                        Path = pathNode.GetString() ?? "",
+                        Page = pathNode.GetChild("page")?.GetString() ?? ""
+                    };
+                    sheet.Instances.Add(entry);
+                }
+            }
+        }
+
         return sheet;
     }
 
@@ -645,7 +710,26 @@ public static class SchReader
         // Parse lib_name
         component.LibName = node.GetChild("lib_name")?.GetString();
 
-        // instances node is not yet deserialized into typed model
+        // Parse instances (KiCad 9+ format)
+        var instancesNode = node.GetChild("instances");
+        if (instancesNode is not null)
+        {
+            foreach (var projNode in instancesNode.GetChildren("project"))
+            {
+                var projectName = projNode.GetString() ?? "";
+                foreach (var pathNode in projNode.GetChildren("path"))
+                {
+                    var inst = new KiCadSchComponentInstance
+                    {
+                        ProjectName = projectName,
+                        Path = pathNode.GetString() ?? "",
+                        Reference = pathNode.GetChild("reference")?.GetString() ?? "",
+                        Unit = pathNode.GetChild("unit")?.GetInt() ?? 1
+                    };
+                    component.InstanceList.Add(inst);
+                }
+            }
+        }
 
         // Parse properties
         var parameters = new List<KiCadSchParameter>();
@@ -836,5 +920,325 @@ public static class SchReader
         }
 
         return bezier;
+    }
+
+    private static void ParseSheetInstances(SExpr node, KiCadSch sch)
+    {
+        foreach (var pathNode in node.GetChildren("path"))
+        {
+            var inst = new KiCadSchSheetInstance
+            {
+                Path = pathNode.GetString() ?? "",
+                Page = pathNode.GetChild("page")?.GetString() ?? ""
+            };
+            sch.SheetInstanceList.Add(inst);
+        }
+    }
+
+    private static void ParseSymbolInstances(SExpr node, KiCadSch sch)
+    {
+        foreach (var pathNode in node.GetChildren("path"))
+        {
+            var inst = new KiCadSchSymbolInstance
+            {
+                Path = pathNode.GetString() ?? "",
+                Reference = pathNode.GetChild("reference")?.GetString() ?? "",
+                Unit = pathNode.GetChild("unit")?.GetInt() ?? 1,
+                Value = pathNode.GetChild("value")?.GetString() ?? "",
+                Footprint = pathNode.GetChild("footprint")?.GetString() ?? ""
+            };
+            sch.SymbolInstanceList.Add(inst);
+        }
+    }
+
+    private static KiCadSchImage ParseSchImage(SExpr node)
+    {
+        var img = new KiCadSchImage();
+        var atNode = node.GetChild("at");
+        if (atNode is not null)
+        {
+            var loc = SExpressionHelper.ParseXY(atNode);
+            img.Corner1 = loc;
+            img.Corner2 = loc;
+        }
+        img.Scale = node.GetChild("scale")?.GetDouble() ?? 1.0;
+        img.Uuid = SExpressionHelper.ParseUuid(node);
+
+        var dataNode = node.GetChild("data");
+        if (dataNode is not null)
+        {
+            // Collect all string values as the base64 data
+            var parts = new List<string>();
+            foreach (var v in dataNode.Values)
+            {
+                if (v is SExprString s) parts.Add(s.Value);
+                else if (v is SExprSymbol sym) parts.Add(sym.Value);
+            }
+            img.DataString = string.Join("\n", parts);
+        }
+
+        return img;
+    }
+
+    private static KiCadSchTable ParseSchTable(SExpr node)
+    {
+        var table = new KiCadSchTable
+        {
+            ColumnCount = node.GetChild("column_count")?.GetInt() ?? 0
+        };
+
+        var borderNode = node.GetChild("border");
+        if (borderNode is not null)
+        {
+            table.BorderExternal = borderNode.GetChild("external")?.GetBool() ?? false;
+            table.BorderHeader = borderNode.GetChild("header")?.GetBool() ?? false;
+            var strokeNode = borderNode.GetChild("stroke");
+            if (strokeNode is not null)
+            {
+                table.BorderStrokeWidth = Coord.FromMm(strokeNode.GetChild("width")?.GetDouble() ?? 0);
+                table.BorderStrokeType = strokeNode.GetChild("type")?.GetString();
+            }
+        }
+
+        var sepNode = node.GetChild("separators");
+        if (sepNode is not null)
+        {
+            table.SeparatorRows = sepNode.GetChild("rows")?.GetBool() ?? false;
+            table.SeparatorCols = sepNode.GetChild("cols")?.GetBool() ?? false;
+            var strokeNode = sepNode.GetChild("stroke");
+            if (strokeNode is not null)
+            {
+                table.SeparatorStrokeWidth = Coord.FromMm(strokeNode.GetChild("width")?.GetDouble() ?? 0);
+                table.SeparatorStrokeType = strokeNode.GetChild("type")?.GetString();
+            }
+        }
+
+        var cwNode = node.GetChild("column_widths");
+        if (cwNode is not null)
+        {
+            foreach (var v in cwNode.Values)
+            {
+                if (v is SExprNumber n) table.ColumnWidths.Add(n.Value);
+                else if (v is SExprString s && double.TryParse(s.Value, System.Globalization.CultureInfo.InvariantCulture, out var d)) table.ColumnWidths.Add(d);
+            }
+        }
+
+        var rhNode = node.GetChild("row_heights");
+        if (rhNode is not null)
+        {
+            foreach (var v in rhNode.Values)
+            {
+                if (v is SExprNumber n) table.RowHeights.Add(n.Value);
+                else if (v is SExprString s && double.TryParse(s.Value, System.Globalization.CultureInfo.InvariantCulture, out var d)) table.RowHeights.Add(d);
+            }
+        }
+
+        var cellsNode = node.GetChild("cells");
+        if (cellsNode is not null)
+        {
+            foreach (var cellNode in cellsNode.GetChildren("table_cell"))
+            {
+                var cell = new KiCadSchTableCell
+                {
+                    Text = cellNode.GetString() ?? ""
+                };
+
+                var efsNode = cellNode.GetChild("exclude_from_sim");
+                if (efsNode is not null)
+                {
+                    cell.HasExcludeFromSim = true;
+                    cell.ExcludeFromSim = efsNode.GetBool() ?? false;
+                }
+
+                var catNode = cellNode.GetChild("at");
+                if (catNode is not null)
+                {
+                    cell.Location = SExpressionHelper.ParseXY(catNode);
+                    cell.Rotation = catNode.GetDouble(2) ?? 0;
+                }
+
+                var sizeNode = cellNode.GetChild("size");
+                if (sizeNode is not null)
+                    cell.Size = new CoordPoint(Coord.FromMm(sizeNode.GetDouble(0) ?? 0), Coord.FromMm(sizeNode.GetDouble(1) ?? 0));
+
+                var marginsNode = cellNode.GetChild("margins");
+                if (marginsNode is not null)
+                {
+                    cell.MarginLeft = marginsNode.GetDouble(0) ?? 0;
+                    cell.MarginRight = marginsNode.GetDouble(1) ?? 0;
+                    cell.MarginTop = marginsNode.GetDouble(2) ?? 0;
+                    cell.MarginBottom = marginsNode.GetDouble(3) ?? 0;
+                }
+
+                var spanNode = cellNode.GetChild("span");
+                if (spanNode is not null)
+                {
+                    cell.ColSpan = spanNode.GetInt(0) ?? 1;
+                    cell.RowSpan = spanNode.GetInt(1) ?? 1;
+                }
+
+                var fillNode = cellNode.GetChild("fill");
+                if (fillNode is not null)
+                    cell.FillType = fillNode.GetChild("type")?.GetString();
+
+                var effectsNode = cellNode.GetChild("effects");
+                if (effectsNode is not null)
+                {
+                    var fontNode = effectsNode.GetChild("font");
+                    if (fontNode is not null)
+                    {
+                        var fsNode = fontNode.GetChild("size");
+                        if (fsNode is not null)
+                        {
+                            cell.FontHeight = Coord.FromMm(fsNode.GetDouble(0) ?? 1.27);
+                            cell.FontWidth = Coord.FromMm(fsNode.GetDouble(1) ?? 1.27);
+                        }
+                    }
+                    var justNode = effectsNode.GetChild("justify");
+                    if (justNode is not null)
+                    {
+                        foreach (var v in justNode.Values)
+                        {
+                            if (v is SExprSymbol sym) cell.Justification.Add(sym.Value);
+                            else if (v is SExprString s) cell.Justification.Add(s.Value);
+                        }
+                    }
+                }
+
+                cell.Uuid = SExpressionHelper.ParseUuid(cellNode);
+                table.Cells.Add(cell);
+            }
+        }
+
+        return table;
+    }
+
+    private static KiCadSchRuleArea ParseSchRuleArea(SExpr node)
+    {
+        var ra = new KiCadSchRuleArea();
+        var polyNode = node.GetChild("polyline");
+        if (polyNode is not null)
+        {
+            ra.Points = SExpressionHelper.ParsePoints(polyNode);
+            var strokeNode = polyNode.GetChild("stroke");
+            if (strokeNode is not null)
+            {
+                ra.StrokeWidth = Coord.FromMm(strokeNode.GetChild("width")?.GetDouble() ?? 0);
+                ra.StrokeType = strokeNode.GetChild("type")?.GetString();
+            }
+            var fillNode = polyNode.GetChild("fill");
+            if (fillNode is not null)
+                ra.FillType = fillNode.GetChild("type")?.GetString();
+            var (uuid, isSymbol) = SExpressionHelper.ParseUuidEx(polyNode);
+            ra.Uuid = uuid;
+            ra.UuidIsSymbol = isSymbol;
+        }
+        return ra;
+    }
+
+    private static KiCadSchNetclassFlag ParseSchNetclassFlag(SExpr node)
+    {
+        var ncf = new KiCadSchNetclassFlag
+        {
+            Name = node.GetString() ?? "",
+            Length = node.GetChild("length")?.GetDouble() ?? 0,
+            Shape = node.GetChild("shape")?.GetString()
+        };
+
+        var atNode = node.GetChild("at");
+        if (atNode is not null)
+        {
+            ncf.Location = SExpressionHelper.ParseXY(atNode);
+            ncf.Rotation = atNode.GetDouble(2) ?? 0;
+        }
+
+        var effectsNode = node.GetChild("effects");
+        if (effectsNode is not null)
+        {
+            var fontNode = effectsNode.GetChild("font");
+            if (fontNode is not null)
+            {
+                var fsNode = fontNode.GetChild("size");
+                if (fsNode is not null)
+                {
+                    ncf.FontHeight = Coord.FromMm(fsNode.GetDouble(0) ?? 1.27);
+                    ncf.FontWidth = Coord.FromMm(fsNode.GetDouble(1) ?? 1.27);
+                }
+            }
+            var justNode = effectsNode.GetChild("justify");
+            if (justNode is not null)
+            {
+                foreach (var v in justNode.Values)
+                {
+                    if (v is SExprSymbol sym) ncf.Justification.Add(sym.Value);
+                    else if (v is SExprString s) ncf.Justification.Add(s.Value);
+                }
+            }
+        }
+
+        ncf.Uuid = SExpressionHelper.ParseUuid(node);
+
+        foreach (var propNode in node.GetChildren("property"))
+        {
+            var prop = new KiCadSchNetclassFlagProperty
+            {
+                Key = propNode.GetString(0) ?? "",
+                Value = propNode.GetString(1) ?? ""
+            };
+            var propAt = propNode.GetChild("at");
+            if (propAt is not null)
+            {
+                prop.Location = SExpressionHelper.ParseXY(propAt);
+                prop.Rotation = propAt.GetDouble(2) ?? 0;
+            }
+            var propEffects = propNode.GetChild("effects");
+            if (propEffects is not null)
+            {
+                var fontNode = propEffects.GetChild("font");
+                if (fontNode is not null)
+                {
+                    var fsNode = fontNode.GetChild("size");
+                    if (fsNode is not null)
+                    {
+                        prop.FontHeight = Coord.FromMm(fsNode.GetDouble(0) ?? 1.27);
+                        prop.FontWidth = Coord.FromMm(fsNode.GetDouble(1) ?? 1.27);
+                    }
+                    prop.FontItalic = SExpressionHelper.HasSymbol(fontNode, "italic")
+                        || fontNode.GetChild("italic")?.GetBool() == true;
+                }
+                var justNode = propEffects.GetChild("justify");
+                if (justNode is not null)
+                {
+                    foreach (var v in justNode.Values)
+                    {
+                        if (v is SExprSymbol sym) prop.Justification.Add(sym.Value);
+                        else if (v is SExprString s) prop.Justification.Add(s.Value);
+                    }
+                }
+                prop.IsHidden = SExpressionHelper.HasSymbol(propEffects, "hide");
+            }
+            prop.Uuid = SExpressionHelper.ParseUuid(propNode);
+            ncf.Properties.Add(prop);
+        }
+
+        return ncf;
+    }
+
+    private static KiCadSchBusAlias ParseSchBusAlias(SExpr node)
+    {
+        var ba = new KiCadSchBusAlias
+        {
+            Name = node.GetString() ?? ""
+        };
+        var membersNode = node.GetChild("members");
+        if (membersNode is not null)
+        {
+            foreach (var v in membersNode.Values)
+            {
+                if (v is SExprString s) ba.Members.Add(s.Value);
+                else if (v is SExprSymbol sym) ba.Members.Add(sym.Value);
+            }
+        }
+        return ba;
     }
 }

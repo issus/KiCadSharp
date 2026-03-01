@@ -1,5 +1,6 @@
 using OriginalCircuit.Eda.Enums;
 using OriginalCircuit.Eda.Primitives;
+using OriginalCircuit.KiCad.Models.Pcb;
 using OriginalCircuit.KiCad.Models.Sch;
 using OriginalCircuit.KiCad.SExpression;
 using SExpr = OriginalCircuit.KiCad.SExpression.SExpression;
@@ -124,6 +125,31 @@ internal static class WriterHelper
         var b = new SExpressionBuilder("pts");
         foreach (var pt in points)
             b.AddChild(BuildXY(pt));
+        return b.Build();
+    }
+
+    /// <summary>
+    /// Builds a <c>(pts ...)</c> node from polygon vertices that may include arc segments.
+    /// </summary>
+    public static SExpr BuildPolygonVertices(IReadOnlyList<PolygonVertex> vertices)
+    {
+        var b = new SExpressionBuilder("pts");
+        foreach (var v in vertices)
+        {
+            if (v.IsArc)
+            {
+                b.AddChild("arc", a =>
+                {
+                    a.AddChild("start", s => s.AddMm(v.ArcStart.X).AddMm(v.ArcStart.Y));
+                    a.AddChild("mid", m => m.AddMm(v.ArcMid.X).AddMm(v.ArcMid.Y));
+                    a.AddChild("end", e => e.AddMm(v.ArcEnd.X).AddMm(v.ArcEnd.Y));
+                });
+            }
+            else
+            {
+                b.AddChild(BuildXY(v.Point));
+            }
+        }
         return b.Build();
     }
 

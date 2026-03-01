@@ -340,16 +340,8 @@ public static class PcbWriter
         if (via.Filling is not null)
             vb.AddChild("filling", f => f.AddSymbol(via.Filling));
 
-        vb.AddChild("net", n => n.AddValue(via.Net));
-
-        if (via.Uuid is not null)
-            vb.AddChild(WriterHelper.BuildUuidToken(via.Uuid, via.UuidToken ?? "uuid", via.UuidIsSymbol));
-
-        if (via.Status.HasValue)
-            vb.AddChild("status", s => s.AddValue(via.Status.Value));
-
-        // Zone layer connections
-        if (via.ZoneLayerConnections is { Count: > 0 })
+        // Zone layer connections (before net/uuid in KiCad format)
+        if (via.ZoneLayerConnections is not null)
         {
             vb.AddChild("zone_layer_connections", z =>
             {
@@ -357,6 +349,14 @@ public static class PcbWriter
                     z.AddValue(layer);
             });
         }
+
+        vb.AddChild("net", n => n.AddValue(via.Net));
+
+        if (via.Uuid is not null)
+            vb.AddChild(WriterHelper.BuildUuidToken(via.Uuid, via.UuidToken ?? "uuid", via.UuidIsSymbol));
+
+        if (via.Status.HasValue)
+            vb.AddChild("status", s => s.AddValue(via.Status.Value));
 
         return vb.Build();
     }
@@ -427,7 +427,25 @@ public static class PcbWriter
             boldIsSymbol: text.BoldIsSymbol,
             italicIsSymbol: text.ItalicIsSymbol));
 
+        if (text.RenderCache is not null)
+            tb.AddChild(BuildRenderCache(text.RenderCache));
+
         return tb.Build();
+    }
+
+    internal static SExpr BuildRenderCache(KiCadTextRenderCache rc)
+    {
+        var rb = new SExpressionBuilder("render_cache");
+        rb.AddValue(rc.FontName ?? "");
+        rb.AddValue(rc.FontSize.X.ToMm());
+        foreach (var polygon in rc.Polygons)
+        {
+            rb.AddChild("polygon", p =>
+            {
+                p.AddChild(WriterHelper.BuildPoints(polygon));
+            });
+        }
+        return rb.Build();
     }
 
     private static SExpr BuildZoneLegacy(KiCadPcbRegion region)
@@ -680,6 +698,8 @@ public static class PcbWriter
                 p.AddChild("enabled", e => e.AddBool(zone.PlacementEnabled));
                 if (zone.PlacementSheetName is not null)
                     p.AddChild("sheetname", s => s.AddValue(zone.PlacementSheetName));
+                if (zone.PlacementComponentClass is not null)
+                    p.AddChild("component_class", c => c.AddValue(zone.PlacementComponentClass));
             });
         }
 
@@ -687,7 +707,8 @@ public static class PcbWriter
         {
             zb.AddChild("fill", f =>
             {
-                f.AddBool(zone.IsFilled);
+                if (zone.HasFillValue)
+                    f.AddBool(zone.IsFilled);
                 if (zone.FillMode is not null)
                     f.AddChild("mode", m => m.AddSymbol(zone.FillMode));
                 if (zone.ThermalGap != Coord.Zero)
@@ -720,7 +741,14 @@ public static class PcbWriter
         }
 
         // Outline polygon
-        if (zone.Outline.Count > 0)
+        if (zone.OutlineVertices.Count > 0)
+        {
+            zb.AddChild("polygon", p =>
+            {
+                p.AddChild(WriterHelper.BuildPolygonVertices(zone.OutlineVertices));
+            });
+        }
+        else if (zone.Outline.Count > 0)
         {
             zb.AddChild("polygon", p =>
             {
@@ -924,10 +952,19 @@ public static class PcbWriter
             {
                 f.AddChild("name", n => n.AddValue(file.Name));
                 f.AddChild("type", t => t.AddSymbol(file.Type));
+                if (file.DataSegments.Count > 0)
+                    f.AddChild("data", d =>
+                    {
+                        foreach (var segment in file.DataSegments)
+                        {
+                            if (file.DataSegmentsAreSymbols)
+                                d.AddSymbol(segment);
+                            else
+                                d.AddValue(segment);
+                        }
+                    });
                 if (file.Checksum is not null)
                     f.AddChild("checksum", c => c.AddValue(file.Checksum));
-                if (file.Data.Length > 0)
-                    f.AddChild("data", d => d.AddValue(file.Data));
             });
         }
         return b.Build();

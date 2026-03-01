@@ -99,6 +99,16 @@ public static class FootprintWriter
             b.AddChild(SymLibWriter.BuildProperty(prop));
         }
 
+        // Component classes (KiCad 9+) — must come after properties, before path
+        if (component.ComponentClasses.Count > 0)
+        {
+            b.AddChild("component_classes", cc =>
+            {
+                foreach (var cls in component.ComponentClasses)
+                    cc.AddChild("class", c => c.AddValue(cls));
+            });
+        }
+
         if (component.Path is not null)
             b.AddChild("path", p => p.AddValue(component.Path));
 
@@ -149,6 +159,16 @@ public static class FootprintWriter
         if (component.DuplicatePadNumbersAreJumpers.HasValue)
             b.AddChild("duplicate_pad_numbers_are_jumpers", d => d.AddBool(component.DuplicatePadNumbersAreJumpers.Value));
 
+        // Net tie pad groups — must come after attr, before graphical items
+        if (component.NetTiePadGroups.Count > 0)
+        {
+            b.AddChild("net_tie_pad_groups", n =>
+            {
+                foreach (var group in component.NetTiePadGroups)
+                    n.AddValue(group);
+            });
+        }
+
         // Graphical items (lines, rects, circles, arcs, polygons, curves, texts) — use original order if available
         if (component.GraphicalItemOrder.Count > 0)
         {
@@ -190,16 +210,6 @@ public static class FootprintWriter
             b.AddChild(BuildPad(pad, uuidTok, uuidSym));
         }
 
-        // Net tie pad groups
-        if (component.NetTiePadGroups.Count > 0)
-        {
-            b.AddChild("net_tie_pad_groups", n =>
-            {
-                foreach (var group in component.NetTiePadGroups)
-                    n.AddValue(group);
-            });
-        }
-
         // Private layers
         if (component.PrivateLayers.Count > 0)
         {
@@ -218,15 +228,9 @@ public static class FootprintWriter
         foreach (var group in component.Groups)
             b.AddChild(PcbWriter.BuildGroup(group));
 
-        // Component classes (KiCad 9+)
-        if (component.ComponentClasses.Count > 0)
-        {
-            b.AddChild("component_classes", cc =>
-            {
-                foreach (var cls in component.ComponentClasses)
-                    cc.AddChild("class", c => c.AddValue(cls));
-            });
-        }
+        // Dimensions
+        foreach (var dim in component.Dimensions)
+            b.AddChild(PcbWriter.BuildDimension(dim));
 
         // Embedded fonts (KiCad 8+)
         if (component.EmbeddedFonts.HasValue)
@@ -335,6 +339,9 @@ public static class FootprintWriter
 
         if (text.Uuid is not null && text.UuidAfterEffects)
             tb.AddChild(WriterHelper.BuildUuidToken(text.Uuid, uuidToken, uuidIsSymbol));
+
+        if (text.RenderCache is not null)
+            tb.AddChild(PcbWriter.BuildRenderCache(text.RenderCache));
 
         return tb.Build();
     }

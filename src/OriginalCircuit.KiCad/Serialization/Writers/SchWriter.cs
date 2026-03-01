@@ -1,6 +1,7 @@
 using OriginalCircuit.Eda.Enums;
 using OriginalCircuit.Eda.Models.Sch;
 using OriginalCircuit.Eda.Primitives;
+using OriginalCircuit.KiCad.Models;
 using OriginalCircuit.KiCad.Models.Sch;
 using OriginalCircuit.KiCad.SExpression;
 using SExpr = OriginalCircuit.KiCad.SExpression.SExpression;
@@ -58,6 +59,10 @@ public static class SchWriter
         if (sch.Paper is not null)
             b.AddChild("paper", p => p.AddValue(sch.Paper));
 
+        // Title block
+        if (sch.TitleBlock is not null)
+            b.AddChild(PcbWriter.BuildTitleBlock(sch.TitleBlock));
+
         // Lib symbols
         if (sch.LibSymbols.Count > 0)
         {
@@ -82,7 +87,42 @@ public static class SchWriter
             EmitElementsGrouped(b, sch);
         }
 
-        // embedded_fonts is emitted at the end of the file (KiCad 9+ position)
+        // Sheet instances (KiCad 7/8 format, before embedded_fonts)
+        if (sch.SheetInstances.Count > 0)
+        {
+            b.AddChild("sheet_instances", si =>
+            {
+                foreach (var inst in sch.SheetInstances)
+                {
+                    si.AddChild("path", p =>
+                    {
+                        p.AddValue(inst.Path);
+                        p.AddChild("page", pg => pg.AddValue(inst.Page));
+                    });
+                }
+            });
+        }
+
+        // Symbol instances (KiCad 7/8 format, before embedded_fonts)
+        if (sch.SymbolInstances.Count > 0)
+        {
+            b.AddChild("symbol_instances", si =>
+            {
+                foreach (var inst in sch.SymbolInstances)
+                {
+                    si.AddChild("path", p =>
+                    {
+                        p.AddValue(inst.Path);
+                        p.AddChild("reference", r => r.AddValue(inst.Reference));
+                        p.AddChild("unit", u => u.AddValue(inst.Unit));
+                        p.AddChild("value", v => v.AddValue(inst.Value));
+                        p.AddChild("footprint", f => f.AddValue(inst.Footprint));
+                    });
+                }
+            });
+        }
+
+        // embedded_fonts at the very end of the file (KiCad 9+)
         if (sch.EmbeddedFonts.HasValue)
             b.AddChild("embedded_fonts", v => v.AddBool(sch.EmbeddedFonts.Value));
 
@@ -141,6 +181,21 @@ public static class SchWriter
             case KiCadSchBezier bezier:
                 b.AddChild(BuildBezier(bezier));
                 break;
+            case KiCadSchImage image:
+                b.AddChild(BuildImage(image));
+                break;
+            case KiCadSchTable table:
+                b.AddChild(BuildTable(table));
+                break;
+            case KiCadSchRuleArea ruleArea:
+                b.AddChild(BuildRuleArea(ruleArea));
+                break;
+            case KiCadSchNetclassFlag ncf:
+                b.AddChild(BuildNetclassFlag(ncf));
+                break;
+            case KiCadSchBusAlias busAlias:
+                b.AddChild(BuildBusAlias(busAlias));
+                break;
         }
     }
 
@@ -178,6 +233,16 @@ public static class SchWriter
             b.AddChild(BuildPowerPort(power));
         foreach (var comp in sch.Components.OfType<KiCadSchComponent>())
             b.AddChild(BuildPlacedSymbol(comp));
+        foreach (var image in sch.Images)
+            b.AddChild(BuildImage(image));
+        foreach (var table in sch.Tables)
+            b.AddChild(BuildTable(table));
+        foreach (var ruleArea in sch.RuleAreas)
+            b.AddChild(BuildRuleArea(ruleArea));
+        foreach (var ncf in sch.NetclassFlags)
+            b.AddChild(BuildNetclassFlag(ncf));
+        foreach (var ba in sch.BusAliases)
+            b.AddChild(BuildBusAlias(ba));
     }
 
     private static SExpr BuildWire(KiCadSchWire wire)
@@ -323,6 +388,29 @@ public static class SchWriter
                     boldIsSymbol: pin.BoldIsSymbol, italicIsSymbol: pin.ItalicIsSymbol));
             }
             sb.AddChild(pb.Build());
+        }
+
+        // Per-sheet instances (KiCad 9+ format)
+        if (sheet.Instances.Count > 0)
+        {
+            sb.AddChild("instances", inst =>
+            {
+                foreach (var group in sheet.Instances.GroupBy(i => i.ProjectName))
+                {
+                    inst.AddChild("project", proj =>
+                    {
+                        proj.AddValue(group.Key);
+                        foreach (var entry in group)
+                        {
+                            proj.AddChild("path", p =>
+                            {
+                                p.AddValue(entry.Path);
+                                p.AddChild("page", pg => pg.AddValue(entry.Page));
+                            });
+                        }
+                    });
+                }
+            });
         }
 
         return sb.Build();
@@ -524,6 +612,31 @@ public static class SchWriter
             sb.AddChild(BuildPlacedPin(pin));
         }
 
+        // Per-symbol instances (KiCad 9+ format)
+        if (comp.Instances.Count > 0)
+        {
+            sb.AddChild("instances", inst =>
+            {
+                // Group instances by project name
+                foreach (var group in comp.Instances.GroupBy(i => i.ProjectName))
+                {
+                    inst.AddChild("project", proj =>
+                    {
+                        proj.AddValue(group.Key);
+                        foreach (var entry in group)
+                        {
+                            proj.AddChild("path", p =>
+                            {
+                                p.AddValue(entry.Path);
+                                p.AddChild("reference", r => r.AddValue(entry.Reference));
+                                p.AddChild("unit", u => u.AddValue(entry.Unit));
+                            });
+                        }
+                    });
+                }
+            });
+        }
+
         return sb.Build();
     }
 
@@ -534,5 +647,218 @@ public static class SchWriter
         if (pin.Uuid is not null)
             pb.AddChild(WriterHelper.BuildUuid(pin.Uuid));
         return pb.Build();
+    }
+
+    private static SExpr BuildImage(KiCadSchImage image)
+    {
+        var ib = new SExpressionBuilder("image");
+        ib.AddChild(WriterHelper.BuildPositionCompact(image.Corner1));
+        if (image.Scale != 1.0)
+            ib.AddChild("scale", s => s.AddValue(image.Scale));
+        if (image.Uuid is not null)
+            ib.AddChild(WriterHelper.BuildUuid(image.Uuid));
+        if (image.DataString is not null)
+        {
+            ib.AddChild("data", d =>
+            {
+                foreach (var line in image.DataString.Split('\n'))
+                    d.AddValue(line);
+            });
+        }
+        return ib.Build();
+    }
+
+    private static SExpr BuildTable(KiCadSchTable table)
+    {
+        var tb = new SExpressionBuilder("table");
+        tb.AddChild("column_count", c => c.AddValue(table.ColumnCount));
+        tb.AddChild("border", b =>
+        {
+            b.AddChild("external", e => e.AddBool(table.BorderExternal));
+            b.AddChild("header", h => h.AddBool(table.BorderHeader));
+            b.AddChild("stroke", s =>
+            {
+                s.AddChild("width", w => w.AddMm(table.BorderStrokeWidth));
+                if (table.BorderStrokeType is not null)
+                    s.AddChild("type", t => t.AddSymbol(table.BorderStrokeType));
+            });
+        });
+        tb.AddChild("separators", s =>
+        {
+            s.AddChild("rows", r => r.AddBool(table.SeparatorRows));
+            s.AddChild("cols", c => c.AddBool(table.SeparatorCols));
+            s.AddChild("stroke", st =>
+            {
+                st.AddChild("width", w => w.AddMm(table.SeparatorStrokeWidth));
+                if (table.SeparatorStrokeType is not null)
+                    st.AddChild("type", t => t.AddSymbol(table.SeparatorStrokeType));
+            });
+        });
+        tb.AddChild("column_widths", cw =>
+        {
+            foreach (var w in table.ColumnWidths)
+                cw.AddValue(w);
+        });
+        tb.AddChild("row_heights", rh =>
+        {
+            foreach (var h in table.RowHeights)
+                rh.AddValue(h);
+        });
+        tb.AddChild("cells", cells =>
+        {
+            foreach (var cell in table.Cells)
+                cells.AddChild(BuildTableCell(cell));
+        });
+        return tb.Build();
+    }
+
+    private static SExpr BuildTableCell(KiCadSchTableCell cell)
+    {
+        var cb = new SExpressionBuilder("table_cell").AddValue(cell.Text);
+        if (cell.HasExcludeFromSim)
+            cb.AddChild("exclude_from_sim", e => e.AddBool(cell.ExcludeFromSim));
+        cb.AddChild(WriterHelper.BuildPosition(cell.Location, cell.Rotation));
+        cb.AddChild("size", s =>
+        {
+            s.AddMm(cell.Size.X);
+            s.AddMm(cell.Size.Y);
+        });
+        cb.AddChild("margins", m =>
+        {
+            m.AddValue(cell.MarginLeft);
+            m.AddValue(cell.MarginRight);
+            m.AddValue(cell.MarginTop);
+            m.AddValue(cell.MarginBottom);
+        });
+        cb.AddChild("span", s =>
+        {
+            s.AddValue(cell.ColSpan);
+            s.AddValue(cell.RowSpan);
+        });
+        if (cell.FillType is not null)
+            cb.AddChild("fill", f => f.AddChild("type", t => t.AddSymbol(cell.FillType)));
+        cb.AddChild("effects", e =>
+        {
+            e.AddChild("font", f =>
+            {
+                f.AddChild("size", s =>
+                {
+                    s.AddMm(cell.FontHeight);
+                    s.AddMm(cell.FontWidth);
+                });
+            });
+            if (cell.Justification.Count > 0)
+            {
+                e.AddChild("justify", j =>
+                {
+                    foreach (var jv in cell.Justification)
+                        j.AddSymbol(jv);
+                });
+            }
+        });
+        if (cell.Uuid is not null)
+            cb.AddChild(WriterHelper.BuildUuid(cell.Uuid));
+        return cb.Build();
+    }
+
+    private static SExpr BuildRuleArea(KiCadSchRuleArea ra)
+    {
+        var rb = new SExpressionBuilder("rule_area");
+        rb.AddChild("polyline", p =>
+        {
+            p.AddChild(WriterHelper.BuildPoints(ra.Points));
+            p.AddChild("stroke", s =>
+            {
+                s.AddChild("width", w => w.AddMm(ra.StrokeWidth));
+                if (ra.StrokeType is not null)
+                    s.AddChild("type", t => t.AddSymbol(ra.StrokeType));
+            });
+            if (ra.FillType is not null)
+                p.AddChild("fill", f => f.AddChild("type", t => t.AddSymbol(ra.FillType)));
+            if (ra.Uuid is not null)
+            {
+                if (ra.UuidIsSymbol)
+                    p.AddChild("uuid", u => u.AddSymbol(ra.Uuid));
+                else
+                    p.AddChild(WriterHelper.BuildUuid(ra.Uuid));
+            }
+        });
+        return rb.Build();
+    }
+
+    private static SExpr BuildNetclassFlag(KiCadSchNetclassFlag ncf)
+    {
+        var nb = new SExpressionBuilder("netclass_flag").AddValue(ncf.Name);
+        nb.AddChild("length", l => l.AddValue(ncf.Length));
+        if (ncf.Shape is not null)
+            nb.AddChild("shape", s => s.AddSymbol(ncf.Shape));
+        nb.AddChild(WriterHelper.BuildPosition(ncf.Location, ncf.Rotation));
+        nb.AddChild("effects", e =>
+        {
+            e.AddChild("font", f =>
+            {
+                f.AddChild("size", s =>
+                {
+                    s.AddMm(ncf.FontHeight);
+                    s.AddMm(ncf.FontWidth);
+                });
+            });
+            if (ncf.Justification.Count > 0)
+            {
+                e.AddChild("justify", j =>
+                {
+                    foreach (var jv in ncf.Justification)
+                        j.AddSymbol(jv);
+                });
+            }
+        });
+        if (ncf.Uuid is not null)
+            nb.AddChild(WriterHelper.BuildUuid(ncf.Uuid));
+        foreach (var prop in ncf.Properties)
+        {
+            nb.AddChild("property", p =>
+            {
+                p.AddValue(prop.Key);
+                p.AddValue(prop.Value);
+                p.AddChild(WriterHelper.BuildPosition(prop.Location, prop.Rotation));
+                p.AddChild("effects", e =>
+                {
+                    e.AddChild("font", f =>
+                    {
+                        f.AddChild("size", s =>
+                        {
+                            s.AddMm(prop.FontHeight);
+                            s.AddMm(prop.FontWidth);
+                        });
+                        if (prop.FontItalic)
+                            f.AddChild("italic", i => i.AddBool(true));
+                    });
+                    if (prop.Justification.Count > 0)
+                    {
+                        e.AddChild("justify", j =>
+                        {
+                            foreach (var jv in prop.Justification)
+                                j.AddSymbol(jv);
+                        });
+                    }
+                    if (prop.IsHidden)
+                        e.AddSymbol("hide");
+                });
+                if (prop.Uuid is not null)
+                    p.AddChild(WriterHelper.BuildUuid(prop.Uuid));
+            });
+        }
+        return nb.Build();
+    }
+
+    private static SExpr BuildBusAlias(KiCadSchBusAlias ba)
+    {
+        var bb = new SExpressionBuilder("bus_alias").AddValue(ba.Name);
+        bb.AddChild("members", m =>
+        {
+            foreach (var member in ba.Members)
+                m.AddValue(member);
+        });
+        return bb.Build();
     }
 }

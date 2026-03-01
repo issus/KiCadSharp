@@ -6,6 +6,8 @@ using OriginalCircuit.KiCad.Serialization;
 
 namespace OriginalCircuit.KiCad.Models.Pcb;
 
+using OriginalCircuit.KiCad.Models;
+
 /// <summary>
 /// KiCad PCB document (<c>.kicad_pcb</c>), implementing <see cref="IPcbDocument"/>.
 /// </summary>
@@ -29,7 +31,12 @@ public sealed class KiCadPcb : IPcbDocument
     private readonly List<KiCadPcbGraphicBezier> _graphicBeziers = [];
     private readonly List<KiCadPcbZone> _zones = [];
     private readonly List<KiCadPcbNetClass> _netClasses = [];
+    private readonly List<KiCadPcbGroup> _groups = [];
+    private readonly List<KiCadPcbDimension> _dimensions = [];
+    private readonly List<KiCadPcbGeneratedElement> _generatedElements = [];
     private readonly List<object> _boardElementOrder = [];
+    private readonly List<KiCadPcbLayerDefinition> _layerDefinitions = [];
+    private readonly List<KeyValuePair<string, string>> _properties = [];
 
     /// <summary>
     /// Gets the file format version number.
@@ -165,6 +172,48 @@ public sealed class KiCadPcb : IPcbDocument
     /// Gets the board thickness.
     /// </summary>
     public Coord BoardThickness { get; set; }
+
+    /// <summary>Gets the layer definitions.</summary>
+    public IReadOnlyList<KiCadPcbLayerDefinition> LayerDefinitions => _layerDefinitions;
+    internal List<KiCadPcbLayerDefinition> LayerDefinitionList => _layerDefinitions;
+
+    /// <summary>Gets or sets the paper size.</summary>
+    public string? Paper { get; set; }
+    /// <summary>Gets or sets the paper width for custom sizes.</summary>
+    public double? PaperWidth { get; set; }
+    /// <summary>Gets or sets the paper height for custom sizes.</summary>
+    public double? PaperHeight { get; set; }
+    /// <summary>Gets or sets whether paper is portrait.</summary>
+    public bool PaperPortrait { get; set; }
+
+    /// <summary>Gets or sets the title block.</summary>
+    public KiCadTitleBlock? TitleBlock { get; set; }
+    /// <summary>Gets or sets the setup section.</summary>
+    public KiCadPcbSetup? Setup { get; set; }
+
+    /// <summary>Gets the board-level properties.</summary>
+    public IReadOnlyList<KeyValuePair<string, string>> Properties => _properties;
+    internal List<KeyValuePair<string, string>> PropertyList => _properties;
+
+    /// <summary>Gets the board-level groups.</summary>
+    public IReadOnlyList<KiCadPcbGroup> Groups => _groups;
+    internal List<KiCadPcbGroup> GroupList => _groups;
+
+    /// <summary>Gets the board-level dimensions.</summary>
+    public IReadOnlyList<KiCadPcbDimension> Dimensions => _dimensions;
+    internal List<KiCadPcbDimension> DimensionList => _dimensions;
+
+    /// <summary>Gets the board-level generated elements.</summary>
+    public IReadOnlyList<KiCadPcbGeneratedElement> GeneratedElements => _generatedElements;
+    internal List<KiCadPcbGeneratedElement> GeneratedElementList => _generatedElements;
+
+    /// <summary>Gets or sets whether legacy teardrops were present in the general section.</summary>
+    public bool LegacyTeardrops { get; set; }
+    /// <summary>Gets or sets whether the legacy_teardrops token was present.</summary>
+    public bool HasLegacyTeardrops { get; set; }
+
+    /// <summary>Gets or sets the embedded files.</summary>
+    public KiCadEmbeddedFiles? EmbeddedFiles { get; set; }
 
     /// <inheritdoc />
     /// <remarks>This property is computed on each access. Cache the result if accessing repeatedly.</remarks>

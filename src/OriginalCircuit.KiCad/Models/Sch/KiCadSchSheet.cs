@@ -101,11 +101,10 @@ public sealed class KiCadSchSheet : ISchSheet
     /// </summary>
     public bool Dnp { get; set; }
 
-    /// <summary>
-    /// Gets the UUID of the sheet.
-    /// </summary>
+    /// <summary>Gets the UUID of the sheet.</summary>
     public string? Uuid { get; set; }
-
+    /// <summary>Gets the per-sheet instances (KiCad 9+ format).</summary>
+    public List<KiCadSchSheetInstanceEntry> Instances { get; set; } = [];
     /// <inheritdoc />
     public CoordRect Bounds => new(Location, new CoordPoint(Location.X + Size.X, Location.Y + Size.Y));
 }

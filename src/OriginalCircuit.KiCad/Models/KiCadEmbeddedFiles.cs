@@ -24,6 +24,12 @@ public sealed class KiCadEmbeddedFile
     /// <summary>Gets or sets the checksum value (e.g., SHA-256 hash).</summary>
     public string? Checksum { get; set; }
 
-    /// <summary>Gets or sets the base64-encoded file data.</summary>
-    public string Data { get; set; } = "";
+    /// <summary>Gets or sets the base64-encoded file data segments (one per line in the file).</summary>
+    public List<string> DataSegments { get; set; } = [];
+
+    /// <summary>Gets or sets whether data segments are unquoted symbols (vs quoted strings).</summary>
+    public bool DataSegmentsAreSymbols { get; set; }
+
+    /// <summary>Gets the concatenated base64-encoded file data.</summary>
+    public string Data => string.Concat(DataSegments);
 }

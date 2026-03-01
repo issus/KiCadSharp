@@ -91,10 +91,55 @@ public sealed class KiCadPcbVia : IPcbVia
     /// </summary>
     public int? Status { get; set; }
 
-    /// <summary>
-    /// Gets or sets whether teardrops are enabled on this via.
-    /// </summary>
+    /// <summary>Gets or sets whether teardrops are enabled on this via.</summary>
     public bool TeardropEnabled { get; set; }
+    /// <summary>Gets or sets the teardrop best length ratio.</summary>
+    public double? TeardropBestLengthRatio { get; set; }
+    /// <summary>Gets or sets the teardrop max length.</summary>
+    public Coord? TeardropMaxLength { get; set; }
+    /// <summary>Gets or sets the teardrop best width ratio.</summary>
+    public double? TeardropBestWidthRatio { get; set; }
+    /// <summary>Gets or sets the teardrop max width.</summary>
+    public Coord? TeardropMaxWidth { get; set; }
+    /// <summary>Gets or sets whether teardrop curved edges are enabled.</summary>
+    public bool? TeardropCurvedEdges { get; set; }
+    /// <summary>Gets or sets the teardrop filter ratio.</summary>
+    public double? TeardropFilterRatio { get; set; }
+    /// <summary>Gets or sets whether two-segment teardrops are allowed.</summary>
+    public bool? TeardropAllowTwoSegments { get; set; }
+    /// <summary>Gets or sets whether zone connections are preferred.</summary>
+    public bool? TeardropPreferZoneConnections { get; set; }
+    /// <summary>Gets or sets whether tenting was present.</summary>
+    public bool HasTenting { get; set; }
+    /// <summary>Gets or sets the front tenting state.</summary>
+    public bool? TentingFront { get; set; }
+    /// <summary>Gets or sets the back tenting state.</summary>
+    public bool? TentingBack { get; set; }
+    /// <summary>Gets or sets whether tenting uses child node format.</summary>
+    public bool TentingIsChildNode { get; set; }
+    /// <summary>Gets or sets the front tenting value string (none/yes/no).</summary>
+    public string? TentingFrontValue { get; set; }
+    /// <summary>Gets or sets the back tenting value string (none/yes/no).</summary>
+    public string? TentingBackValue { get; set; }
+    /// <summary>Gets or sets the zone layer connections.</summary>
+    public List<string>? ZoneLayerConnections { get; set; }
+
+    /// <summary>Gets or sets the capping value (yes/no/none).</summary>
+    public string? Capping { get; set; }
+    /// <summary>Gets or sets the filling value (yes/no/none).</summary>
+    public string? Filling { get; set; }
+    /// <summary>Gets or sets whether covering section was present.</summary>
+    public bool HasCovering { get; set; }
+    /// <summary>Gets or sets the covering front value.</summary>
+    public string? CoveringFront { get; set; }
+    /// <summary>Gets or sets the covering back value.</summary>
+    public string? CoveringBack { get; set; }
+    /// <summary>Gets or sets whether plugging section was present.</summary>
+    public bool HasPlugging { get; set; }
+    /// <summary>Gets or sets the plugging front value.</summary>
+    public string? PluggingFront { get; set; }
+    /// <summary>Gets or sets the plugging back value.</summary>
+    public string? PluggingBack { get; set; }
 
     /// <inheritdoc />
     public CoordRect Bounds

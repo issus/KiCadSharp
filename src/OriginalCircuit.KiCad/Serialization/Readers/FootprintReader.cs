@@ -341,8 +341,10 @@ public static class FootprintReader
                         component.ZoneList.Add(PcbReader.ParseZone(child));
                         break;
                     case "teardrop":
-                    case "dimension":
                         // Not yet fully implemented
+                        break;
+                    case "dimension":
+                        component.DimensionList.Add(PcbReader.ParseDimension(child));
                         break;
                     case "sheetname":
                         component.SheetName = child.GetString();
@@ -1094,8 +1096,21 @@ public static class FootprintReader
                 Name = fileNode.GetChild("name")?.GetString() ?? "",
                 Type = fileNode.GetChild("type")?.GetString() ?? "",
                 Checksum = fileNode.GetChild("checksum")?.GetString(),
-                Data = fileNode.GetChild("data")?.GetString() ?? ""
             };
+
+            // Data may contain multiple string values (one per line in the file)
+            var dataNode = fileNode.GetChild("data");
+            if (dataNode is not null)
+            {
+                var hasSymbol = false;
+                foreach (var v in dataNode.Values)
+                {
+                    if (v is SExprString s) file.DataSegments.Add(s.Value);
+                    else if (v is SExprSymbol sym) { file.DataSegments.Add(sym.Value); hasSymbol = true; }
+                }
+                file.DataSegmentsAreSymbols = hasSymbol;
+            }
+
             embedded.Files.Add(file);
         }
         return embedded;

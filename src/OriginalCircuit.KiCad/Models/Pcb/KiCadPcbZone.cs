@@ -48,6 +48,9 @@ public sealed class KiCadPcbZone
     /// <summary>Gets or sets the priority.</summary>
     public int Priority { get; set; }
 
+    /// <summary>Gets or sets whether the connect_pads section was present.</summary>
+    public bool HasConnectPads { get; set; }
+
     /// <summary>Gets or sets the connect pads mode (thru_hole_only, yes, no).</summary>
     public string? ConnectPadsMode { get; set; }
 
@@ -81,6 +84,9 @@ public sealed class KiCadPcbZone
 
     /// <summary>Gets or sets whether the zone is filled.</summary>
     public bool IsFilled { get; set; }
+
+    /// <summary>Gets or sets whether the fill boolean value was present in the original file.</summary>
+    public bool HasFillValue { get; set; }
 
     /// <summary>Gets or sets the thermal gap.</summary>
     public Coord ThermalGap { get; set; }
@@ -121,9 +127,45 @@ public sealed class KiCadPcbZone
     /// <summary>Gets or sets the hatch minimum hole area.</summary>
     public double HatchMinHoleArea { get; set; }
 
+    /// <summary>Gets or sets the fill mode ("hatch" or null for solid).</summary>
+    public string? FillMode { get; set; }
+    /// <summary>Gets or sets whether filled_areas_thickness was present.</summary>
+    public bool HasFilledAreasThickness { get; set; }
+    /// <summary>Gets or sets the filled_areas_thickness value.</summary>
+    public bool FilledAreasThickness { get; set; }
+    /// <summary>Gets or sets whether this zone has an attr section.</summary>
+    public bool HasAttr { get; set; }
+    /// <summary>Gets or sets the teardrop type from attr section (e.g., "padvia").</summary>
+    public string? AttrTeardropType { get; set; }
+
+    // -- Placement --
+
+    /// <summary>Gets or sets whether placement section was present.</summary>
+    public bool HasPlacement { get; set; }
+    /// <summary>Gets or sets whether placement is enabled.</summary>
+    public bool PlacementEnabled { get; set; }
+    /// <summary>Gets or sets the placement sheet name.</summary>
+    public string? PlacementSheetName { get; set; }
+    /// <summary>Gets or sets the placement component class.</summary>
+    public string? PlacementComponentClass { get; set; }
+
     // -- Polygon data --
 
-    /// <summary>Gets or sets the zone outline polygon points.</summary>
+    /// <summary>Gets or sets the zone outline polygon points (xy vertices only, for backward compatibility).</summary>
     public IReadOnlyList<CoordPoint> Outline { get; set; } = [];
+    /// <summary>Gets or sets the zone outline polygon vertices including arc segments for round-trip fidelity.</summary>
+    public List<PolygonVertex> OutlineVertices { get; set; } = [];
+    /// <summary>Gets or sets the filled polygons for this zone.</summary>
+    public List<KiCadPcbZoneFilledPolygon> FilledPolygons { get; set; } = [];
+    /// <summary>Gets or sets the fill segments (legacy).</summary>
+    public List<KiCadPcbZoneFillSegment> FillSegments { get; set; } = [];
+}
 
+/// <summary>A fill segment in a legacy zone.</summary>
+public sealed class KiCadPcbZoneFillSegment
+{
+    /// <summary>Gets or sets the layer name.</summary>
+    public string LayerName { get; set; } = "";
+    /// <summary>Gets or sets the segment points.</summary>
+    public IReadOnlyList<CoordPoint> Points { get; set; } = [];
 }

@@ -27,6 +27,7 @@ public sealed class KiCadSchComponent : ISchComponent
     private readonly List<KiCadSchComponent> _subSymbols = [];
     private readonly List<KiCadDiagnostic> _diagnostics = [];
     private readonly List<object> _orderedPrimitives = [];
+    private readonly List<KiCadSchComponentInstance> _instances = [];
 
     /// <inheritdoc />
     public string Name { get; set; } = "";
@@ -264,6 +265,10 @@ public sealed class KiCadSchComponent : ISchComponent
     /// </summary>
     public IReadOnlyList<KiCadSchComponent> SubSymbols => _subSymbols;
     internal List<KiCadSchComponent> SubSymbolList => _subSymbols;
+
+    /// <summary>Gets the per-symbol instances (KiCad 9+ format).</summary>
+    public IReadOnlyList<KiCadSchComponentInstance> Instances => _instances;
+    internal List<KiCadSchComponentInstance> InstanceList => _instances;
 
     /// <summary>
     /// Gets the diagnostics collected during parsing.

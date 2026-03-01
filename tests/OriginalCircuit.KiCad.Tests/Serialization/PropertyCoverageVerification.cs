@@ -314,6 +314,7 @@ public class PropertyCoverageVerification
 
     private static readonly HashSet<string> s_modelNamespaces =
     [
+        "OriginalCircuit.KiCad.Models",
         "OriginalCircuit.KiCad.Models.Pcb",
         "OriginalCircuit.KiCad.Models.Sch"
     ];
@@ -565,6 +566,9 @@ public class PropertyCoverageVerification
 
                 foreach (var prop in props)
                 {
+                    // Skip model-type properties — they're compared via graph walk
+                    if (IsModelType(prop.PropertyType)) continue;
+
                     object? origVal, rtVal;
                     try { origVal = prop.GetValue(origList[i]); }
                     catch { continue; }

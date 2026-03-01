@@ -1,5 +1,6 @@
 using OriginalCircuit.Eda.Enums;
 using OriginalCircuit.Eda.Primitives;
+using OriginalCircuit.KiCad.Models.Pcb;
 using OriginalCircuit.KiCad.Models.Sch;
 using OriginalCircuit.KiCad.SExpression;
 using SExpr = OriginalCircuit.KiCad.SExpression.SExpression;
@@ -48,6 +49,36 @@ internal static class SExpressionHelper
         foreach (var xy in pts.GetChildren("xy"))
         {
             result.Add(ParseXY(xy));
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// Parses all <c>(xy X Y)</c> and <c>(arc (start X Y) (mid X Y) (end X Y))</c> children from a <c>(pts ...)</c> node,
+    /// returning a list of <see cref="PolygonVertex"/> objects preserving both types.
+    /// </summary>
+    public static List<PolygonVertex> ParsePolygonVertices(SExpr parent)
+    {
+        var pts = parent.GetChild("pts");
+        if (pts is null) return [];
+
+        var result = new List<PolygonVertex>();
+        foreach (var child in pts.Children)
+        {
+            if (child.Token == "xy")
+            {
+                result.Add(PolygonVertex.FromPoint(ParseXY(child)));
+            }
+            else if (child.Token == "arc")
+            {
+                var startNode = child.GetChild("start");
+                var midNode = child.GetChild("mid");
+                var endNode = child.GetChild("end");
+                if (startNode is not null && midNode is not null && endNode is not null)
+                {
+                    result.Add(PolygonVertex.FromArc(ParseXY(startNode), ParseXY(midNode), ParseXY(endNode)));
+                }
+            }
         }
         return result;
     }

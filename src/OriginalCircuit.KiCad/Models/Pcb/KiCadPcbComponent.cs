@@ -6,6 +6,8 @@ using OriginalCircuit.KiCad.Models.Sch;
 
 namespace OriginalCircuit.KiCad.Models.Pcb;
 
+using OriginalCircuit.KiCad.Models;
+
 /// <summary>
 /// KiCad PCB footprint component. Represents a <c>(footprint ...)</c> definition containing pads, graphical items, and 3D models.
 /// </summary>
@@ -25,6 +27,12 @@ public sealed class KiCadPcbComponent : IPcbComponent
     private readonly List<KiCadSchParameter> _properties = [];
     private readonly List<KiCadDiagnostic> _diagnostics = [];
     private readonly List<object> _graphicalItemOrder = [];
+    private readonly List<KiCadPcbZone> _zones = [];
+    private readonly List<KiCadPcbGroup> _groups = [];
+    private readonly List<KiCadPcbDimension> _dimensions = [];
+    private readonly List<string> _componentClasses = [];
+    private readonly List<string> _netTiePadGroups = [];
+    private readonly List<string> _privateLayers = [];
 
     /// <inheritdoc />
     public string Name { get; set; } = "";
@@ -318,9 +326,27 @@ public sealed class KiCadPcbComponent : IPcbComponent
     /// </summary>
     public double Model3DRotationZ { get; set; }
 
-    /// <summary>
-    /// Gets the UUID / tstamp.
-    /// </summary>
+    /// <summary>Gets the footprint-level zones.</summary>
+    public IReadOnlyList<KiCadPcbZone> Zones => _zones;
+    internal List<KiCadPcbZone> ZoneList => _zones;
+    /// <summary>Gets the footprint-level groups.</summary>
+    public IReadOnlyList<KiCadPcbGroup> Groups => _groups;
+    internal List<KiCadPcbGroup> GroupList => _groups;
+    /// <summary>Gets the footprint-level dimensions.</summary>
+    public IReadOnlyList<KiCadPcbDimension> Dimensions => _dimensions;
+    internal List<KiCadPcbDimension> DimensionList => _dimensions;
+    /// <summary>Gets the component classes.</summary>
+    public IReadOnlyList<string> ComponentClasses => _componentClasses;
+    internal List<string> ComponentClassList => _componentClasses;
+    /// <summary>Gets the net tie pad groups.</summary>
+    public IReadOnlyList<string> NetTiePadGroups => _netTiePadGroups;
+    internal List<string> NetTiePadGroupList => _netTiePadGroups;
+    /// <summary>Gets the private layers.</summary>
+    public IReadOnlyList<string> PrivateLayers => _privateLayers;
+    internal List<string> PrivateLayerList => _privateLayers;
+    /// <summary>Gets or sets the embedded files.</summary>
+    public KiCadEmbeddedFiles? EmbeddedFiles { get; set; }
+    /// <summary>Gets the UUID / tstamp.</summary>
     public string? Uuid { get; set; }
 
     /// <summary>

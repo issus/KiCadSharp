@@ -570,6 +570,27 @@ public static class PcbReader
         // Check for hide both from effects and as a top-level symbol on the gr_text node
         text.IsHidden = isHidden || node.Values.Any(v => v is SExprSymbol s && s.Value == "hide");
 
+        // Parse render_cache
+        var renderCacheNode = node.GetChild("render_cache");
+        if (renderCacheNode is not null)
+        {
+            var rc = new KiCadTextRenderCache
+            {
+                FontName = renderCacheNode.GetString(0),
+            };
+            var sizeVal = renderCacheNode.GetDouble(1);
+            if (sizeVal.HasValue)
+                rc.FontSize = new CoordPoint(Coord.FromMm(sizeVal.Value), Coord.Zero);
+
+            foreach (var polyNode in renderCacheNode.GetChildren("polygon"))
+            {
+                var pts = SExpressionHelper.ParsePoints(polyNode);
+                if (pts.Count > 0)
+                    rc.Polygons.Add(pts);
+            }
+            text.RenderCache = rc;
+        }
+
         return text;
     }
 
@@ -757,13 +778,16 @@ public static class PcbReader
             zone.HasPlacement = true;
             zone.PlacementEnabled = placementNode.GetChild("enabled")?.GetBool() ?? false;
             zone.PlacementSheetName = placementNode.GetChild("sheetname")?.GetString();
+            zone.PlacementComponentClass = placementNode.GetChild("component_class")?.GetString();
         }
 
         // Fill settings
         var fillNode = node.GetChild("fill");
         if (fillNode is not null)
         {
-            zone.IsFilled = fillNode.GetBool(0) ?? false;
+            var fillBool = fillNode.GetBool(0);
+            zone.HasFillValue = fillBool.HasValue;
+            zone.IsFilled = fillBool ?? false;
             zone.ThermalGap = Coord.FromMm(fillNode.GetChild("thermal_gap")?.GetDouble() ?? 0);
             zone.ThermalBridgeWidth = Coord.FromMm(fillNode.GetChild("thermal_bridge_width")?.GetDouble() ?? 0);
             zone.SmoothingType = fillNode.GetChild("smoothing")?.GetString();
@@ -786,10 +810,16 @@ public static class PcbReader
         var polygon = node.GetChild("polygon");
         if (polygon is not null)
         {
-            var pts = SExpressionHelper.ParsePoints(polygon);
-            if (pts.Count > 0)
+            // Parse full vertices (including arcs) for round-trip fidelity
+            var vertices = SExpressionHelper.ParsePolygonVertices(polygon);
+            if (vertices.Count > 0)
             {
-                zone.Outline = pts;
+                zone.OutlineVertices = vertices;
+                // Also populate Outline with just the xy points for backward compat
+                zone.Outline = vertices
+                    .Where(v => !v.IsArc)
+                    .Select(v => v.Point)
+                    .ToList();
             }
         }
 
@@ -1194,7 +1224,7 @@ public static class PcbReader
         return setup;
     }
 
-    private static KiCadPcbDimension ParseDimension(SExpr node)
+    internal static KiCadPcbDimension ParseDimension(SExpr node)
     {
         var dim = new KiCadPcbDimension();
 

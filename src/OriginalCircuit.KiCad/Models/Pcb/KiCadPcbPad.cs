@@ -199,6 +199,45 @@ public sealed class KiCadPcbPad : IPcbPad
     /// </summary>
     public bool LockedIsChildNode { get; set; }
 
+    // -- Custom pad options --
+    /// <summary>Gets or sets the custom pad clearance type.</summary>
+    public string? CustomClearanceType { get; set; }
+    /// <summary>Gets or sets the custom pad anchor shape.</summary>
+    public string? CustomAnchorShape { get; set; }
+    /// <summary>Gets or sets the custom pad primitives.</summary>
+    public List<object> Primitives { get; set; } = [];
+    // -- Teardrops --
+    /// <summary>Gets or sets whether teardrops are present.</summary>
+    public bool HasTeardrops { get; set; }
+    /// <summary>Gets or sets the teardrop best length ratio.</summary>
+    public double? TeardropBestLengthRatio { get; set; }
+    /// <summary>Gets or sets the teardrop max length.</summary>
+    public Coord? TeardropMaxLength { get; set; }
+    /// <summary>Gets or sets the teardrop best width ratio.</summary>
+    public double? TeardropBestWidthRatio { get; set; }
+    /// <summary>Gets or sets the teardrop max width.</summary>
+    public Coord? TeardropMaxWidth { get; set; }
+    /// <summary>Gets or sets whether teardrop curved edges are enabled.</summary>
+    public bool? TeardropCurvedEdges { get; set; }
+    /// <summary>Gets or sets the teardrop filter ratio.</summary>
+    public double? TeardropFilterRatio { get; set; }
+    /// <summary>Gets or sets whether teardrops are enabled.</summary>
+    public bool? TeardropEnabled { get; set; }
+    /// <summary>Gets or sets whether two-segment teardrops are allowed.</summary>
+    public bool? TeardropAllowTwoSegments { get; set; }
+    /// <summary>Gets or sets whether zone connections are preferred.</summary>
+    public bool? TeardropPreferZoneConnections { get; set; }
+    // -- Tenting --
+    /// <summary>Gets or sets whether tenting is present.</summary>
+    public bool HasTenting { get; set; }
+    /// <summary>Gets or sets the front tenting value.</summary>
+    public string? TentingFront { get; set; }
+    /// <summary>Gets or sets the back tenting value.</summary>
+    public string? TentingBack { get; set; }
+    // -- Rect delta --
+    /// <summary>Gets or sets the rect delta for trapezoidal pads.</summary>
+    public CoordPoint? RectDelta { get; set; }
+
     /// <inheritdoc />
     public CoordRect Bounds => CoordRect.FromCenterAndSize(Location, Size.X, Size.Y);
 }

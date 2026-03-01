@@ -141,6 +141,9 @@ public sealed class KiCadPcbText : IPcbText
     /// </summary>
     public bool UuidAfterEffects { get; set; }
 
+    /// <summary>Gets or sets the pre-rendered glyph cache.</summary>
+    public KiCadTextRenderCache? RenderCache { get; set; }
+
     /// <inheritdoc />
     public CoordRect Bounds
     {

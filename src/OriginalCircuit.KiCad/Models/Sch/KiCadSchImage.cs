@@ -28,6 +28,11 @@ public sealed class KiCadSchImage : ISchImage
     /// </summary>
     public string? Uuid { get; set; }
 
+    /// <summary>
+    /// Gets or sets the base64-encoded image data string (for round-trip fidelity).
+    /// </summary>
+    public string? DataString { get; set; }
+
     /// <inheritdoc />
     public CoordRect Bounds => new(Corner1, Corner2);
 }
