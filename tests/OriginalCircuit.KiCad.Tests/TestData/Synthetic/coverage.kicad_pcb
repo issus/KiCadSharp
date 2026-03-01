@@ -1,0 +1,457 @@
+(kicad_pcb
+  (version 20231120)
+  (generator "pcbnew")
+  (generator_version "8.0")
+  (general
+    (thickness 1.6)
+  )
+  (paper "A4")
+  (layers
+    (0 "F.Cu" signal)
+    (31 "B.Cu" signal)
+    (36 "B.SilkS" user "B.Silkscreen")
+    (37 "F.SilkS" user "F.Silkscreen")
+    (38 "B.Mask" user "B.Mask")
+    (39 "F.Mask" user "F.Mask")
+    (40 "Dwgs.User" user "User.Drawings")
+    (44 "Edge.Cuts" user)
+    (34 "B.Fab" user)
+    (35 "F.Fab" user)
+    (32 "B.Paste" user)
+    (33 "F.Paste" user)
+    (41 "Cmts.User" user "User.Comments")
+    (42 "Eco1.User" user "User.Eco1")
+    (43 "Eco2.User" user "User.Eco2")
+    (46 "B.CrtYd" user "B.Courtyard")
+    (47 "F.CrtYd" user "F.Courtyard")
+  )
+  (setup
+    (pad_to_mask_clearance 0)
+    (allow_soldermask_bridges_in_footprints no)
+    (pcbplotparams
+      (layerselection 0x00010fc_ffffffff)
+      (plot_on_all_layers_selection 0x0000000_00000000)
+      (disableapertmacros no)
+      (usegerberextensions no)
+      (usegerberattributes yes)
+      (usegerberadvancedattributes yes)
+      (creategerberjobfile yes)
+      (dashed_line_dash_ratio 12.000000)
+      (dashed_line_gap_ratio 3.000000)
+      (svgprecision 4)
+      (plotframeref no)
+      (viasonmask no)
+      (mode 1)
+      (useauxorigin no)
+      (hpglpennumber 1)
+      (hpglpenspeed 20)
+      (hpglpendiameter 15.000000)
+      (pdf_front_fp_property_popups yes)
+      (pdf_back_fp_property_popups yes)
+      (dxfpolygonmode yes)
+      (dxfimperialunits yes)
+      (dxfusepcbnewfont yes)
+      (psnegative no)
+      (psa4output no)
+      (plotreference yes)
+      (plotvalue yes)
+      (plotfptext no)
+      (plotinvisibletext no)
+      (sketchpadsonfab no)
+      (subtractmaskfromsilk no)
+      (outputformat 1)
+      (mirror no)
+      (drillshape 1)
+      (scaleselection 1)
+      (outputdirectory "")
+    )
+  )
+  (net 0 "")
+  (net 1 "GND")
+  (net 2 "VCC")
+
+  ;; Footprint with autoplace, solder paste ratio, tedit, thermal, placed
+  (footprint "Coverage:TestFP" locked placed
+    (layer "F.Cu")
+    (tedit "5E5E7D00")
+    (uuid "11111111-1111-1111-1111-111111111111")
+    (at 100 100)
+    (autoplace_cost90 5)
+    (autoplace_cost180 10)
+    (solder_paste_ratio -0.25)
+    (thermal_gap 0.5)
+    (thermal_width 0.3)
+    (property "Reference" "U1"
+      (at 0 -3 0)
+      (layer "F.SilkS")
+      (uuid "22222222-2222-2222-2222-222222222201")
+      (effects
+        (font
+          (size 1 1)
+          (thickness 0.15)
+        )
+      )
+    )
+    (property "Value" "TestFP"
+      (at 0 3 0)
+      (layer "F.Fab")
+      (uuid "22222222-2222-2222-2222-222222222202")
+      (effects
+        (font
+          (size 1 1)
+          (thickness 0.15)
+        )
+      )
+    )
+    (property "Footprint" "Coverage:TestFP"
+      (at 0 0 0)
+      (layer "F.Fab")
+      (uuid "22222222-2222-2222-2222-222222222203")
+      (effects
+        (font
+          (size 1.27 1.27)
+          (thickness 0.15)
+        )
+        (hide yes)
+      )
+    )
+
+    ;; Pad with die_length, locked, thermal_width
+    (pad "1" smd rect locked
+      (at -2 0)
+      (size 1 1)
+      (layers "F.Cu" "F.Paste" "F.Mask")
+      (die_length 0.5)
+      (thermal_width 0.4)
+      (net 1 "GND")
+      (uuid "22222222-2222-2222-2222-222222222211")
+    )
+    (pad "2" thru_hole circle
+      (at 2 0)
+      (size 1.5 1.5)
+      (drill 0.8)
+      (layers "*.Cu" "*.Mask")
+      (net 2 "VCC")
+      (uuid "22222222-2222-2222-2222-222222222212")
+    )
+
+    ;; Footprint-level graphics with stroke colors, fill colors, locked
+    (fp_line
+      (start -5 -5)
+      (end 5 -5)
+      (stroke
+        (width 0.12)
+        (type solid)
+        (color 255 0 0 1)
+      )
+      (layer "F.SilkS")
+      (uuid "22222222-2222-2222-2222-222222222221")
+    )
+    (fp_line
+      (start -5 5)
+      (end 5 5)
+      (stroke
+        (width 0.12)
+        (type solid)
+        (color 0 128 0 1)
+      )
+      (fill
+        (type color)
+        (color 255 255 0 0.5)
+      )
+      (layer "F.SilkS")
+      (uuid "22222222-2222-2222-2222-222222222222")
+    )
+    (fp_arc
+      (start 3 0)
+      (mid 0 -3)
+      (end -3 0)
+      (stroke
+        (width 0.12)
+        (type solid)
+        (color 0 0 255 1)
+      )
+      (fill
+        (type background)
+        (color 128 128 255 0.3)
+      )
+      (layer "F.SilkS")
+      (uuid "22222222-2222-2222-2222-222222222223")
+    )
+    (fp_circle locked
+      (center 0 0)
+      (end 2 0)
+      (stroke
+        (width 0.12)
+        (type dash)
+        (color 0 200 200 1)
+      )
+      (fill
+        (type color)
+        (color 200 200 0 0.4)
+      )
+      (layer "F.SilkS")
+      (uuid "22222222-2222-2222-2222-222222222224")
+    )
+    (fp_rect locked
+      (start -4 -4)
+      (end 4 4)
+      (stroke
+        (width 0.1)
+        (type solid)
+        (color 128 0 128 1)
+      )
+      (fill
+        (type color)
+        (color 200 100 200 0.2)
+      )
+      (layer "F.Fab")
+      (uuid "22222222-2222-2222-2222-222222222225")
+    )
+    (fp_poly locked
+      (pts
+        (xy -3 -3)
+        (xy 3 -3)
+        (xy 0 3)
+      )
+      (stroke
+        (width 0.1)
+        (type dash_dot)
+        (color 200 100 0 1)
+      )
+      (fill
+        (type color)
+        (color 100 200 100 0.5)
+      )
+      (layer "F.Fab")
+      (uuid "22222222-2222-2222-2222-222222222226")
+    )
+
+    ;; Bezier curve (fp_curve) with locked, stroke color, stroke style
+    (fp_curve locked
+      (pts
+        (xy -5 2)
+        (xy -3 -2)
+        (xy 3 -2)
+        (xy 5 2)
+      )
+      (stroke
+        (width 0.1)
+        (type dash)
+        (color 0 200 100 1)
+      )
+      (layer "F.SilkS")
+      (uuid "22222222-2222-2222-2222-222222222227")
+    )
+
+    ;; Text with font color and italic
+    (fp_text user "ColorText"
+      (at 0 -6 0)
+      (layer "F.SilkS")
+      (uuid "22222222-2222-2222-2222-222222222230")
+      (effects
+        (font
+          (size 1 1)
+          (thickness 0.15)
+          (italic yes)
+          (color 0 0 255 1)
+        )
+      )
+    )
+
+    ;; 3D model with opacity
+    (model "path/to/model.step"
+      (opacity 0.75)
+      (offset
+        (xyz 0 0 0)
+      )
+      (scale
+        (xyz 1 1 1)
+      )
+      (rotate
+        (xyz 0 0 0)
+      )
+    )
+  )
+
+  ;; Board-level shapes with stroke/fill colors
+  ;; Track with status and stroke color
+  (segment
+    (start 110 100)
+    (end 120 100)
+    (width 0.25)
+    (layer "F.Cu")
+    (net 1)
+    (uuid "33333333-3333-3333-3333-333333333301")
+    (status 1)
+  )
+  (segment
+    (start 120 100)
+    (end 130 100)
+    (width 0.25)
+    (layer "F.Cu")
+    (net 1)
+    (uuid "33333333-3333-3333-3333-333333333302")
+  )
+
+  ;; Via with status
+  (via
+    (at 130 100)
+    (size 0.8)
+    (drill 0.4)
+    (layers "F.Cu" "B.Cu")
+    (net 1)
+    (uuid "33333333-3333-3333-3333-333333333310")
+    (status 2)
+  )
+
+  ;; Arc with locked and status and stroke color
+  (arc locked
+    (start 140 100)
+    (mid 142 98)
+    (end 144 100)
+    (width 0.25)
+    (layer "F.Cu")
+    (net 2)
+    (uuid "33333333-3333-3333-3333-333333333320")
+    (status 4)
+  )
+
+  ;; Board-level graphic shapes
+  (gr_line
+    (start 50 50)
+    (end 60 50)
+    (stroke
+      (width 0.15)
+      (type solid)
+      (color 255 0 0 1)
+    )
+    (fill
+      (type color)
+      (color 200 200 0 0.5)
+    )
+    (layer "Dwgs.User")
+    (uuid "44444444-4444-4444-4444-444444444401")
+  )
+  (gr_arc
+    (start 70 50)
+    (mid 72 48)
+    (end 74 50)
+    (stroke
+      (width 0.15)
+      (type solid)
+      (color 0 255 0 1)
+    )
+    (fill
+      (type background)
+      (color 128 255 128 0.3)
+    )
+    (layer "Dwgs.User")
+    (uuid "44444444-4444-4444-4444-444444444402")
+  )
+  (gr_circle locked
+    (center 80 50)
+    (end 82 50)
+    (stroke
+      (width 0.15)
+      (type dash)
+      (color 0 0 255 1)
+    )
+    (fill
+      (type color)
+      (color 128 128 255 0.4)
+    )
+    (layer "Dwgs.User")
+    (uuid "44444444-4444-4444-4444-444444444403")
+  )
+  (gr_rect locked
+    (start 50 60)
+    (end 60 70)
+    (stroke
+      (width 0.15)
+      (type solid)
+      (color 128 0 0 1)
+    )
+    (fill
+      (type color)
+      (color 200 100 100 0.3)
+    )
+    (layer "Dwgs.User")
+    (uuid "44444444-4444-4444-4444-444444444404")
+  )
+  (gr_poly locked
+    (pts
+      (xy 65 60)
+      (xy 75 60)
+      (xy 70 70)
+    )
+    (stroke
+      (width 0.15)
+      (type dash_dot)
+      (color 0 128 128 1)
+    )
+    (fill
+      (type color)
+      (color 100 200 200 0.5)
+    )
+    (layer "Dwgs.User")
+    (uuid "44444444-4444-4444-4444-444444444405")
+  )
+
+  ;; Board-level circle, polygon, rectangle, curve with colors and locked
+  (gr_circle
+    (center 90 60)
+    (end 92 60)
+    (stroke
+      (width 0.15)
+      (type solid)
+      (color 200 200 0 1)
+    )
+    (fill
+      (type color)
+      (color 255 255 128 0.5)
+    )
+    (layer "Dwgs.User")
+    (uuid "44444444-4444-4444-4444-444444444406")
+  )
+
+  ;; Board-level text with font color and italic
+  (gr_text "BoardText"
+    (at 100 50)
+    (layer "F.SilkS")
+    (uuid "44444444-4444-4444-4444-444444444410")
+    (effects
+      (font
+        (size 1.5 1.5)
+        (thickness 0.15)
+        (italic yes)
+        (color 255 0 128 1)
+      )
+    )
+  )
+
+  ;; Zone with locked
+  (zone locked
+    (net 1)
+    (net_name "GND")
+    (layer "F.Cu")
+    (uuid "55555555-5555-5555-5555-555555555501")
+    (hatch edge 0.5)
+    (connect_pads
+      (clearance 0.2)
+    )
+    (min_thickness 0.25)
+    (fill yes
+      (thermal_gap 0.5)
+      (thermal_bridge_width 0.5)
+    )
+    (polygon
+      (pts
+        (xy 95 95)
+        (xy 105 95)
+        (xy 105 105)
+        (xy 95 105)
+      )
+    )
+  )
+)

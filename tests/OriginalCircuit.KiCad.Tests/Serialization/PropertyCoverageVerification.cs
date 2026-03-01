@@ -103,6 +103,41 @@ public class PropertyCoverageVerification
         return false;
     }
 
+    /// <summary>
+    /// Properties that exist only to satisfy shared EDA interfaces but are never populated
+    /// by any KiCad reader because KiCad's format doesn't use them.
+    /// </summary>
+    private static bool IsInterfaceStubProperty(PropertyInfo prop)
+    {
+        var declType = prop.DeclaringType;
+        if (declType == null) return false;
+
+        var key = $"{declType.Name}.{prop.Name}";
+        return key switch
+        {
+            // KiCad uses string LayerName instead of int Layer — no name→number mapping exists
+            "KiCadPcbTrack.Layer" or "KiCadPcbPad.Layer" or "KiCadPcbArc.Layer" or
+            "KiCadPcbText.Layer" or "KiCadPcbComponent.Layer" or "KiCadPcbCircle.Layer" or
+            "KiCadPcbCurve.Layer" or "KiCadPcbPolygon.Layer" or "KiCadPcbRectangle.Layer" or
+            "KiCadPcbVia.StartLayer" or "KiCadPcbVia.EndLayer" => true,
+
+            // IPcbComponent.Height — KiCad files don't carry component height
+            "KiCadPcbComponent.Height" => true,
+            // IPcbText.StrokeWidth — KiCad uses FontThickness instead
+            "KiCadPcbText.StrokeWidth" => true,
+            // ISchNoConnect.Color — no_connect has no color in KiCad format
+            "KiCadSchNoConnect.Color" => true,
+            // ISchParameter.Color — parser populates FontColor instead
+            "KiCadSchParameter.Color" => true,
+            // ISchLabel.Color — parser populates FontColor instead
+            "KiCadSchLabel.Color" => true,
+            // ISchNetLabel.Color — parser populates font properties instead
+            "KiCadSchNetLabel.Color" => true,
+
+            _ => false
+        };
+    }
+
     private static bool IsTypedProperty(PropertyInfo prop)
     {
         if (!prop.CanRead) return false;
@@ -112,6 +147,7 @@ public class PropertyCoverageVerification
         if (IsHintProperty(prop)) return false;
         if (IsComputedProperty(prop)) return false;
         if (IsInfrastructureProperty(prop)) return false;
+        if (IsInterfaceStubProperty(prop)) return false;
         return true;
     }
 
@@ -143,6 +179,12 @@ public class PropertyCoverageVerification
         try { value = prop.GetValue(instance); }
         catch { return false; }
 
+        // Check companion presence flags before comparing to defaults.
+        // Some properties (e.g. InBom defaults to true) are explicitly parsed but match
+        // the constructor default, making them appear unpopulated without this check.
+        if (HasExplicitPresenceFlag(instance, prop))
+            return true;
+
         var defaultInstance = GetDefaultInstance(instance.GetType());
         if (defaultInstance != null)
         {
@@ -155,6 +197,54 @@ public class PropertyCoverageVerification
 
         // Fallback: check against type defaults
         return !IsDefaultValue(value, prop.PropertyType);
+    }
+
+    /// <summary>
+    /// Checks if a companion Has*/Present flag indicates the property was explicitly parsed.
+    /// </summary>
+    private static bool HasExplicitPresenceFlag(object instance, PropertyInfo prop)
+    {
+        var type = instance.GetType();
+
+        // Check for Has{PropertyName} companion (e.g., HasClearance for Clearance)
+        var hasFlag = type.GetProperty($"Has{prop.Name}", BindingFlags.Public | BindingFlags.Instance);
+        if (hasFlag != null && hasFlag.PropertyType == typeof(bool))
+        {
+            try
+            {
+                if ((bool)hasFlag.GetValue(instance)!) return true;
+            }
+            catch { /* ignore */ }
+        }
+
+        // Check for {PropertyName}Present companion (e.g., InBomPresent for InBom)
+        var presentFlag = type.GetProperty($"{prop.Name}Present", BindingFlags.Public | BindingFlags.Instance);
+        if (presentFlag != null && presentFlag.PropertyType == typeof(bool))
+        {
+            try
+            {
+                if ((bool)presentFlag.GetValue(instance)!) return true;
+            }
+            catch { /* ignore */ }
+        }
+
+        // For KiCadPcbZone hatch properties, check if FillRaw is non-null
+        // (hatch values are parsed from the fill node and default to 0)
+        if (type.Name == "KiCadPcbZone" && prop.Name.StartsWith("Hatch", StringComparison.Ordinal)
+            && prop.Name != "HatchStyle" && prop.Name != "HatchPitch")
+        {
+            var fillRaw = type.GetProperty("FillRaw", BindingFlags.Public | BindingFlags.Instance);
+            if (fillRaw != null)
+            {
+                try
+                {
+                    if (fillRaw.GetValue(instance) != null) return true;
+                }
+                catch { /* ignore */ }
+            }
+        }
+
+        return false;
     }
 
     private static bool IsDefaultValue(object? value, Type type)
@@ -288,9 +378,10 @@ public class PropertyCoverageVerification
 
     private static IEnumerable<string> GetTestFiles(string pattern)
     {
-        var dir = Path.Combine("TestData", "RealWorld");
-        if (!Directory.Exists(dir)) return [];
-        return Directory.GetFiles(dir, pattern, SearchOption.AllDirectories);
+        var dirs = new[] { Path.Combine("TestData", "RealWorld"), Path.Combine("TestData", "Synthetic") };
+        return dirs
+            .Where(Directory.Exists)
+            .SelectMany(dir => Directory.GetFiles(dir, pattern, SearchOption.AllDirectories));
     }
 
     private async Task<List<(string path, object document)>> LoadAllDocumentsAsync()
@@ -376,14 +467,11 @@ public class PropertyCoverageVerification
                 _output.WriteLine($"  {p}");
         }
 
-        // Soft assertion: warn but don't fail for properties that may legitimately never appear
-        // in the test corpus (e.g., very new KiCad 9 features). Log them all for review.
-        // Hard assertion: at least 90% of typed properties must have coverage.
         var coveragePct = coverage.Count > 0
             ? 100.0 * coverage.Count(k => k.Value.populated > 0) / coverage.Count
             : 0;
         _output.WriteLine($"\nOverall typed property coverage: {coveragePct:F1}%");
-        coveragePct.Should().BeGreaterThan(70, "at least 70% of typed properties should be populated by test corpus");
+        unpopulated.Should().BeEmpty("all typed properties must be populated by at least one file in the test corpus");
     }
 
     // ── Test 2: Round-trip property survival ─────────────────────────────
@@ -542,6 +630,7 @@ public class PropertyCoverageVerification
                             : IsHintProperty(prop) ? "Hint"
                             : IsComputedProperty(prop) ? "Computed"
                             : IsInfrastructureProperty(prop) ? "Infrastructure"
+                            : IsInterfaceStubProperty(prop) ? "InterfaceStub"
                             : "Typed";
                         propMap.TryAdd(prop.Name, (category, 0, 0));
                     }

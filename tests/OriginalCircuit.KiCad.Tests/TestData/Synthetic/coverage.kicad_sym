@@ -1,0 +1,249 @@
+(kicad_symbol_lib
+  (version 20231120)
+  (generator "kicad_symbol_editor")
+  (generator_version "8.0")
+
+  ;; Base symbol with all features
+  (symbol "CoverageBase"
+    (pin_numbers
+      (hide yes)
+    )
+    (pin_names
+      (offset 1.016)
+    )
+    (exclude_from_sim no)
+    (in_bom yes)
+    (on_board yes)
+    (duplicate_pin_numbers_are_jumpers yes)
+    (property "Reference" "U"
+      (at 0 8 0)
+      (effects
+        (font
+          (size 1.27 1.27)
+        )
+      )
+    )
+    (property "Value" "CoverageBase"
+      (at 0 -8 0)
+      (effects
+        (font
+          (size 1.27 1.27)
+        )
+      )
+    )
+    (property "Footprint" ""
+      (at 0 0 0)
+      (effects
+        (font
+          (size 1.27 1.27)
+        )
+        (hide yes)
+      )
+    )
+    (property "Datasheet" ""
+      (at 0 0 0)
+      (effects
+        (font
+          (size 1.27 1.27)
+        )
+        (hide yes)
+      )
+    )
+    (property "ki_description" "Test symbol for coverage"
+      (at 0 0 0)
+      (effects
+        (font
+          (size 1.27 1.27)
+        )
+        (hide yes)
+      )
+    )
+    (unit_name "Unit A")
+    (symbol "CoverageBase_0_1"
+      ;; Arc with uuid, stroke color, fill color
+      (arc
+        (start 0 5.08)
+        (mid 5.08 0)
+        (end 0 -5.08)
+        (stroke
+          (width 0.254)
+          (type solid)
+          (color 255 0 0 1)
+        )
+        (fill
+          (type color)
+          (color 0 128 0 0.5)
+        )
+        (uuid "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaa001")
+      )
+      ;; Circle with uuid, stroke color, fill color
+      (circle
+        (center 0 0)
+        (radius 2.54)
+        (stroke
+          (width 0.254)
+          (type solid)
+          (color 0 0 255 1)
+        )
+        (fill
+          (type color)
+          (color 255 255 0 0.3)
+        )
+        (uuid "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaa002")
+      )
+      ;; Polygon (filled polyline with 3+ points) with uuid, stroke color, fill color
+      (polyline
+        (pts
+          (xy -3 -3)
+          (xy 3 -3)
+          (xy 0 3)
+          (xy -3 -3)
+        )
+        (stroke
+          (width 0.254)
+          (type solid)
+          (color 128 0 128 1)
+        )
+        (fill
+          (type color)
+          (color 200 100 200 0.4)
+        )
+        (uuid "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaa003")
+      )
+      ;; Polyline (unfilled, 2 points) with fill color
+      (polyline
+        (pts
+          (xy -5 0)
+          (xy 5 0)
+        )
+        (stroke
+          (width 0.254)
+          (type solid)
+        )
+        (fill
+          (type color)
+          (color 100 200 100 0.6)
+        )
+        (uuid "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaa004")
+      )
+      ;; Text label with stroke, font face, hidden, mirrored, exclude_from_sim
+      (text "CoverageText"
+        (at 0 10 0)
+        (exclude_from_sim yes)
+        (stroke
+          (width 0.1)
+          (type dash)
+          (color 64 64 64 1)
+        )
+        (effects
+          (font
+            (face "Arial")
+            (size 1.27 1.27)
+          )
+          (hide yes)
+          (justify mirror)
+        )
+        (uuid "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaa005")
+      )
+    )
+    (symbol "CoverageBase_1_1"
+      ;; Pin with name/number font styling
+      (pin passive line
+        (at -10 0 0)
+        (length 2.54)
+        (name "VCC"
+          (effects
+            (font
+              (face "Arial")
+              (size 1.27 1.27)
+              (thickness 0.15)
+              (bold yes)
+              (italic yes)
+              (color 255 0 0 1)
+            )
+          )
+        )
+        (number "1"
+          (effects
+            (font
+              (face "Courier New")
+              (size 1.27 1.27)
+              (thickness 0.12)
+              (bold yes)
+              (italic yes)
+              (color 0 0 255 1)
+            )
+          )
+        )
+        (alternate "ALT1" passive inverted)
+      )
+      ;; Second pin
+      (pin passive line
+        (at 10 0 180)
+        (length 2.54)
+        (name "GND"
+          (effects
+            (font
+              (size 1.27 1.27)
+            )
+          )
+        )
+        (number "2"
+          (effects
+            (font
+              (size 1.27 1.27)
+            )
+          )
+        )
+      )
+    )
+  )
+
+  ;; Derived symbol extending CoverageBase
+  (symbol "CoverageDerived"
+    (extends "CoverageBase")
+    (property "Reference" "U"
+      (at 0 8 0)
+      (effects
+        (font
+          (size 1.27 1.27)
+        )
+      )
+    )
+    (property "Value" "CoverageDerived"
+      (at 0 -8 0)
+      (effects
+        (font
+          (size 1.27 1.27)
+        )
+      )
+    )
+    (property "Footprint" ""
+      (at 0 0 0)
+      (effects
+        (font
+          (size 1.27 1.27)
+        )
+        (hide yes)
+      )
+    )
+    (property "Datasheet" ""
+      (at 0 0 0)
+      (effects
+        (font
+          (size 1.27 1.27)
+        )
+        (hide yes)
+      )
+    )
+    (property "ki_description" "Derived symbol for testing extends"
+      (at 0 0 0)
+      (effects
+        (font
+          (size 1.27 1.27)
+        )
+        (hide yes)
+      )
+    )
+  )
+)

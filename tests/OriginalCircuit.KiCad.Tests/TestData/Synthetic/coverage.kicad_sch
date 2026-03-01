@@ -1,0 +1,149 @@
+(kicad_sch
+  (version 20231120)
+  (generator "eeschema")
+  (generator_version "8.0")
+  (uuid "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb00")
+  (paper "A4")
+
+  (lib_symbols
+  )
+
+  ;; Wire with color and line width
+  (wire
+    (pts
+      (xy 100 100)
+      (xy 150 100)
+    )
+    (stroke
+      (width 0.5)
+      (type solid)
+      (color 255 0 0 1)
+    )
+    (uuid "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01")
+  )
+
+  ;; Bus with line width
+  (bus
+    (pts
+      (xy 100 110)
+      (xy 100 130)
+    )
+    (stroke
+      (width 0.3)
+      (type default)
+    )
+    (uuid "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb02")
+  )
+
+  ;; Bus entry with color and line width
+  (bus_entry
+    (at 100 130)
+    (size 2.54 2.54)
+    (stroke
+      (width 0.2)
+      (type default)
+      (color 0 128 0 1)
+    )
+    (uuid "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb03")
+  )
+
+  ;; Sheet with stroke color, fill, line style
+  (sheet
+    (at 160 90)
+    (size 40 30)
+    (exclude_from_sim no)
+    (in_bom yes)
+    (on_board yes)
+    (dnp no)
+    (stroke
+      (width 0.15)
+      (type dash)
+      (color 0 0 128 1)
+    )
+    (fill
+      (type background)
+      (color 240 240 255 0.5)
+    )
+    (uuid "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb10")
+    (property "Sheetname" "TestSheet"
+      (at 160 88 0)
+      (effects
+        (font
+          (size 1.27 1.27)
+        )
+      )
+    )
+    (property "Sheetfile" "testsheet.kicad_sch"
+      (at 160 122 0)
+      (effects
+        (font
+          (size 1.27 1.27)
+        )
+      )
+    )
+
+    ;; Sheet pin with font face, thickness, color, bold, italic, mirrored
+    (pin "SheetPin1" input
+      (at 160 95 180)
+      (effects
+        (font
+          (face "Arial")
+          (size 1.27 1.27)
+          (thickness 0.15)
+          (bold yes)
+          (italic yes)
+          (color 128 0 0 1)
+        )
+        (justify mirror)
+      )
+      (uuid "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb11")
+    )
+  )
+
+  ;; Net label with font color, face, thickness, bold, italic, mirrored
+  (label "NET_A"
+    (at 150 100 0)
+    (effects
+      (font
+        (face "Courier New")
+        (size 1.27 1.27)
+        (thickness 0.12)
+        (bold yes)
+        (italic yes)
+        (color 0 128 128 1)
+      )
+      (justify mirror)
+    )
+    (uuid "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb20")
+  )
+
+  ;; Property (parameter) with font color, face, line spacing
+  (global_label "GLOBAL_NET"
+    (shape output)
+    (at 120 100 0)
+    (effects
+      (font
+        (size 1.27 1.27)
+      )
+    )
+    (uuid "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb30")
+    (property "Intersheet References" "${INTERSHEET_REFS}"
+      (at 120 96 0)
+      (effects
+        (font
+          (face "Arial")
+          (size 1.27 1.27)
+          (color 200 0 200 1)
+        )
+        (line_spacing 1.5)
+        (hide yes)
+      )
+    )
+  )
+
+  (sheet_instances
+    (path "/"
+      (page "1")
+    )
+  )
+)
